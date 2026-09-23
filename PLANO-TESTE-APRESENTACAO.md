@@ -20,7 +20,7 @@
 9. Enviar a comanda.
 10. Confirmar que ela aparece no historico e que os dados permanecem apos reabrir o app.
 11. Usar `Reimprimir` no historico.
-12. Em `Cardapio`, informar uma URL JSON, salvar e fechar o app.
+12. Em `Configuracoes`, informar uma URL JSON e usar `Forcar atualizacao agora`. Apos a atualizacao bem-sucedida, fechar o app.
 13. Abrir novamente com internet ligada e confirmar que o cardapio e verificado automaticamente.
 14. Abrir novamente com internet desligada e confirmar que o cardapio local continua disponivel.
 
@@ -45,6 +45,9 @@
 
 ## Validacao da impressao
 
+- A comanda de producao deve mostrar plaquinha, cliente, data/hora, quantidades, produtos, sabores e observacoes, sem precos nem totais financeiros.
+- Testar um pedido com precos cadastrados, reimprimir um pedido antigo e usar `Testar impressora`: os tres fluxos devem sair sem valores.
+- Conferir a legibilidade e as quebras de linha das observacoes em 58 e 80 mm, conforme o equipamento disponivel.
 - `Sistema Android`: fluxo conectado pelo `expo-print`; abre o servico de impressao do Android.
 - `Bluetooth`, `Wi-Fi/rede` e `USB/OTG`: telas e configuracoes preparadas, mas a comunicacao direta depende do modulo nativo compatível com a marca/modelo e deve ser testada no APK com o equipamento real.
 - Registrar no teste o modelo da impressora, a conexao, a largura do papel e se a comanda saiu legivel.

@@ -37,6 +37,8 @@ Essas opções devem ser avaliadas à luz do código existente e das decisões d
 ## Decisões atualizadas
 
 - O cardápio real será definido e configurado por último.
+- A impressão inicial é uma comanda de produção para a cozinha: deve conter produtos, quantidades, sabores e observações, sem preços ou totais financeiros. Isso também vale para reimpressões.
+- O ícone Android deve representar um gorro de chef de cozinha. A arte e sua configuração foram atualizadas nesta etapa; detalhes em `assets/ICONES.md`.
 - A impressão deve ser configurável dentro do aplicativo, sem fixar a solução em um único modelo ou conexão.
 - A implementação deve contemplar as opções de impressão suportadas pelo Android e pelo dispositivo disponível, incluindo a configuração específica da impressora quando necessário.
 - O cardápio ficará hospedado fora da rede local em um servidor HTTPS.
