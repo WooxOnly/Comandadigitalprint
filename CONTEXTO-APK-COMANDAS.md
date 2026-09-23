@@ -34,12 +34,21 @@ A fala recuperada sobre mesa e plaquinha não permite concluir se representam o 
 
 Essas opções devem ser avaliadas à luz do código existente e das decisões do usuário. A sugestão de fases não elimina o requisito de verificação opcional de atualização do cardápio.
 
-## Decisões pendentes
+## Decisões atualizadas
 
-- Marca, modelo e conexão da impressora térmica.
+- O cardápio real será definido e configurado por último.
+- A impressão deve ser configurável dentro do aplicativo, sem fixar a solução em um único modelo ou conexão.
+- A implementação deve contemplar as opções de impressão suportadas pelo Android e pelo dispositivo disponível, incluindo a configuração específica da impressora quando necessário.
+- O cardápio ficará hospedado fora da rede local em um servidor HTTPS.
+- O aplicativo consultará o servidor ao abrir e terá um botão para forçar uma nova atualização.
+- O servidor terá leitura pública do cardápio e atualização administrativa protegida por token.
+
+## Decisões ainda pendentes
+
 - Se mesa e plaquinha são o mesmo campo ou identificadores distintos.
 - Regra de preço para pizza com dois sabores.
-- Origem do cardápio online e forma de disponibilizar suas atualizações.
+- Domínio e serviço de hospedagem do servidor do cardápio.
+- Quais conexões e modelos de impressora estarão disponíveis para os testes de impressão.
 
 Moeda, preços, cardápio final e equipamento não foram definidos no contexto recuperado. Não inventar esses dados nem apresentar exemplos como escolhas confirmadas.
 
@@ -48,6 +57,6 @@ Moeda, preços, cardápio final e equipamento não foram definidos no contexto r
 1. Ler as instruções locais aplicáveis e inspecionar o código existente antes de escolher arquitetura ou propor alterações.
 2. Identificar se já existe uma implementação Android ou algum componente reutilizável, preservando o trabalho atual.
 3. Usar os requisitos confirmados como referência e tratar separadamente sugestões técnicas e decisões pendentes.
-4. Resolver as decisões que afetem cada etapa antes de consolidar a implementação correspondente, especialmente integração com a impressora e preço de pizzas com dois sabores.
+4. Priorizar a camada de impressão configurável e resolver as decisões que afetem cada etapa antes de consolidar a implementação correspondente, especialmente os métodos suportados pelo Android e o preço de pizzas com dois sabores.
 
 A entrega deste documento é somente transferência de contexto. Nenhuma implementação, instalação de dependência ou alteração de funcionalidade faz parte desta entrega.

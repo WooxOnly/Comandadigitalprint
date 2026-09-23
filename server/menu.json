@@ -1,0 +1,21 @@
+[
+  {
+    "id": "item-1",
+    "name": "Produto de exemplo",
+    "category": "Lanches",
+    "price": 0
+  },
+  {
+    "id": "item-2",
+    "name": "Pizza de exemplo",
+    "category": "Pizzas",
+    "price": 0,
+    "kind": "pizza"
+  },
+  {
+    "id": "item-3",
+    "name": "Bebida de exemplo",
+    "category": "Bebidas",
+    "price": 0
+  }
+]

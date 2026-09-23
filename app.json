@@ -1,15 +1,26 @@
 {
   "expo": {
     "name": "Comandadigitalprint",
-    "slug": "Comandadigitalprint",
+    "owner": "onlybeones-team",
+    "slug": "matheus-sampaio",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita o acesso as fotos para escolher a logo do restaurante.",
+          "microphonePermission": false
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.wooxonly.comandadigitalprint",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +31,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "239a9a61-a6d5-4c62-ad74-2a4316a06394"
+      }
     }
   }
 }
