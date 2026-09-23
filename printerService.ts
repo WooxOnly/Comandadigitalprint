@@ -5,6 +5,11 @@ export type PrinterSettings = { connection: PrinterConnection; name: string; add
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[] };
 export type PrintableOrder = { plate: string; customer: string; items: PrintableOrderItem[]; createdAt: string };
 
+// expo-print uses points (72 per inch), not screen pixels. Long orders paginate.
+export function getReceiptPageSize(paperWidth: PrinterSettings['paperWidth']) {
+  return { width: Math.round(Number(paperWidth) * 72 / 25.4), height: Math.round(200 * 72 / 25.4) };
+}
+
 function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
@@ -23,8 +28,8 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80') {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Comanda de produção</title>
   <style>
-    @page { margin: 0; }
-    body { box-sizing: border-box; font-family: Arial, sans-serif; width: ${paperWidth}mm; max-width: 100%; margin: 0; padding: 2mm; font-size: 14px; color: #000; overflow-wrap: anywhere; }
+    @page { size: ${paperWidth}mm 200mm; margin: 0; }
+    body { box-sizing: border-box; font-family: Arial, sans-serif; width: ${paperWidth}mm; max-width: 100%; margin: 0 auto; padding: 2mm; font-size: 14px; line-height: 1.4; text-align: center; color: #000; overflow-wrap: anywhere; }
     .center { text-align: center; }
     .line { border-top: 1px dashed #000; margin: 8px 0; }
     .item { margin: 10px 0; break-inside: avoid; }
@@ -51,6 +56,6 @@ export async function printOrder(order: PrintableOrder, settings: PrinterSetting
 
   await Print.printAsync({
     html: buildOrderHtml(order, settings.paperWidth),
-    width: settings.paperWidth === '58' ? 216 : 288,
+    ...getReceiptPageSize(settings.paperWidth),
   });
 }

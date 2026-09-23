@@ -48,6 +48,10 @@
 - A comanda de producao deve mostrar plaquinha, cliente, data/hora, quantidades, produtos, sabores e observacoes, sem precos nem totais financeiros.
 - Testar um pedido com precos cadastrados, reimprimir um pedido antigo e usar `Testar impressora`: os tres fluxos devem sair sem valores.
 - Conferir a legibilidade e as quebras de linha das observacoes em 58 e 80 mm, conforme o equipamento disponivel.
+- A comanda fica centralizada e solicita papel de 58 x 200 mm ou 80 x 200 mm no dialogo Android, conforme a largura configurada. Pedidos longos podem ocupar mais paginas.
+- O plugin `plugins/with-receipt-paper.js` corrige a passagem de largura/altura ao dialogo nativo do expo-print. A alteracao exige um novo APK; recarregar o JavaScript nao atualiza esse comportamento.
+- Conferir a largura antes e depois de selecionar uma impressora: o servico Android pode substituir o formato solicitado pelas medidas que o equipamento suporta.
+- Executar `node --test tests/receipt-printing.test.cjs` para verificar dimensoes, conteudo de producao e compatibilidade do plugin.
 - `Sistema Android`: fluxo conectado pelo `expo-print`; abre o servico de impressao do Android.
 - `Bluetooth`, `Wi-Fi/rede` e `USB/OTG`: telas e configuracoes preparadas, mas a comunicacao direta depende do modulo nativo compatível com a marca/modelo e deve ser testada no APK com o equipamento real.
 - Registrar no teste o modelo da impressora, a conexao, a largura do papel e se a comanda saiu legivel.
