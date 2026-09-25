@@ -36,6 +36,7 @@ Essas opções devem ser avaliadas à luz do código existente e das decisões d
 
 ## Decisões atualizadas
 
+- A interface deve atender celulares e iPad, em retrato e paisagem, com textos em português corretamente acentuados. A atualização visual usa verde-escuro, terracota, fundo claro e cartões brancos; detalhes em `ATUALIZACAO-VISUAL.md`.
 - O cardápio real será definido e configurado por último.
 - A impressão inicial é uma comanda de produção para a cozinha: deve conter produtos, quantidades, sabores e observações, sem preços ou totais financeiros. Isso também vale para reimpressões.
 - O ícone Android deve representar um gorro de chef de cozinha. A arte e sua configuração foram atualizadas nesta etapa; detalhes em `assets/ICONES.md`.

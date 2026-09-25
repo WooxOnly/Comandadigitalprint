@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, BackHandler, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, BackHandler, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { printOrder, type PrinterConnection, type PrinterSettings } from './printerService';
 
 type Product = { id: string; name: string; category: string; price: number; kind?: 'pizza' };
@@ -17,7 +18,7 @@ const MENU_UPDATE_URL_KEY = '@comandadigitalprint/menu-update-url';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
 const PLATES = Array.from({ length: 10 }, (_, index) => String(index + 1));
 const CONNECTIONS: { value: PrinterConnection; label: string }[] = [
-  { value: 'system', label: 'Sistema Android' },
+  { value: 'system', label: Platform.OS === 'ios' ? 'Sistema iOS (AirPrint)' : 'Sistema Android' },
   { value: 'bluetooth', label: 'Bluetooth' },
   { value: 'wifi', label: 'Wi-Fi / rede' },
   { value: 'usb', label: 'USB / OTG' },
@@ -29,6 +30,20 @@ const DEFAULT_MENU: Product[] = [
   { id: 'item-3', name: 'Bebida de exemplo', category: 'Bebidas', price: 0 },
 ];
 const QUICK_NOTES = ['Sem cebola', 'Pouco sal', 'Bem passado'];
+
+const TABS: { screen: AppScreen; label: string; title: string; icon: string; hint: string }[] = [
+  { screen: 'home', label: 'Início', title: 'Início', icon: '⌂', hint: 'Visão geral' },
+  { screen: 'order', label: 'Pedido', title: 'Novo pedido', icon: '+', hint: 'Montar uma comanda' },
+  { screen: 'menu', label: 'Cardápio', title: 'Cardápio', icon: '≡', hint: 'Produtos e categorias' },
+  { screen: 'history', label: 'Histórico', title: 'Histórico', icon: '◷', hint: 'Consultar e reimprimir' },
+  { screen: 'printer', label: 'Ajustes', title: 'Configurações', icon: '⚙', hint: 'Impressora e atualização' },
+];
+
+const COLORS = {
+  background: '#F5F3EF', surface: '#FFFFFF', ink: '#223B35', muted: '#62716B',
+  border: '#DBE2DC', green: '#214B40', greenSoft: '#E8F1EC',
+  primary: '#AE4328', primarySoft: '#FCEBE3', placeholder: '#6C7771',
+};
 
 export default function App() {
   const [category, setCategory] = useState('Todos');
@@ -46,7 +61,9 @@ export default function App() {
   const [productNote, setProductNote] = useState('');
   const [printerSettings, setPrinterSettings] = useState<PrinterSettings>(DEFAULT_PRINTER_SETTINGS);
   const [feedback, setFeedback] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const isWide = windowWidth >= 760 && fontScale < 1.4;
+  const currentTab = TABS.find((tab) => tab.screen === screen)!;
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -73,7 +90,7 @@ export default function App() {
         await refreshMenuFromUrl(storedUrl, false);
       }
       if (storedLogo) setLogoUri(storedLogo);
-    }).catch(() => Alert.alert('Dados indisponiveis', 'Nao foi possivel carregar os dados salvos.'));
+    }).catch(() => Alert.alert('Dados indisponíveis', 'Não foi possível carregar os dados salvos.'));
   }, []);
 
   const filteredMenu = useMemo(() => category === 'Todos' ? menu : menu.filter((item) => item.category === category), [category, menu]);
@@ -121,7 +138,7 @@ export default function App() {
   async function chooseLogo() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permissão necessária', 'Permita o acesso às fotos para escolher a logo do restaurante.');
+      Alert.alert('Permissão necessária', 'Permita o acesso às fotos para escolher o logotipo do restaurante.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 });
@@ -133,7 +150,7 @@ export default function App() {
   }
 
   function saveMenu() {
-    AsyncStorage.multiSet([[MENU_KEY, JSON.stringify(menu)], [MENU_UPDATE_URL_KEY, menuUpdateUrl.trim()]]).then(() => Alert.alert('Cardápio salvo', 'Os produtos e a URL de atualização foram salvos neste aparelho.')).catch(() => Alert.alert('Falha ao salvar', 'Não foi possível salvar o cardápio.'));
+    AsyncStorage.multiSet([[MENU_KEY, JSON.stringify(menu)], [MENU_UPDATE_URL_KEY, menuUpdateUrl.trim()]]).then(() => Alert.alert('Cardápio salvo', 'O cardápio e o endereço de atualização foram salvos neste aparelho.')).catch(() => Alert.alert('Falha ao salvar', 'Não foi possível salvar o cardápio.'));
   }
 
   function addMenuProduct() {
@@ -151,14 +168,14 @@ export default function App() {
   async function refreshMenuFromUrl(url: string, showFeedback: boolean) {
     try {
       const response = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error('Resposta invalida');
+      if (!response.ok) throw new Error('Resposta inválida');
       const remoteMenu = await response.json() as Product[];
-      if (!Array.isArray(remoteMenu) || remoteMenu.some((item) => !item || typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.category !== 'string' || typeof item.price !== 'number' || !Number.isFinite(item.price) || (item.kind !== undefined && item.kind !== 'pizza'))) throw new Error('Formato invalido');
+      if (!Array.isArray(remoteMenu) || remoteMenu.some((item) => !item || typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.category !== 'string' || typeof item.price !== 'number' || !Number.isFinite(item.price) || (item.kind !== undefined && item.kind !== 'pizza'))) throw new Error('Formato inválido');
       setMenu(remoteMenu);
       setCategory('Todos');
       setMenuUpdateStatus(`Atualizado em ${new Date().toLocaleTimeString('pt-BR')}`);
       await AsyncStorage.multiSet([[MENU_KEY, JSON.stringify(remoteMenu)], [MENU_UPDATE_URL_KEY, url]]);
-      if (showFeedback) Alert.alert('Cardápio atualizado', 'A atualização foi aplicada sem bloquear o uso do aplicativo.');
+      if (showFeedback) Alert.alert('Cardápio atualizado', 'Os produtos foram atualizados neste aparelho.');
     } catch {
       setMenuUpdateStatus('Usando cardápio local');
       if (showFeedback) Alert.alert('Atualização indisponível', 'Não foi possível atualizar agora. O cardápio local continua disponível.');
@@ -168,7 +185,7 @@ export default function App() {
   async function updateMenuFromUrl() {
     const url = menuUpdateUrl.trim();
     if (!url) {
-      Alert.alert('URL ausente', 'Informe uma URL que retorne uma lista JSON de produtos.');
+      Alert.alert('Endereço ausente', 'Informe o endereço do cardápio online.');
       return;
     }
     await refreshMenuFromUrl(url, true);
@@ -180,7 +197,7 @@ export default function App() {
 
   function savePrinterSettings() {
     AsyncStorage.setItem(PRINTER_SETTINGS_KEY, JSON.stringify(printerSettings)).then(() => {
-      Alert.alert('Configuração salva', 'A impressora será usada quando a comunicação for habilitada.');
+      Alert.alert('Configuração salva', 'As preferências da impressora foram salvas neste aparelho.');
     }).catch(() => Alert.alert('Falha ao salvar', 'Não foi possível salvar a configuração da impressora.'));
   }
 
@@ -192,14 +209,14 @@ export default function App() {
   async function printSavedOrder(order: SavedOrder) {
     try {
       await printOrder(order, printerSettings);
-      showFeedback('Impressão iniciada', 'A comanda foi enviada para o método selecionado.', 'success');
+      showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       showFeedback('Impressão indisponível', error instanceof Error ? error.message : 'Não foi possível iniciar a impressão.', 'error');
     }
   }
 
   async function testPrinter() {
-    await printSavedOrder({ id: 'printer-test', plate: 'TESTE', customer: 'Teste de impressao', items: [{ id: 'printer-test-item', name: 'Comanda de teste', category: 'Teste', price: 0, quantity: 1, note: '' }], createdAt: new Date().toISOString() });
+    await printSavedOrder({ id: 'printer-test', plate: 'TESTE', customer: 'Teste de impressão', items: [{ id: 'printer-test-item', name: 'Comanda de teste', category: 'Teste', price: 0, quantity: 1, note: '' }], createdAt: new Date().toISOString() });
   }
 
   async function sendOrder() {
@@ -214,66 +231,299 @@ export default function App() {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextHistory));
       await printSavedOrder(order);
     } catch {
-      Alert.alert('Falha ao salvar', 'A comanda foi enviada, mas não foi salva no dispositivo.');
+      Alert.alert('Falha ao salvar', 'Não foi possível salvar a comanda. A impressão não foi iniciada.');
     }
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <ScrollView contentContainerStyle={[styles.content, { width: '100%' }]}>
-        <View style={[styles.contentFrame, { maxWidth: windowWidth >= 700 ? 820 : 560 }]}>
-        <View style={styles.header}>
-          <Pressable style={styles.logoButton} onPress={chooseLogo}><View style={styles.logoFrame}>{logoUri ? <Image source={{ uri: logoUri }} style={styles.logoImage} /> : <Text style={styles.logoPlaceholder}>+</Text>}</View><Text style={styles.logoHint}>{logoUri ? 'Trocar logo' : 'Adicionar logo'}</Text></Pressable><View style={styles.headerTitle}><Text style={styles.eyebrow}>COMANDA DIGITAL</Text><Text style={styles.title}>{screen === 'home' ? 'Início' : screen === 'order' ? 'Novo pedido' : screen === 'menu' ? 'Cardápio' : screen === 'history' ? 'Histórico' : 'Configurações'}</Text></View>
-          <View style={styles.headerActions}><Pressable style={styles.backButton} onPress={() => setScreen('home')}><Text style={styles.backButtonText}>Início</Text></Pressable></View>
-        </View>
-        {screen === 'printer' && <Pressable style={styles.secondaryWideButton} onPress={testPrinter}><Text style={styles.secondaryButtonText}>Testar impressora</Text></Pressable>}
-        {screen === 'home' ? (
-          <View>
-            <Text style={styles.homeIntro}>Organize pedidos, cardápio e impressão em um só lugar.</Text>
-            <Pressable style={styles.startButton} onPress={() => setScreen('order')}><Text style={styles.startButtonText}>Iniciar pedido</Text><Text style={styles.startButtonHint}>Montar uma nova comanda</Text></Pressable>
-            <View style={styles.mainMenu}><Pressable style={styles.mainMenuButton} onPress={() => setScreen('order')}><Text style={styles.mainMenuIcon}>+</Text><Text style={styles.mainMenuTitle}>Pedido</Text><Text style={styles.mainMenuHint}>Nova comanda</Text></Pressable><Pressable style={styles.mainMenuButton} onPress={() => setScreen('menu')}><Text style={styles.mainMenuIcon}>≡</Text><Text style={styles.mainMenuTitle}>Cadastro</Text><Text style={styles.mainMenuHint}>Cardapio e produtos</Text></Pressable><Pressable style={styles.mainMenuButton} onPress={() => setScreen('history')}><Text style={styles.mainMenuIcon}>◷</Text><Text style={styles.mainMenuTitle}>Historico</Text><Text style={styles.mainMenuHint}>{history.length} pedido(s)</Text></Pressable><Pressable style={styles.mainMenuButton} onPress={() => setScreen('printer')}><Text style={styles.mainMenuIcon}>⚙</Text><Text style={styles.mainMenuTitle}>Configuracoes</Text><Text style={styles.mainMenuHint}>Impressora</Text></Pressable></View>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" />
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.header}>
+            <Pressable onPress={chooseLogo} accessibilityRole="button" accessibilityLabel="Escolher logotipo do restaurante" style={({ pressed }) => [styles.logoButton, pressed && styles.pressed]}>
+              <Image source={logoUri ? { uri: logoUri } : require('./assets/chef-icon.png')} style={styles.logoImage} />
+            </Pressable>
+            <View style={styles.headerTitle}>
+              <Text style={styles.eyebrow}>COMANDA DIGITAL</Text>
+              <Text style={styles.title}>{currentTab.title}</Text>
+            </View>
+            {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>Do pedido à cozinha</Text></View>}
           </View>
-        ) : screen === 'printer' ? (
-          <View><Text style={styles.sectionTitle}>Configuracao da impressora</Text><Text style={styles.settingsIntro}>Escolha como o Android vai localizar a impressora. Os dados ficam salvos neste aparelho.</Text><Text style={styles.label}>Metodo de conexao</Text><View style={styles.connectionList}>{CONNECTIONS.map((option) => <Pressable key={option.value} onPress={() => updatePrinterSettings({ connection: option.value })} style={[styles.connectionOption, option.value === printerSettings.connection && styles.selectedConnection]}><Text style={[styles.connectionText, option.value === printerSettings.connection && styles.selectedConnectionText]}>{option.label}</Text></Pressable>)}</View><TextInput value={printerSettings.name} onChangeText={(name) => updatePrinterSettings({ name })} placeholder="Nome da impressora (opcional)" placeholderTextColor="#8a8f98" style={styles.input} /><TextInput value={printerSettings.address} onChangeText={(address) => updatePrinterSettings({ address })} placeholder={printerSettings.connection === 'wifi' ? 'Endereco IP ou nome da rede' : 'Endereco, MAC ou identificador'} placeholderTextColor="#8a8f98" style={styles.input} autoCapitalize="none" /><TextInput value={printerSettings.port} onChangeText={(port) => updatePrinterSettings({ port })} placeholder="Porta (rede)" placeholderTextColor="#8a8f98" style={styles.input} keyboardType="number-pad" /><Text style={[styles.label, styles.paperLabel]}>Largura do papel</Text><View style={styles.paperOptions}>{(['58', '80'] as const).map((width) => <Pressable key={width} onPress={() => updatePrinterSettings({ paperWidth: width })} style={[styles.paperOption, width === printerSettings.paperWidth && styles.selectedConnection]}><Text style={[styles.connectionText, width === printerSettings.paperWidth && styles.selectedConnectionText]}>{width} mm</Text></Pressable>)}</View><Pressable style={styles.sendButton} onPress={savePrinterSettings}><Text style={styles.sendButtonText}>Salvar configuracao</Text></Pressable><Text style={[styles.label, styles.paperLabel]}>Atualizacao do cardapio</Text><TextInput value={menuUpdateUrl} onChangeText={(url) => { setMenuUpdateUrl(url); setMenuUpdateStatus('URL nao salva'); }} placeholder="URL do JSON do cardapio" placeholderTextColor="#8a8f98" style={styles.input} autoCapitalize="none" keyboardType="url" /><Text style={styles.mutedText}>{menuUpdateStatus || 'A URL salva sera consultada automaticamente ao abrir o app.'}</Text><Pressable style={styles.secondaryWideButton} onPress={updateMenuFromUrl}><Text style={styles.secondaryButtonText}>Forcar atualizacao agora</Text></Pressable></View>
-        ) : screen === 'menu' ? (
-          <View>
-            <Text style={styles.sectionTitle}>Editar cardapio</Text>
-            <Text style={styles.settingsIntro}>Cadastre produtos localmente e salve-os no aparelho.</Text>
-            {menu.map((product) => <View key={product.id} style={styles.menuEditCard}><TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} placeholder="Nome do produto" placeholderTextColor="#8a8f98" style={styles.input} /><View style={styles.menuEditRow}><TextInput value={product.category} onChangeText={(category) => updateMenuProduct(product.id, { category })} placeholder="Categoria" placeholderTextColor="#8a8f98" style={[styles.input, styles.menuEditField]} /><TextInput value={String(product.price)} onChangeText={(price) => updateMenuProduct(product.id, { price: Number(price.replace(',', '.')) || 0 })} placeholder="Preco" placeholderTextColor="#8a8f98" style={[styles.input, styles.menuEditField]} keyboardType="decimal-pad" /></View><View style={styles.menuEditActions}><Pressable onPress={() => updateMenuProduct(product.id, { kind: product.kind === 'pizza' ? undefined : 'pizza' })} style={styles.noteChip}><Text style={styles.noteChipText}>{product.kind === 'pizza' ? 'Pizza' : 'Marcar pizza'}</Text></Pressable><Pressable onPress={() => removeMenuProduct(product.id)} style={styles.removeButton}><Text style={styles.removeButtonText}>Excluir</Text></Pressable></View></View>)}
-            <Pressable style={styles.secondaryWideButton} onPress={addMenuProduct}><Text style={styles.secondaryButtonText}>Adicionar produto</Text></Pressable>
-            <Pressable style={styles.sendButton} onPress={saveMenu}><Text style={styles.sendButtonText}>Salvar cardapio</Text></Pressable>
-          </View>
-        ) : screen === 'history' ? (
-          <View><Text style={styles.sectionTitle}>Pedidos enviados</Text>{history.length === 0 ? <Text style={styles.emptyText}>Nenhuma comanda registrada neste aparelho.</Text> : history.map((order) => <View key={order.id} style={styles.historyCard}><View style={styles.productInfo}><Text style={styles.cardTitle}>Plaquinha {order.plate}</Text><Text style={styles.mutedText}>{order.customer || 'Cliente nao informado'}</Text><Text style={styles.mutedText}>{order.items.length} item(ns) - R$ {orderTotal(order.items).toFixed(2).replace('.', ',')}</Text></View><Pressable style={styles.addButton} onPress={() => printSavedOrder(order)}><Text style={styles.addButtonText}>Reimprimir</Text></Pressable></View>)}</View>
-        ) : (
-          <>
-            <View style={styles.formCard}><Text style={styles.label}>Plaquinha</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.plateList}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} style={[styles.plate, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{value}</Text></Pressable>)}</ScrollView><TextInput value={customPlate} onChangeText={setCustomPlate} placeholder="Outra plaquinha (opcional)" placeholderTextColor="#8a8f98" style={styles.input} /><TextInput value={customer} onChangeText={setCustomer} placeholder="Nome do cliente (opcional)" placeholderTextColor="#8a8f98" style={styles.input} /></View>
-            <Text style={styles.sectionTitle}>Cardapio</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{value}</Text></Pressable>)}</ScrollView>
-            <Text style={styles.notice}>{menu.length === DEFAULT_MENU.length ? 'Cardapio inicial: configure os produtos antes de operar.' : 'Cardapio local'}</Text>
-            {filteredMenu.map((product) => <Pressable key={product.id} style={styles.productCard} onPress={() => openProduct(product)}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{product.category} - R$ {product.price.toFixed(2).replace('.', ',')}</Text></View><Text style={styles.productArrow}>+</Text></Pressable>)}
-            <View style={styles.orderHeader}><Text style={styles.sectionTitle}>Pedido atual</Text>{items.length > 0 && <Text style={styles.itemCount}>{items.length} item(ns)</Text>}</View>
-            {items.length === 0 ? <Text style={styles.emptyText}>Toque em Adicionar para montar a comanda.</Text> : items.map((item) => <View key={item.id} style={styles.orderCard}><View style={styles.orderLine}><View style={styles.productInfo}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.mutedText}>{item.flavors?.join(' / ') || item.category}</Text><Text style={styles.mutedText}>R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}</Text></View><View style={styles.quantityControl}><Pressable onPress={() => changeQuantity(item.id, -1)} style={styles.quantityButton}><Text style={styles.quantityText}>-</Text></Pressable><Text style={styles.quantity}>{item.quantity}</Text><Pressable onPress={() => changeQuantity(item.id, 1)} style={styles.quantityButton}><Text style={styles.quantityText}>+</Text></Pressable></View></View><TextInput value={item.note} onChangeText={(note) => updateNote(item.id, note)} placeholder="Observacao do item" placeholderTextColor="#8a8f98" style={styles.noteInput} /><View style={styles.quickNotes}>{QUICK_NOTES.map((note) => <Pressable key={note} onPress={() => updateNote(item.id, item.note ? `${item.note}, ${note}` : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View></View>)}
-            {items.length > 0 && <Text style={styles.totalText}>Total: R$ {orderTotal(items).toFixed(2).replace('.', ',')}</Text>}
-            <Pressable style={styles.sendButton} onPress={sendOrder}><Text style={styles.sendButtonText}>Enviar comanda</Text><Text style={styles.sendButtonHint}>Salva no aparelho e abre a impressao</Text></Pressable>
-          </>
-        )}
-        <View style={styles.bottomNav}><Pressable style={[styles.bottomNavButton, screen === 'home' && styles.activeBottomNavButton]} onPress={() => setScreen('home')}><Text style={styles.bottomNavText}>Inicio</Text></Pressable><Pressable style={[styles.bottomNavButton, screen === 'order' && styles.activeBottomNavButton]} onPress={() => setScreen('order')}><Text style={styles.bottomNavText}>Pedido</Text></Pressable><Pressable style={[styles.bottomNavButton, screen === 'menu' && styles.activeBottomNavButton]} onPress={() => setScreen('menu')}><Text style={styles.bottomNavText}>Cadastro</Text></Pressable><Pressable style={[styles.bottomNavButton, screen === 'history' && styles.activeBottomNavButton]} onPress={() => setScreen('history')}><Text style={styles.bottomNavText}>Historico</Text></Pressable><Pressable style={[styles.bottomNavButton, screen === 'printer' && styles.activeBottomNavButton]} onPress={() => setScreen('printer')}><Text style={styles.bottomNavText}>Configuracoes</Text></Pressable></View>
-        </View>
-      </ScrollView>
-      <Modal visible={selectedProduct !== null} transparent animationType="slide" onRequestClose={() => setSelectedProduct(null)}><View style={styles.modalBackdrop}><View style={styles.productModal}><Text style={styles.modalTitle}>{selectedProduct?.name}</Text><Text style={styles.mutedText}>Observação do produto (opcional)</Text><View style={styles.quickNotes}>{['Remover cebola', 'Adicionar ovos', 'Sem pimenta'].map((note) => <Pressable key={note} onPress={() => setProductNote((current) => current ? `${current}, ${note}` : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View><TextInput value={productNote} onChangeText={setProductNote} placeholder="Ex.: bem passado, sem molho..." placeholderTextColor="#8a8f98" style={styles.modalInput} multiline />{selectedProduct?.kind === 'pizza' && <Pressable style={styles.secondaryWideButton} onPress={() => { addTwoFlavorPizza(selectedProduct); setSelectedProduct(null); }}><Text style={styles.secondaryButtonText}>Adicionar com dois sabores</Text></Pressable>}<View style={styles.modalActions}><Pressable style={styles.cancelButton} onPress={() => setSelectedProduct(null)}><Text style={styles.cancelButtonText}>Cancelar</Text></Pressable><Pressable style={styles.sendButton} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>Adicionar ao pedido</Text></Pressable></View></View></View></Modal>
-      {feedback && <View style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{feedback.title}</Text><Text style={styles.feedbackMessage}>{feedback.message}</Text></View>}
-    </View>
+
+          <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <View style={styles.contentFrame}>
+              {screen === 'home' ? (
+                <View>
+                  <View style={styles.hero}>
+                    <Text style={styles.heroEyebrow}>BOM ATENDIMENTO COMEÇA AQUI</Text>
+                    <Text style={[styles.heroTitle, isWide && styles.heroTitleWide]}>Tudo pronto para o próximo pedido.</Text>
+                    <Text style={styles.heroDescription}>Monte a comanda, confira os detalhes e envie para a cozinha.</Text>
+                    <Pressable onPress={() => setScreen('order')} accessibilityRole="button" style={({ pressed }) => [styles.heroButton, pressed && styles.pressed]}>
+                      <Text style={styles.heroButtonText}>Iniciar pedido</Text><Text style={styles.heroArrow}>→</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.sectionTitle}>Acesso rápido</Text>
+                  <View style={styles.mainMenu}>
+                    {TABS.filter((tab) => tab.screen !== 'home').map((tab) => (
+                      <Pressable key={tab.screen} onPress={() => setScreen(tab.screen)} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, pressed && styles.pressed]}>
+                        <View style={styles.menuIconBadge}><Text style={styles.mainMenuIcon}>{tab.icon}</Text></View>
+                        <Text style={styles.mainMenuTitle}>{tab.screen === 'printer' ? 'Configurações' : tab.label}</Text>
+                        <Text style={styles.mainMenuHint}>{tab.screen === 'history' ? history.length + (history.length === 1 ? ' pedido salvo' : ' pedidos salvos') : tab.hint}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <View style={styles.homeFooter}><Text style={styles.homeFooterText}>Seu cardápio e seu histórico ficam salvos neste aparelho.</Text></View>
+                </View>
+              ) : screen === 'printer' ? (
+                <View style={[styles.columns, isWide && styles.columnsWide]}>
+                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
+                    <Text style={styles.panelTitle}>Impressora</Text>
+                    <Text style={styles.settingsIntro}>Escolha a conexão e a largura do papel para suas comandas.</Text>
+                    <Text style={styles.label}>Método de conexão</Text>
+                    <View style={styles.connectionList}>
+                      {CONNECTIONS.map((option) => <Pressable key={option.value} onPress={() => updatePrinterSettings({ connection: option.value })} accessibilityRole="radio" accessibilityState={{ checked: option.value === printerSettings.connection }} style={[styles.connectionOption, option.value === printerSettings.connection && styles.selectedConnection]}>
+                        <Text style={[styles.connectionText, option.value === printerSettings.connection && styles.selectedConnectionText]}>{option.label}</Text>
+                        {option.value === printerSettings.connection && <Text style={styles.selectedConnectionText}>✓</Text>}
+                      </Pressable>)}
+                    </View>
+                    <Text style={styles.fieldLabel}>Nome da impressora</Text>
+                    <TextInput value={printerSettings.name} onChangeText={(name) => updatePrinterSettings({ name })} accessibilityLabel="Nome da impressora" placeholder="Opcional" placeholderTextColor={COLORS.placeholder} style={styles.input} />
+                    <Text style={styles.fieldLabel}>Endereço ou identificador</Text>
+                    <TextInput value={printerSettings.address} onChangeText={(address) => updatePrinterSettings({ address })} accessibilityLabel="Endereço da impressora" placeholder={printerSettings.connection === 'wifi' ? 'Endereço IP da impressora' : 'Endereço, MAC ou identificador'} placeholderTextColor={COLORS.placeholder} style={styles.input} autoCapitalize="none" />
+                    <Text style={styles.fieldLabel}>Porta de rede</Text>
+                    <TextInput value={printerSettings.port} onChangeText={(port) => updatePrinterSettings({ port })} accessibilityLabel="Porta de rede" placeholder="9100" placeholderTextColor={COLORS.placeholder} style={styles.input} keyboardType="number-pad" />
+                    <Text style={styles.fieldLabel}>Largura do papel</Text>
+                    <View style={styles.paperOptions}>{(['58', '80'] as const).map((width) => <Pressable key={width} onPress={() => updatePrinterSettings({ paperWidth: width })} accessibilityRole="radio" accessibilityState={{ checked: width === printerSettings.paperWidth }} style={[styles.paperOption, width === printerSettings.paperWidth && styles.selectedConnection]}><Text style={[styles.connectionText, width === printerSettings.paperWidth && styles.selectedConnectionText]}>{width} mm</Text></Pressable>)}</View>
+                    <Pressable style={styles.sendButton} onPress={savePrinterSettings}><Text style={styles.sendButtonText}>Salvar configuração</Text></Pressable>
+                    <Pressable style={styles.secondaryWideButton} onPress={testPrinter}><Text style={styles.secondaryButtonText}>Testar impressora</Text></Pressable>
+                  </View>
+                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
+                    <Text style={styles.panelTitle}>Cardápio online</Text>
+                    <Text style={styles.settingsIntro}>Atualize os produtos a partir do endereço do seu cardápio.</Text>
+                    <Text style={styles.fieldLabel}>Endereço do cardápio</Text>
+                    <TextInput value={menuUpdateUrl} onChangeText={(url) => { setMenuUpdateUrl(url); setMenuUpdateStatus('Endereço ainda não salvo'); }} accessibilityLabel="Endereço do cardápio online" placeholder="https://seu-servidor.com/menu" placeholderTextColor={COLORS.placeholder} style={styles.input} autoCapitalize="none" keyboardType="url" />
+                    <Text style={styles.helperText}>{menuUpdateStatus || 'O endereço salvo será consultado ao abrir o aplicativo.'}</Text>
+                    <Pressable style={styles.secondaryWideButton} onPress={updateMenuFromUrl}><Text style={styles.secondaryButtonText}>Atualizar cardápio agora</Text></Pressable>
+                  </View>
+                </View>
+              ) : screen === 'menu' ? (
+                <View>
+                  <Text style={styles.settingsIntro}>Organize os produtos e as categorias do seu cardápio.</Text>
+                  <View style={styles.menuGrid}>
+                    {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
+                      <Text style={styles.fieldLabel}>Nome do produto</Text>
+                      <TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} accessibilityLabel="Nome do produto" placeholder="Ex.: pizza de calabresa" placeholderTextColor={COLORS.placeholder} style={styles.input} />
+                      <View style={styles.menuEditRow}>
+                        <View style={styles.menuEditField}><Text style={styles.fieldLabel}>Categoria</Text><TextInput value={product.category} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel="Categoria do produto" placeholder="Ex.: pizzas" placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+                        <View style={styles.priceField}><Text style={styles.fieldLabel}>Preço (R$)</Text><TextInput value={String(product.price)} onChangeText={(price) => updateMenuProduct(product.id, { price: Number(price.replace(',', '.')) || 0 })} accessibilityLabel="Preço do produto" placeholder="0,00" placeholderTextColor={COLORS.placeholder} style={styles.input} keyboardType="decimal-pad" /></View>
+                      </View>
+                      <View style={styles.menuEditActions}>
+                        <Pressable onPress={() => updateMenuProduct(product.id, { kind: product.kind === 'pizza' ? undefined : 'pizza' })} accessibilityRole="checkbox" accessibilityState={{ checked: product.kind === 'pizza' }} style={[styles.noteChip, product.kind === 'pizza' && styles.selectedCategory]}><Text style={[styles.noteChipText, product.kind === 'pizza' && styles.selectedCategoryText]}>{product.kind === 'pizza' ? '✓ Pizza' : 'Marcar como pizza'}</Text></Pressable>
+                        <Pressable onPress={() => removeMenuProduct(product.id)} style={styles.removeButton}><Text style={styles.removeButtonText}>Excluir</Text></Pressable>
+                      </View>
+                    </View>)}
+                  </View>
+                  <Pressable style={styles.secondaryWideButton} onPress={addMenuProduct}><Text style={styles.secondaryButtonText}>+ Adicionar produto</Text></Pressable>
+                  <Pressable style={styles.sendButton} onPress={saveMenu}><Text style={styles.sendButtonText}>Salvar cardápio</Text></Pressable>
+                </View>
+              ) : screen === 'history' ? (
+                <View>
+                  <Text style={styles.settingsIntro}>Consulte suas comandas e reimprima quando precisar.</Text>
+                  {history.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Seu histórico começa aqui</Text><Text style={styles.emptyText}>As comandas salvas aparecerão nesta tela.</Text></View> : history.map((order) => <View key={order.id} style={styles.historyCard}>
+                    <View style={styles.productInfo}><Text style={styles.cardTitle}>Plaquinha {order.plate}</Text><Text style={styles.mutedText}>{order.customer || 'Cliente não informado'}</Text><Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString('pt-BR')}</Text><Text style={styles.priceText}>{order.items.length} {order.items.length === 1 ? 'item' : 'itens'} · R$ {orderTotal(order.items).toFixed(2).replace('.', ',')}</Text></View>
+                    <Pressable style={styles.addButton} onPress={() => printSavedOrder(order)}><Text style={styles.addButtonText}>Reimprimir</Text></Pressable>
+                  </View>)}
+                </View>
+              ) : (
+                <View style={[styles.columns, isWide && styles.columnsWide]}>
+                  <View style={[styles.column, isWide && styles.columnWide]}>
+                    <View style={styles.panel}>
+                      <Text style={styles.panelTitle}>Identificação</Text>
+                      <Text style={styles.fieldLabel}>Plaquinha</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.plateList}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={'Plaquinha ' + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{value}</Text></Pressable>)}</ScrollView>
+                      <TextInput value={customPlate} onChangeText={setCustomPlate} accessibilityLabel="Outra plaquinha" placeholder="Outra plaquinha (opcional)" placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} />
+                      <TextInput value={customer} onChangeText={setCustomer} accessibilityLabel="Nome do cliente" placeholder="Nome do cliente (opcional)" placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} />
+                    </View>
+                    <Text style={styles.sectionTitle}>Escolha os produtos</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === category }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{value}</Text></Pressable>)}</ScrollView>
+                    {filteredMenu.length === 0 && <Text style={styles.emptyText}>Nenhum produto nesta categoria.</Text>}
+                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={'Adicionar ' + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{product.category}</Text><Text style={styles.priceText}>R$ {product.price.toFixed(2).replace('.', ',')}</Text></View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
+                  </View>
+                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
+                    <View style={styles.orderHeader}><Text style={styles.panelTitle}>Pedido atual</Text><Text style={styles.itemCount}>{items.length} {items.length === 1 ? 'item' : 'itens'}</Text></View>
+                    {items.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Vamos montar uma comanda?</Text><Text style={styles.emptyText}>Toque em um produto do cardápio para adicioná-lo ao pedido.</Text></View> : items.map((item) => <View key={item.id} style={styles.orderCard}>
+                      <Text style={styles.cardTitle}>{item.name}</Text>
+                      <Text style={styles.mutedText}>{item.flavors?.join(' / ') || item.category}</Text>
+                      <View style={styles.orderLine}>
+                        <Text style={styles.priceText}>R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}</Text>
+                        <View style={styles.quantityControl}><Pressable onPress={() => changeQuantity(item.id, -1)} accessibilityRole="button" accessibilityLabel={'Diminuir quantidade de ' + item.name} style={styles.quantityButton}><Text style={styles.quantityText}>−</Text></Pressable><Text style={styles.quantity}>{item.quantity}</Text><Pressable onPress={() => changeQuantity(item.id, 1)} accessibilityRole="button" accessibilityLabel={'Aumentar quantidade de ' + item.name} style={styles.quantityButton}><Text style={styles.quantityText}>+</Text></Pressable></View>
+                      </View>
+                      <TextInput value={item.note} onChangeText={(note) => updateNote(item.id, note)} accessibilityLabel={'Observação de ' + item.name} placeholder="Observação do item" placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} multiline />
+                      <View style={styles.quickNotes}>{QUICK_NOTES.map((note) => <Pressable key={note} onPress={() => updateNote(item.id, item.note ? item.note + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View>
+                    </View>)}
+                    {items.length > 0 && <View style={styles.totalRow}><Text style={styles.totalLabel}>Total do pedido</Text><Text style={styles.totalText}>R$ {orderTotal(items).toFixed(2).replace('.', ',')}</Text></View>}
+                    <Pressable style={styles.sendButton} onPress={sendOrder}><Text style={styles.sendButtonText}>Enviar comanda</Text><Text style={styles.sendButtonHint}>Salvar e abrir a impressão</Text></Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+
+          {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{feedback.title}</Text><Text style={styles.feedbackMessage}>{feedback.message}</Text></View>}
+
+          <View style={styles.navBackground}><View style={styles.bottomNav}>
+            {TABS.map((tab) => <Pressable key={tab.screen} accessibilityRole="tab" accessibilityLabel={tab.title} accessibilityState={{ selected: screen === tab.screen }} onPress={() => setScreen(tab.screen)} style={({ pressed }) => [styles.bottomNavButton, screen === tab.screen && styles.activeBottomNavButton, pressed && styles.pressed]}>
+              <Text style={[styles.bottomNavIcon, screen === tab.screen && styles.activeBottomNavText]}>{tab.icon}</Text>
+              <Text style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{tab.label}</Text>
+            </Pressable>)}
+          </View></View>
+        </KeyboardAvoidingView>
+
+        <Modal visible={selectedProduct !== null} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setSelectedProduct(null)}>
+          <SafeAreaProvider><KeyboardAvoidingView style={[styles.modalBackdrop, isWide && styles.modalBackdropWide]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <SafeAreaView edges={['bottom']} style={[styles.productModal, isWide && styles.productModalWide]}>
+              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
+                <Text style={styles.modalEyebrow}>ADICIONAR AO PEDIDO</Text>
+                <Text style={styles.modalTitle}>{selectedProduct?.name}</Text>
+                <Text style={styles.settingsIntro}>Como você quer este produto?</Text>
+                <Text style={styles.fieldLabel}>Observação (opcional)</Text>
+                <TextInput value={productNote} onChangeText={setProductNote} accessibilityLabel="Observação do produto" placeholder="Ex.: bem passado, sem molho..." placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.modalInput]} multiline />
+                <View style={styles.quickNotes}>{['Remover cebola', 'Adicionar ovos', 'Sem pimenta'].map((note) => <Pressable key={note} onPress={() => setProductNote((current) => current ? current + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View>
+                {selectedProduct?.kind === 'pizza' && <Pressable style={styles.secondaryWideButton} onPress={() => { addTwoFlavorPizza(selectedProduct); setSelectedProduct(null); }}><Text style={styles.secondaryButtonText}>Adicionar com dois sabores</Text></Pressable>}
+                <Pressable style={styles.sendButton} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>Adicionar ao pedido</Text></Pressable>
+                <Pressable style={styles.cancelButton} onPress={() => setSelectedProduct(null)}><Text style={styles.cancelButtonText}>Cancelar</Text></Pressable>
+              </ScrollView>
+            </SafeAreaView>
+          </KeyboardAvoidingView></SafeAreaProvider>
+        </Modal>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f2eb' }, content: { alignItems: 'center', padding: 20, paddingTop: 34, paddingBottom: 42 }, contentFrame: { alignSelf: 'center', width: '100%' },
-  header: { alignItems: 'center', marginBottom: 26, minHeight: 126, position: 'relative' }, logoButton: { alignItems: 'center' }, logoFrame: { alignItems: 'center', backgroundColor: '#e8b44f', borderColor: '#d35d32', borderRadius: 12, borderWidth: 2, height: 58, justifyContent: 'center', overflow: 'hidden', width: 58 }, logoImage: { height: '100%', width: '100%' }, logoPlaceholder: { color: '#202322', fontSize: 28, fontWeight: '400' }, logoHint: { color: '#777a76', fontSize: 9, marginTop: 3 }, headerTitle: { alignItems: 'center' }, eyebrow: { color: '#d35d32', fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginTop: 7 }, title: { color: '#202322', fontSize: 32, fontWeight: '800', marginTop: 4, textAlign: 'center' }, backButton: { backgroundColor: '#202322', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }, backButtonText: { color: '#fffaf0', fontSize: 12, fontWeight: '700' },
-  headerActions: { alignItems: 'flex-end', gap: 6, position: 'absolute', right: 0, top: 0 }, historyButton: { backgroundColor: '#202322', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }, historyButtonText: { color: '#fffaf0', fontSize: 12, fontWeight: '700' }, secondaryButton: { backgroundColor: '#e8b44f', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }, secondaryButtonText: { color: '#202322', fontSize: 12, fontWeight: '700' }, homeIntro: { color: '#777a76', fontSize: 15, lineHeight: 22, marginBottom: 18, textAlign: 'center' }, startButton: { backgroundColor: '#d35d32', borderRadius: 12, marginBottom: 22, padding: 20 }, startButtonText: { color: '#fffaf0', fontSize: 22, fontWeight: '800' }, startButtonHint: { color: '#ffe5d8', fontSize: 12, marginTop: 5 }, mainMenu: { gap: 10 }, mainMenuButton: { backgroundColor: '#fffaf0', borderColor: '#d9d3c9', borderRadius: 10, borderWidth: 1, padding: 16 }, activeMainMenuButton: { backgroundColor: '#f0e9dc', borderColor: '#d35d32', borderWidth: 2 }, mainMenuIcon: { color: '#d35d32', fontSize: 24, fontWeight: '800' }, mainMenuTitle: { color: '#202322', fontSize: 17, fontWeight: '800', marginTop: 5 }, mainMenuHint: { color: '#777a76', fontSize: 12, marginTop: 3 }, formCard: { backgroundColor: '#fffaf0', borderRadius: 12, padding: 16 }, label: { color: '#686b68', fontSize: 12, fontWeight: '700', marginBottom: 10, textTransform: 'uppercase' },
-  plateList: { gap: 8, paddingBottom: 4 }, plate: { alignItems: 'center', borderColor: '#d9d3c9', borderRadius: 8, borderWidth: 1, height: 42, justifyContent: 'center', width: 42 }, selectedPlate: { backgroundColor: '#d35d32', borderColor: '#d35d32' }, plateText: { color: '#424642', fontSize: 16, fontWeight: '800' }, selectedPlateText: { color: '#fffaf0' }, input: { borderBottomColor: '#d9d3c9', borderBottomWidth: 1, color: '#202322', fontSize: 15, marginTop: 15, paddingBottom: 8 },
-  sectionTitle: { color: '#202322', fontSize: 20, fontWeight: '800', marginBottom: 12, marginTop: 25 }, categoryList: { gap: 8, paddingBottom: 14 }, category: { borderColor: '#d9d3c9', borderRadius: 18, borderWidth: 1, paddingHorizontal: 15, paddingVertical: 9 }, selectedCategory: { backgroundColor: '#202322', borderColor: '#202322' }, categoryText: { color: '#686b68', fontSize: 13, fontWeight: '700' }, selectedCategoryText: { color: '#fffaf0' }, notice: { color: '#9a5b3c', fontSize: 12, marginBottom: 10 },
-  settingsIntro: { color: '#777a76', fontSize: 14, lineHeight: 21, marginBottom: 20 }, connectionList: { gap: 8, marginBottom: 8 }, connectionOption: { backgroundColor: '#fffaf0', borderColor: '#d9d3c9', borderRadius: 8, borderWidth: 1, padding: 14 }, selectedConnection: { backgroundColor: '#202322', borderColor: '#202322' }, connectionText: { color: '#424642', fontSize: 14, fontWeight: '700' }, selectedConnectionText: { color: '#fffaf0' }, paperLabel: { marginTop: 22 }, paperOptions: { flexDirection: 'row', gap: 8, marginBottom: 10 }, paperOption: { alignItems: 'center', backgroundColor: '#fffaf0', borderColor: '#d9d3c9', borderRadius: 8, borderWidth: 1, flex: 1, padding: 14 }, menuEditCard: { backgroundColor: '#fffaf0', borderRadius: 10, marginBottom: 10, padding: 14 }, menuEditRow: { flexDirection: 'row', gap: 10 }, menuEditField: { flex: 1 }, menuEditActions: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }, removeButton: { backgroundColor: '#f5d8d0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7 }, removeButtonText: { color: '#a53e2b', fontSize: 12, fontWeight: '700' }, secondaryWideButton: { alignItems: 'center', backgroundColor: '#e8b44f', borderRadius: 8, marginTop: 10, padding: 13 }, productCard: { alignItems: 'center', backgroundColor: '#fffaf0', borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, padding: 15 }, productArrow: { backgroundColor: '#e8b44f', borderRadius: 16, color: '#202322', fontSize: 22, fontWeight: '700', height: 32, lineHeight: 29, textAlign: 'center', width: 32 }, productActions: { alignItems: 'flex-end', gap: 7 }, productInfo: { flex: 1 }, cardTitle: { color: '#202322', fontSize: 15, fontWeight: '800' }, mutedText: { color: '#777a76', fontSize: 12, marginTop: 4 }, addButton: { backgroundColor: '#e8b44f', borderRadius: 7, paddingHorizontal: 12, paddingVertical: 9 }, addButtonText: { color: '#202322', fontSize: 12, fontWeight: '800' },
-  orderHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between' }, itemCount: { color: '#777a76', fontSize: 12 }, emptyText: { color: '#777a76', fontSize: 14, lineHeight: 21 }, orderCard: { backgroundColor: '#fffaf0', borderRadius: 10, marginBottom: 10, padding: 15 }, orderLine: { alignItems: 'center', flexDirection: 'row' }, quantityControl: { alignItems: 'center', flexDirection: 'row', gap: 8 }, quantityButton: { alignItems: 'center', backgroundColor: '#f0e9dc', borderRadius: 7, height: 30, justifyContent: 'center', width: 30 }, quantityText: { color: '#202322', fontSize: 18, fontWeight: '700' }, quantity: { color: '#202322', fontSize: 15, fontWeight: '800' },
-  noteInput: { borderBottomColor: '#d9d3c9', borderBottomWidth: 1, color: '#202322', fontSize: 13, marginTop: 14, paddingBottom: 7 }, quickNotes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }, noteChip: { backgroundColor: '#f0e9dc', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 6 }, noteChipText: { color: '#686b68', fontSize: 11 }, feedbackToast: { borderRadius: 10, elevation: 6, marginTop: 14, padding: 14, shadowColor: '#202322', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 }, feedbackSuccess: { backgroundColor: '#d9f0df', borderColor: '#5b9b6c', borderWidth: 1 }, feedbackError: { backgroundColor: '#f5d8d0', borderColor: '#b04a37', borderWidth: 1 }, feedbackTitle: { color: '#202322', fontSize: 15, fontWeight: '800' }, feedbackMessage: { color: '#424642', fontSize: 13, lineHeight: 19, marginTop: 4 }, modalBackdrop: { backgroundColor: 'rgba(32,35,34,0.45)', flex: 1, justifyContent: 'flex-end' }, productModal: { backgroundColor: '#fffaf0', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20 }, modalTitle: { color: '#202322', fontSize: 22, fontWeight: '800', marginBottom: 5 }, modalInput: { borderColor: '#d9d3c9', borderRadius: 8, borderWidth: 1, color: '#202322', minHeight: 72, marginTop: 14, padding: 12, textAlignVertical: 'top' }, modalActions: { flexDirection: 'row', gap: 10, marginTop: 18 }, cancelButton: { alignItems: 'center', borderColor: '#d9d3c9', borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: 'center', padding: 15 }, cancelButtonText: { color: '#686b68', fontSize: 14, fontWeight: '700' }, totalText: { color: '#202322', fontSize: 18, fontWeight: '800', marginTop: 8, textAlign: 'right' }, sendButton: { alignItems: 'center', backgroundColor: '#d35d32', borderRadius: 10, marginTop: 15, padding: 15 }, sendButtonText: { color: '#fffaf0', fontSize: 16, fontWeight: '800' }, sendButtonHint: { color: '#ffe5d8', fontSize: 11, marginTop: 4 }, bottomNav: { borderTopColor: '#d9d3c9', borderTopWidth: 1, flexDirection: 'row', gap: 6, marginTop: 28, paddingTop: 12 }, bottomNavButton: { alignItems: 'center', borderRadius: 8, flex: 1, paddingHorizontal: 4, paddingVertical: 10 }, activeBottomNavButton: { backgroundColor: '#202322' }, bottomNavText: { color: '#686b68', fontSize: 11, fontWeight: '700', textAlign: 'center' }, historyCard: { alignItems: 'center', backgroundColor: '#fffaf0', borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, padding: 15 },
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  pressed: { opacity: 0.7 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16, width: '100%', maxWidth: 1160, alignSelf: 'center' },
+  logoButton: { borderRadius: 16, overflow: 'hidden', width: 56, height: 56 },
+  logoImage: { width: '100%', height: '100%' },
+  headerTitle: { flex: 1, minWidth: 0 },
+  eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 4 },
+  title: { color: COLORS.ink, fontSize: 25, fontWeight: '800', letterSpacing: -0.6 },
+  headerBadge: { backgroundColor: COLORS.greenSoft, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
+  headerBadgeText: { color: COLORS.green, fontSize: 12, fontWeight: '600' },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28, alignItems: 'center' },
+  contentFrame: { width: '100%', maxWidth: 1120 },
+  hero: { backgroundColor: COLORS.green, borderRadius: 24, padding: 24 },
+  heroEyebrow: { color: '#BDD5CA', fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginBottom: 14 },
+  heroTitle: { color: '#FFFFFF', fontSize: 29, lineHeight: 36, fontWeight: '800', maxWidth: 460, letterSpacing: -0.8 },
+  heroTitleWide: { fontSize: 38, lineHeight: 45, maxWidth: 620 },
+  heroDescription: { color: '#DFEBE4', fontSize: 14, lineHeight: 22, marginTop: 12, maxWidth: 440 },
+  heroButton: { backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 15, marginTop: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', maxWidth: 400 },
+  heroButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  heroArrow: { color: '#FFFFFF', fontSize: 24 },
+  sectionTitle: { color: COLORS.ink, fontSize: 20, fontWeight: '800', marginTop: 26, marginBottom: 14 },
+  mainMenu: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  mainMenuButton: { flexBasis: '45%', flexGrow: 1, backgroundColor: COLORS.surface, borderColor: COLORS.border, borderWidth: 1, borderRadius: 18, padding: 16 },
+  mainMenuButtonWide: { flexBasis: '22%' },
+  menuIconBadge: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  mainMenuIcon: { color: COLORS.primary, fontSize: 25, fontWeight: '600' },
+  mainMenuTitle: { color: COLORS.ink, fontSize: 15, fontWeight: '800' },
+  mainMenuHint: { color: COLORS.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
+  homeFooter: { paddingVertical: 22, paddingHorizontal: 12 },
+  homeFooterText: { color: COLORS.muted, fontSize: 12, lineHeight: 19, textAlign: 'center' },
+  columns: { gap: 20 },
+  columnsWide: { flexDirection: 'row', alignItems: 'flex-start' },
+  column: { minWidth: 0 },
+  columnWide: { flex: 1 },
+  panel: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, padding: 18 },
+  panelTitle: { color: COLORS.ink, fontSize: 20, fontWeight: '800' },
+  settingsIntro: { color: COLORS.muted, fontSize: 14, lineHeight: 22, marginTop: 8, marginBottom: 20 },
+  label: { color: COLORS.ink, fontSize: 13, fontWeight: '700', marginBottom: 10 },
+  fieldLabel: { color: COLORS.ink, fontSize: 13, fontWeight: '600', marginTop: 16, marginBottom: 8 },
+  input: { backgroundColor: '#F8FAF8', borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, color: COLORS.ink, fontSize: 15, minHeight: 48, paddingHorizontal: 12, paddingVertical: 12 },
+  spacedInput: { marginTop: 12 },
+  helperText: { color: COLORS.muted, fontSize: 12, lineHeight: 19, marginTop: 10 },
+  connectionList: { gap: 8 },
+  connectionOption: { minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 14 },
+  selectedConnection: { backgroundColor: COLORS.green, borderColor: COLORS.green },
+  connectionText: { color: COLORS.ink, fontSize: 14, fontWeight: '700' },
+  selectedConnectionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  paperOptions: { flexDirection: 'row', gap: 10 },
+  paperOption: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, padding: 14 },
+  menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  menuEditCard: { width: '100%', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 16 },
+  menuEditCardWide: { width: '48%', flexGrow: 1, flexBasis: '46%' },
+  menuEditRow: { flexDirection: 'row', gap: 12 },
+  menuEditField: { flex: 1, minWidth: 0 },
+  priceField: { flex: 0.65, minWidth: 82 },
+  menuEditActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 16 },
+  removeButton: { backgroundColor: '#FCECE8', borderRadius: 10, minHeight: 44, justifyContent: 'center', paddingHorizontal: 14 },
+  removeButtonText: { color: '#A33024', fontSize: 13, fontWeight: '700' },
+  sendButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderRadius: 14, minHeight: 52, marginTop: 18, padding: 16 },
+  sendButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  sendButtonHint: { color: '#FFE8DE', fontSize: 12, marginTop: 5, textAlign: 'center' },
+  secondaryWideButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.greenSoft, borderColor: '#D2E3D8', borderWidth: 1, borderRadius: 14, minHeight: 50, marginTop: 12, padding: 14 },
+  secondaryButtonText: { color: COLORS.green, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  plateList: { gap: 8, paddingBottom: 4 },
+  plate: { alignItems: 'center', justifyContent: 'center', borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, minHeight: 46, minWidth: 46, padding: 10 },
+  selectedPlate: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  plateText: { color: COLORS.ink, fontSize: 16, fontWeight: '700' },
+  selectedPlateText: { color: '#FFFFFF' },
+  categoryList: { gap: 8, paddingBottom: 14 },
+  category: { borderColor: COLORS.border, borderWidth: 1, borderRadius: 22, minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: COLORS.surface },
+  selectedCategory: { backgroundColor: COLORS.green, borderColor: COLORS.green },
+  categoryText: { color: COLORS.muted, fontSize: 13, fontWeight: '700' },
+  selectedCategoryText: { color: '#FFFFFF' },
+  productCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.surface, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, marginBottom: 10, padding: 16 },
+  productInfo: { flex: 1, minWidth: 0 },
+  cardTitle: { color: COLORS.ink, fontSize: 16, fontWeight: '700', lineHeight: 23 },
+  mutedText: { color: COLORS.muted, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  priceText: { color: COLORS.green, fontSize: 15, fontWeight: '800', marginTop: 8 },
+  productArrow: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  productArrowText: { color: COLORS.primary, fontSize: 25, fontWeight: '700' },
+  orderHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 16 },
+  itemCount: { backgroundColor: COLORS.greenSoft, color: COLORS.green, borderRadius: 12, overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, fontWeight: '700' },
+  emptyCard: { backgroundColor: '#F5F8F5', borderRadius: 14, padding: 22 },
+  emptyTitle: { color: COLORS.ink, fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  emptyText: { color: COLORS.muted, fontSize: 14, lineHeight: 22 },
+  orderCard: { borderBottomColor: COLORS.border, borderBottomWidth: 1, paddingBottom: 20, marginBottom: 18 },
+  orderLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 },
+  quantityControl: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  quantityButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.greenSoft },
+  quantityText: { color: COLORS.green, fontSize: 22, fontWeight: '700' },
+  quantity: { color: COLORS.ink, fontSize: 16, fontWeight: '800', minWidth: 22, textAlign: 'center' },
+  quickNotes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  noteChip: { backgroundColor: COLORS.greenSoft, borderRadius: 12, minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  noteChipText: { color: COLORS.green, fontSize: 12, fontWeight: '600' },
+  totalRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4 },
+  totalLabel: { color: COLORS.muted, fontSize: 14 },
+  totalText: { color: COLORS.ink, fontSize: 22, fontWeight: '800' },
+  historyCard: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 16, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, marginBottom: 12, padding: 18 },
+  addButton: { backgroundColor: COLORS.greenSoft, borderRadius: 12, minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 12 },
+  addButtonText: { color: COLORS.green, fontSize: 13, fontWeight: '700' },
+  navBackground: { backgroundColor: COLORS.surface, borderTopColor: COLORS.border, borderTopWidth: 1 },
+  bottomNav: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingVertical: 8, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  bottomNavButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 58, borderRadius: 14, paddingVertical: 7, paddingHorizontal: 2 },
+  activeBottomNavButton: { backgroundColor: COLORS.primarySoft },
+  bottomNavIcon: { color: COLORS.muted, fontSize: 23, fontWeight: '600', marginBottom: 3 },
+  bottomNavText: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textAlign: 'center' },
+  activeBottomNavText: { color: COLORS.primary },
+  feedbackToast: { marginHorizontal: 20, marginBottom: 8, padding: 14, borderRadius: 14, borderWidth: 1 },
+  feedbackSuccess: { backgroundColor: '#E6F2E9', borderColor: '#9CBDA8' },
+  feedbackError: { backgroundColor: '#FCECE8', borderColor: '#DFA699' },
+  feedbackTitle: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
+  feedbackMessage: { color: COLORS.ink, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(18,35,29,0.55)', justifyContent: 'flex-end' },
+  modalBackdropWide: { justifyContent: 'center', alignItems: 'center', padding: 24 },
+  productModal: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%' },
+  productModalWide: { maxWidth: 560, borderRadius: 24, overflow: 'hidden' },
+  modalContent: { padding: 24 },
+  modalEyebrow: { color: COLORS.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 10 },
+  modalTitle: { color: COLORS.ink, fontSize: 24, fontWeight: '800', lineHeight: 31 },
+  modalInput: { minHeight: 100, textAlignVertical: 'top' },
+  cancelButton: { alignItems: 'center', justifyContent: 'center', minHeight: 48, marginTop: 8 },
+  cancelButtonText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
 });

@@ -4,7 +4,7 @@
     "owner": "onlybeones-team",
     "slug": "matheus-sampaio",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/chef-icon.png",
     "userInterfaceStyle": "light",
     "plugins": [
@@ -12,7 +12,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permita o acesso as fotos para escolher a logo do restaurante.",
+          "photosPermission": "Permita o acesso às fotos para escolher o logotipo do restaurante.",
           "microphonePermission": false
         }
       ]

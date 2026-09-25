@@ -51,7 +51,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80') {
 
 export async function printOrder(order: PrintableOrder, settings: PrinterSettings) {
   if (settings.connection !== 'system') {
-    throw new Error(`A conexao ${settings.connection} precisa do modulo nativo da impressora e de um dispositivo configurado.`);
+    throw new Error(`A conexão ${settings.connection} precisa do módulo nativo da impressora e de um dispositivo configurado.`);
   }
 
   await Print.printAsync({
