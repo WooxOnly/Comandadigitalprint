@@ -1,21 +1,302 @@
 [
   {
-    "id": "item-1",
-    "name": "Produto de exemplo",
-    "category": "Lanches",
-    "price": 0
+    "id": "seabra-Aperitivos-0",
+    "name": "Camarão frito ao alho — 1 lb",
+    "category": "Aperitivos",
+    "price": 15.99,
+    "code": "3156"
   },
   {
-    "id": "item-2",
-    "name": "Pizza de exemplo",
-    "category": "Pizzas",
-    "price": 0,
+    "id": "seabra-Aperitivos-1",
+    "name": "Camarão frito ao alho — 2 lb",
+    "category": "Aperitivos",
+    "price": 29.99,
+    "code": "3157"
+  },
+  {
+    "id": "seabra-Aperitivos-2",
+    "name": "Mandioca frita",
+    "category": "Aperitivos",
+    "price": 8.99,
+    "code": "1199"
+  },
+  {
+    "id": "seabra-Aperitivos-3",
+    "name": "Batata frita com cheddar e bacon",
+    "category": "Aperitivos",
+    "price": 10.99,
+    "code": "1179"
+  },
+  {
+    "id": "seabra-Aperitivos-4",
+    "name": "Asinha de frango frita com alho",
+    "category": "Aperitivos",
+    "price": 10.99,
+    "code": "1198"
+  },
+  {
+    "id": "seabra-Aperitivos-5",
+    "name": "Calabresa acebolada",
+    "category": "Aperitivos",
+    "price": 11.99,
+    "code": "1197"
+  },
+  {
+    "id": "seabra-Aperitivos-6",
+    "name": "Picanha acebolada",
+    "category": "Aperitivos",
+    "price": 19.99,
+    "code": "1196"
+  },
+  {
+    "id": "seabra-Aperitivos-7",
+    "name": "Picanha com mandioca e Catupiry",
+    "category": "Aperitivos",
+    "price": 24.99,
+    "code": "1181"
+  },
+  {
+    "id": "seabra-Aperitivos-8",
+    "name": "Isca de frango com molho de alho",
+    "category": "Aperitivos",
+    "price": 15.99,
+    "code": "5151"
+  },
+  {
+    "id": "seabra-Aperitivos-9",
+    "name": "Isca de tilápia com molho de alho",
+    "category": "Aperitivos",
+    "price": 15.99,
+    "code": "5151"
+  },
+  {
+    "id": "seabra-Lanches-0",
+    "name": "Pão com manteiga",
+    "category": "Lanches",
+    "price": 1.99,
+    "code": "1192/10241"
+  },
+  {
+    "id": "seabra-Lanches-1",
+    "name": "Pão com ovo",
+    "category": "Lanches",
+    "price": 3.99,
+    "code": "1153/10243",
+    "description": "Pão francês com ovo mexido."
+  },
+  {
+    "id": "seabra-Lanches-2",
+    "name": "Queijo quente",
+    "category": "Lanches",
+    "price": 3.99,
+    "code": "1191/20333",
+    "description": "Pão francês, manteiga e mussarela."
+  },
+  {
+    "id": "seabra-Lanches-3",
+    "name": "Misto quente",
+    "category": "Lanches",
+    "price": 4.99,
+    "code": "1079/10242",
+    "description": "Pão francês, manteiga, presunto e mussarela."
+  },
+  {
+    "id": "seabra-Lanches-4",
+    "name": "Bauru",
+    "category": "Lanches",
+    "price": 6.99,
+    "code": "1172/10134",
+    "description": "Pão francês, manteiga, presunto, mussarela, ovo, tomate e orégano."
+  },
+  {
+    "id": "seabra-Lanches-5",
+    "name": "Pão com mortadela",
+    "category": "Lanches",
+    "price": 5.99,
+    "code": "1190/20323",
+    "description": "Pão francês, manteiga e mortadela."
+  },
+  {
+    "id": "seabra-Lanches-6",
+    "name": "Omelete simples",
+    "category": "Lanches",
+    "price": 6.99,
+    "code": "1085/10324",
+    "description": "5 ovos e pão com manteiga."
+  },
+  {
+    "id": "seabra-Lanches-7",
+    "name": "Omelete variado",
+    "category": "Lanches",
+    "price": 11.99,
+    "code": "1086/10325",
+    "description": "5 ovos, presunto, mussarela, tomate, bacon e pão com manteiga."
+  },
+  {
+    "id": "seabra-Hambúrgueres-0",
+    "name": "Hamburgão",
+    "category": "Hambúrgueres",
+    "price": 16.99,
+    "code": "3058/10323",
+    "description": "Pão de hambúrguer, 2 hambúrgueres de Angus, maionese, ketchup, mostarda, mussarela, presunto, ovo frito, alface, tomate, cebola, bacon e batata frita."
+  },
+  {
+    "id": "seabra-Hambúrgueres-1",
+    "name": "X-tudo",
+    "category": "Hambúrgueres",
+    "price": 15.99,
+    "code": "3061/10328",
+    "description": "Pão de hambúrguer, hambúrguer de Angus, maionese, ketchup, mostarda, mussarela, presunto, bacon, ovo frito, alface, tomate, cebola e batata frita."
+  },
+  {
+    "id": "seabra-Hambúrgueres-2",
+    "name": "X-picanha",
+    "category": "Hambúrgueres",
+    "price": 18.99,
+    "code": "1111/10327",
+    "description": "Pão de sal, picanha, mussarela, maionese, alface, tomate, ovo frito, bacon e batata frita."
+  },
+  {
+    "id": "seabra-Hambúrgueres-3",
+    "name": "X-burger",
+    "category": "Hambúrgueres",
+    "price": 11.99,
+    "code": "1193/10329",
+    "description": "Pão de hambúrguer, hambúrguer de Angus, maionese, mussarela e batata frita."
+  },
+  {
+    "id": "seabra-Hambúrgueres-4",
+    "name": "X-bacon",
+    "category": "Hambúrgueres",
+    "price": 11.99,
+    "code": "1194/10330",
+    "description": "Pão de hambúrguer, hambúrguer de Angus, maionese, mussarela, bacon e batata frita."
+  },
+  {
+    "id": "seabra-Hambúrgueres-5",
+    "name": "Chicken Rio",
+    "category": "Hambúrgueres",
+    "price": 10.99,
+    "code": "3057/10322",
+    "description": "Pão francês, filé de frango empanado, maionese, mussarela, alface, tomate, picles e batata frita."
+  },
+  {
+    "id": "seabra-Salgados-0",
+    "name": "Coxinha",
+    "category": "Salgados",
+    "price": 2.99
+  },
+  {
+    "id": "pizza-25",
+    "name": "Pepperoni",
+    "category": "Pizzas promocionais",
+    "price": 16.99,
+    "kind": "pizza",
+    "allowsExtras": false
+  },
+  {
+    "id": "pizza-26",
+    "name": "Mussarela",
+    "category": "Pizzas promocionais",
+    "price": 16.99,
+    "kind": "pizza",
+    "allowsExtras": false
+  },
+  {
+    "id": "pizza-27",
+    "name": "Calabresa com cebola",
+    "category": "Pizzas regulares",
+    "price": 23.99,
     "kind": "pizza"
   },
   {
-    "id": "item-3",
-    "name": "Bebida de exemplo",
-    "category": "Bebidas",
-    "price": 0
+    "id": "pizza-28",
+    "name": "Portuguesa",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-29",
+    "name": "Vegetariana",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-30",
+    "name": "Margarita",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-31",
+    "name": "Atum",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-32",
+    "name": "Milho e bacon com alho",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-33",
+    "name": "Mussarela com alho",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-34",
+    "name": "Rúcula com tomate seco",
+    "category": "Pizzas regulares",
+    "price": 23.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-35",
+    "name": "Lombinho com Catupiry",
+    "category": "Pizzas especiais",
+    "price": 27.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-36",
+    "name": "Quatro queijos",
+    "category": "Pizzas especiais",
+    "price": 27.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-37",
+    "name": "Havaiana",
+    "category": "Pizzas especiais",
+    "price": 27.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-38",
+    "name": "Prosciutto com mussarela",
+    "category": "Pizzas especiais",
+    "price": 27.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-39",
+    "name": "Frango com Catupiry",
+    "category": "Pizzas especiais",
+    "price": 27.99,
+    "kind": "pizza"
+  },
+  {
+    "id": "pizza-fatia",
+    "name": "Fatia de pizza",
+    "category": "Fatias",
+    "price": 4.5
   }
 ]

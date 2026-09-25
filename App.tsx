@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, BackHandler, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { printOrder, type PrinterConnection, type PrinterSettings } from './printerService';
+import { DEFAULT_MENU, TOPPINGS, isDemoMenu, type Product } from './menuData';
+import { createOrderItem, describeExtra, type OrderItem, type PizzaMode, type Extra } from './orderItems';
 
-type Product = { id: string; name: string; category: string; price: number; kind?: 'pizza' };
-type OrderItem = Product & { quantity: number; note: string; flavors?: string[] };
 type SavedOrder = { id: string; plate: string; customer: string; items: OrderItem[]; createdAt: string };
 type AppScreen = 'home' | 'order' | 'menu' | 'history' | 'printer';
 
@@ -24,11 +24,6 @@ const CONNECTIONS: { value: PrinterConnection; label: string }[] = [
   { value: 'usb', label: 'USB / OTG' },
 ];
 const DEFAULT_PRINTER_SETTINGS: PrinterSettings = { connection: 'system', name: '', address: '', port: '9100', paperWidth: '80' };
-const DEFAULT_MENU: Product[] = [
-  { id: 'item-1', name: 'Produto de exemplo', category: 'Lanches', price: 0 },
-  { id: 'item-2', name: 'Pizza de exemplo', category: 'Pizzas', price: 0, kind: 'pizza' },
-  { id: 'item-3', name: 'Bebida de exemplo', category: 'Bebidas', price: 0 },
-];
 const QUICK_NOTES = ['Sem cebola', 'Pouco sal', 'Bem passado'];
 
 const TABS: { screen: AppScreen; label: string; title: string; icon: string; hint: string }[] = [
@@ -59,6 +54,10 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productNote, setProductNote] = useState('');
+  const [pizzaMode, setPizzaMode] = useState<PizzaMode | null>(null);
+  const [secondFlavor, setSecondFlavor] = useState<Product | null>(null);
+  const [extras, setExtras] = useState<Extra[]>([]);
+  const [extraPlacement, setExtraPlacement] = useState<Extra['placement']>('whole');
   const [printerSettings, setPrinterSettings] = useState<PrinterSettings>(DEFAULT_PRINTER_SETTINGS);
   const [feedback, setFeedback] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
   const { width: windowWidth, fontScale } = useWindowDimensions();
@@ -84,7 +83,10 @@ export default function App() {
     Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(MENU_UPDATE_URL_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(async ([storedOrders, storedPrinter, storedMenu, storedUrl, storedLogo]) => {
       if (storedOrders) setHistory(JSON.parse(storedOrders) as SavedOrder[]);
       if (storedPrinter) setPrinterSettings({ ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(storedPrinter) as Partial<PrinterSettings> });
-      if (storedMenu) setMenu(JSON.parse(storedMenu) as Product[]);
+      if (storedMenu) {
+        const saved = JSON.parse(storedMenu) as Product[];
+        setMenu(isDemoMenu(saved) ? DEFAULT_MENU : saved);
+      }
       if (storedUrl) {
         setMenuUpdateUrl(storedUrl);
         await refreshMenuFromUrl(storedUrl, false);
@@ -100,27 +102,21 @@ export default function App() {
   function openProduct(product: Product) {
     setSelectedProduct(product);
     setProductNote('');
+    setPizzaMode(product.allowsExtras === false ? 'whole' : null);
+    setSecondFlavor(null);
+    setExtras([]);
+    setExtraPlacement('whole');
   }
 
   function addSelectedProduct() {
     if (!selectedProduct) return;
-    setItems((current) => {
-      if (!productNote.trim()) {
-        const existing = current.find((item) => item.id === selectedProduct.id && !item.note);
-        if (existing) return current.map((item) => item.id === selectedProduct.id && !item.note ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      return [...current, { ...selectedProduct, quantity: 1, note: productNote.trim() }];
-    });
-    setSelectedProduct(null);
-  }
-
-  function addTwoFlavorPizza(first: Product) {
-    const second = pizzaMenu.find((product) => product.id !== first.id);
-    if (!second) {
-      Alert.alert('Cadastre outra pizza', 'A pizza com dois sabores precisa de pelo menos dois sabores cadastrados.');
-      return;
+    try {
+      const item = createOrderItem(selectedProduct, productNote, pizzaMode, secondFlavor, extras);
+      setItems((current) => [...current, item]);
+      setSelectedProduct(null);
+    } catch (error) {
+      Alert.alert('Confira a pizza', error instanceof Error ? error.message : 'Confira os sabores.');
     }
-    setItems((current) => [...current, { ...first, id: `${first.id}-${second.id}-${Date.now()}`, name: 'Pizza com dois sabores', quantity: 1, note: '', flavors: [first.name, second.name], price: Math.max(first.price, second.price) }]);
   }
 
   function changeQuantity(id: string, delta: number) {
@@ -170,7 +166,8 @@ export default function App() {
       const response = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error('Resposta inválida');
       const remoteMenu = await response.json() as Product[];
-      if (!Array.isArray(remoteMenu) || remoteMenu.some((item) => !item || typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.category !== 'string' || typeof item.price !== 'number' || !Number.isFinite(item.price) || (item.kind !== undefined && item.kind !== 'pizza'))) throw new Error('Formato inválido');
+      if (!Array.isArray(remoteMenu) || remoteMenu.some((item) => !item || typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.category !== 'string' || typeof item.price !== 'number' || !Number.isFinite(item.price) || (item.kind !== undefined && item.kind !== 'pizza') || (item.description !== undefined && typeof item.description !== 'string') || (item.allowsExtras !== undefined && typeof item.allowsExtras !== 'boolean'))) throw new Error('Formato inválido');
+      if (isDemoMenu(remoteMenu)) throw new Error('Cardápio online ainda contém exemplos');
       setMenu(remoteMenu);
       setCategory('Todos');
       setMenuUpdateStatus(`Atualizado em ${new Date().toLocaleTimeString('pt-BR')}`);
@@ -189,10 +186,6 @@ export default function App() {
       return;
     }
     await refreshMenuFromUrl(url, true);
-  }
-
-  function orderTotal(orderItems: OrderItem[]) {
-    return orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
   }
 
   function savePrinterSettings() {
@@ -216,7 +209,7 @@ export default function App() {
   }
 
   async function testPrinter() {
-    await printSavedOrder({ id: 'printer-test', plate: 'TESTE', customer: 'Teste de impressão', items: [{ id: 'printer-test-item', name: 'Comanda de teste', category: 'Teste', price: 0, quantity: 1, note: '' }], createdAt: new Date().toISOString() });
+    await printSavedOrder({ id: 'printer-test', plate: 'TESTE', customer: 'Teste de impressão', items: [{ id: 'printer-test-item', name: 'Comanda de teste', category: 'Teste', quantity: 1, note: '' }], createdAt: new Date().toISOString() });
   }
 
   async function sendOrder() {
@@ -310,13 +303,13 @@ export default function App() {
               ) : screen === 'menu' ? (
                 <View>
                   <Text style={styles.settingsIntro}>Organize os produtos e as categorias do seu cardápio.</Text>
+                  <Pressable style={styles.secondaryWideButton} onPress={() => Alert.alert('Carregar cardápio Seabra', 'Substituir os produtos deste aparelho pelo cardápio das fotos? O histórico será mantido.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Carregar', onPress: () => { setMenu(DEFAULT_MENU); setCategory('Todos'); AsyncStorage.setItem(MENU_KEY, JSON.stringify(DEFAULT_MENU)).catch(() => Alert.alert('Falha ao salvar', 'Tente salvar o cardápio novamente.')); } }])}><Text style={styles.secondaryButtonText}>Carregar cardápio Seabra</Text></Pressable>
                   <View style={styles.menuGrid}>
                     {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
                       <Text style={styles.fieldLabel}>Nome do produto</Text>
                       <TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} accessibilityLabel="Nome do produto" placeholder="Ex.: pizza de calabresa" placeholderTextColor={COLORS.placeholder} style={styles.input} />
                       <View style={styles.menuEditRow}>
                         <View style={styles.menuEditField}><Text style={styles.fieldLabel}>Categoria</Text><TextInput value={product.category} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel="Categoria do produto" placeholder="Ex.: pizzas" placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
-                        <View style={styles.priceField}><Text style={styles.fieldLabel}>Preço (R$)</Text><TextInput value={String(product.price)} onChangeText={(price) => updateMenuProduct(product.id, { price: Number(price.replace(',', '.')) || 0 })} accessibilityLabel="Preço do produto" placeholder="0,00" placeholderTextColor={COLORS.placeholder} style={styles.input} keyboardType="decimal-pad" /></View>
                       </View>
                       <View style={styles.menuEditActions}>
                         <Pressable onPress={() => updateMenuProduct(product.id, { kind: product.kind === 'pizza' ? undefined : 'pizza' })} accessibilityRole="checkbox" accessibilityState={{ checked: product.kind === 'pizza' }} style={[styles.noteChip, product.kind === 'pizza' && styles.selectedCategory]}><Text style={[styles.noteChipText, product.kind === 'pizza' && styles.selectedCategoryText]}>{product.kind === 'pizza' ? '✓ Pizza' : 'Marcar como pizza'}</Text></Pressable>
@@ -331,7 +324,7 @@ export default function App() {
                 <View>
                   <Text style={styles.settingsIntro}>Consulte suas comandas e reimprima quando precisar.</Text>
                   {history.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Seu histórico começa aqui</Text><Text style={styles.emptyText}>As comandas salvas aparecerão nesta tela.</Text></View> : history.map((order) => <View key={order.id} style={styles.historyCard}>
-                    <View style={styles.productInfo}><Text style={styles.cardTitle}>Plaquinha {order.plate}</Text><Text style={styles.mutedText}>{order.customer || 'Cliente não informado'}</Text><Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString('pt-BR')}</Text><Text style={styles.priceText}>{order.items.length} {order.items.length === 1 ? 'item' : 'itens'} · R$ {orderTotal(order.items).toFixed(2).replace('.', ',')}</Text></View>
+                    <View style={styles.productInfo}><Text style={styles.cardTitle}>Plaquinha {order.plate}</Text><Text style={styles.mutedText}>{order.customer || 'Cliente não informado'}</Text><Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString('pt-BR')}</Text><Text style={styles.priceText}>{order.items.length} {order.items.length === 1 ? 'item' : 'itens'}</Text></View>
                     <Pressable style={styles.addButton} onPress={() => printSavedOrder(order)}><Text style={styles.addButtonText}>Reimprimir</Text></Pressable>
                   </View>)}
                 </View>
@@ -348,21 +341,20 @@ export default function App() {
                     <Text style={styles.sectionTitle}>Escolha os produtos</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === category }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{value}</Text></Pressable>)}</ScrollView>
                     {filteredMenu.length === 0 && <Text style={styles.emptyText}>Nenhum produto nesta categoria.</Text>}
-                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={'Adicionar ' + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{product.category}</Text><Text style={styles.priceText}>R$ {product.price.toFixed(2).replace('.', ',')}</Text></View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
+                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={'Adicionar ' + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{product.category}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
                   </View>
                   <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
                     <View style={styles.orderHeader}><Text style={styles.panelTitle}>Pedido atual</Text><Text style={styles.itemCount}>{items.length} {items.length === 1 ? 'item' : 'itens'}</Text></View>
                     {items.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Vamos montar uma comanda?</Text><Text style={styles.emptyText}>Toque em um produto do cardápio para adicioná-lo ao pedido.</Text></View> : items.map((item) => <View key={item.id} style={styles.orderCard}>
                       <Text style={styles.cardTitle}>{item.name}</Text>
-                      <Text style={styles.mutedText}>{item.flavors?.join(' / ') || item.category}</Text>
+                      <Text style={styles.mutedText}>{item.flavors?.map((flavor, index) => `${index + 1}ª metade: ${flavor}`).join('\n') || item.category}</Text>
+                      {item.extras?.map((extra) => <Text key={extra.name + extra.placement} style={styles.mutedText}>+ {describeExtra(extra, item.flavors)}</Text>)}
                       <View style={styles.orderLine}>
-                        <Text style={styles.priceText}>R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}</Text>
                         <View style={styles.quantityControl}><Pressable onPress={() => changeQuantity(item.id, -1)} accessibilityRole="button" accessibilityLabel={'Diminuir quantidade de ' + item.name} style={styles.quantityButton}><Text style={styles.quantityText}>−</Text></Pressable><Text style={styles.quantity}>{item.quantity}</Text><Pressable onPress={() => changeQuantity(item.id, 1)} accessibilityRole="button" accessibilityLabel={'Aumentar quantidade de ' + item.name} style={styles.quantityButton}><Text style={styles.quantityText}>+</Text></Pressable></View>
                       </View>
                       <TextInput value={item.note} onChangeText={(note) => updateNote(item.id, note)} accessibilityLabel={'Observação de ' + item.name} placeholder="Observação do item" placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} multiline />
                       <View style={styles.quickNotes}>{QUICK_NOTES.map((note) => <Pressable key={note} onPress={() => updateNote(item.id, item.note ? item.note + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View>
                     </View>)}
-                    {items.length > 0 && <View style={styles.totalRow}><Text style={styles.totalLabel}>Total do pedido</Text><Text style={styles.totalText}>R$ {orderTotal(items).toFixed(2).replace('.', ',')}</Text></View>}
                     <Pressable style={styles.sendButton} onPress={sendOrder}><Text style={styles.sendButtonText}>Enviar comanda</Text><Text style={styles.sendButtonHint}>Salvar e abrir a impressão</Text></Pressable>
                   </View>
                 </View>
@@ -386,12 +378,31 @@ export default function App() {
               <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
                 <Text style={styles.modalEyebrow}>ADICIONAR AO PEDIDO</Text>
                 <Text style={styles.modalTitle}>{selectedProduct?.name}</Text>
-                <Text style={styles.settingsIntro}>Como você quer este produto?</Text>
+                <Text style={styles.settingsIntro}>{selectedProduct?.description || 'Como você quer este produto?'}</Text>
+                {selectedProduct?.kind === 'pizza' && <>
+                  {selectedProduct.allowsExtras === false ? <Text style={styles.helperText}>Pizza promocional: somente inteira e sem adicionais.</Text> : <>
+                    <Text style={styles.fieldLabel}>1. Inteira ou dois sabores?</Text>
+                    <View style={styles.quickNotes}>{([{ value: 'whole', label: 'Inteira' }, { value: 'halves', label: 'Dois sabores' }] as const).map((option) => <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ checked: pizzaMode === option.value }} onPress={() => { if (pizzaMode === option.value) return; setPizzaMode(option.value); setSecondFlavor(null); setExtras([]); setExtraPlacement('whole'); }} style={[styles.noteChip, pizzaMode === option.value && styles.selectedCategory]}><Text style={[styles.noteChipText, pizzaMode === option.value && styles.selectedCategoryText]}>{option.label}</Text></Pressable>)}</View>
+                  </>}
+                  {pizzaMode === 'halves' && <>
+                    <Text style={styles.fieldLabel}>2. Qual é o outro sabor?</Text>
+                    <Text style={styles.helperText}>1ª metade: {selectedProduct.name}</Text>
+                    <View style={styles.quickNotes}>{pizzaMenu.filter((pizza) => pizza.id !== selectedProduct.id && pizza.allowsExtras !== false).map((pizza) => <Pressable key={pizza.id} accessibilityRole="radio" accessibilityState={{ checked: secondFlavor?.id === pizza.id }} onPress={() => setSecondFlavor(pizza)} style={[styles.noteChip, secondFlavor?.id === pizza.id && styles.selectedCategory]}><Text style={[styles.noteChipText, secondFlavor?.id === pizza.id && styles.selectedCategoryText]}>{pizza.name}</Text></Pressable>)}</View>
+                  </>}
+                  {selectedProduct.allowsExtras !== false && pizzaMode && (pizzaMode === 'whole' || secondFlavor) && <>
+                    <Text style={styles.fieldLabel}>Extras (opcional)</Text>
+                    {pizzaMode === 'halves' && <View style={styles.quickNotes}>{([{ value: 'whole', label: 'Pizza inteira' }, { value: 'first', label: '1ª metade: ' + selectedProduct.name }, { value: 'second', label: '2ª metade: ' + secondFlavor?.name }] as const).map((option) => <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ checked: extraPlacement === option.value }} onPress={() => setExtraPlacement(option.value)} style={[styles.noteChip, extraPlacement === option.value && styles.selectedCategory]}><Text style={[styles.noteChipText, extraPlacement === option.value && styles.selectedCategoryText]}>{option.label}</Text></Pressable>)}</View>}
+                    <View style={styles.quickNotes}>{TOPPINGS.map((name) => {
+                      const checked = extras.some((extra) => extra.name === name && extra.placement === extraPlacement);
+                      return <Pressable key={name} accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={() => setExtras((current) => checked ? current.filter((extra) => !(extra.name === name && extra.placement === extraPlacement)) : [...current.filter((extra) => extra.name !== name || (extra.placement !== 'whole' && extraPlacement !== 'whole')), { name, placement: extraPlacement }])} style={[styles.noteChip, checked && styles.selectedCategory]}><Text style={[styles.noteChipText, checked && styles.selectedCategoryText]}>{checked ? '✓ ' : '+ '}{name}</Text></Pressable>;
+                    })}</View>
+                    {extras.length > 0 && <Text style={styles.helperText}>{extras.map((extra) => '+ ' + describeExtra(extra, [selectedProduct.name, secondFlavor?.name || ''])).join('\n')}</Text>}
+                  </>}
+                </>}
                 <Text style={styles.fieldLabel}>Observação (opcional)</Text>
                 <TextInput value={productNote} onChangeText={setProductNote} accessibilityLabel="Observação do produto" placeholder="Ex.: bem passado, sem molho..." placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.modalInput]} multiline />
-                <View style={styles.quickNotes}>{['Remover cebola', 'Adicionar ovos', 'Sem pimenta'].map((note) => <Pressable key={note} onPress={() => setProductNote((current) => current ? current + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View>
-                {selectedProduct?.kind === 'pizza' && <Pressable style={styles.secondaryWideButton} onPress={() => { addTwoFlavorPizza(selectedProduct); setSelectedProduct(null); }}><Text style={styles.secondaryButtonText}>Adicionar com dois sabores</Text></Pressable>}
-                <Pressable style={styles.sendButton} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>Adicionar ao pedido</Text></Pressable>
+                <View style={styles.quickNotes}>{['Sem cebola', 'Sem pimenta', 'Bem passado'].map((note) => <Pressable key={note} onPress={() => setProductNote((current) => current ? current + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{note}</Text></Pressable>)}</View>
+                <Pressable disabled={selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor))} style={[styles.sendButton, selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor)) && styles.pressed]} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>Adicionar ao pedido</Text></Pressable>
                 <Pressable style={styles.cancelButton} onPress={() => setSelectedProduct(null)}><Text style={styles.cancelButtonText}>Cancelar</Text></Pressable>
               </ScrollView>
             </SafeAreaView>

@@ -2,7 +2,7 @@ import * as Print from 'expo-print';
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
 export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' };
-export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[] };
+export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
 export type PrintableOrder = { plate: string; customer: string; items: PrintableOrderItem[]; createdAt: string };
 
 // expo-print uses points (72 per inch), not screen pixels. Long orders paginate.
@@ -16,9 +16,13 @@ function escapeHtml(value: string) {
 
 export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80') {
   const itemRows = order.items.map((item) => {
-    const flavors = item.flavors && item.flavors.length > 0 ? `<div class="muted">${item.flavors.map(escapeHtml).join(' / ')}</div>` : '';
+    const flavors = item.flavors && item.flavors.length > 0 ? `<div class="muted">${item.flavors.map((flavor, index) => `${index + 1}ª metade: ${escapeHtml(flavor)}`).join('<br>')}</div>` : '';
+    const extras = (item.extras || []).map((extra) => {
+      const placement = extra.placement === 'first' ? `1ª metade: ${item.flavors?.[0] || ''}` : extra.placement === 'second' ? `2ª metade: ${item.flavors?.[1] || ''}` : 'inteira';
+      return `<div class="muted"><strong>+ ${escapeHtml(extra.name)}</strong> (${escapeHtml(placement)})</div>`;
+    }).join('');
     const note = item.note ? `<div class="muted">Obs: ${escapeHtml(item.note)}</div>` : '';
-    return `<div class="item"><strong>${item.quantity}x ${escapeHtml(item.name)}</strong>${flavors}${note}</div>`;
+    return `<div class="item"><strong>${item.quantity}x ${escapeHtml(item.name)}</strong>${flavors}${extras}${note}</div>`;
   }).join('');
 
   return `<!doctype html>

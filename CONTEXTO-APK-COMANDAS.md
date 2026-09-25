@@ -37,7 +37,10 @@ Essas opções devem ser avaliadas à luz do código existente e das decisões d
 ## Decisões atualizadas
 
 - A interface deve atender celulares e iPad, em retrato e paisagem, com textos em português corretamente acentuados. A atualização visual usa verde-escuro, terracota, fundo claro e cartões brancos; detalhes em `ATUALIZACAO-VISUAL.md`.
-- O cardápio real será definido e configurado por último.
+- O cardápio Seabra foi fornecido em três fotos em 24/09/2026 e cadastrado: 41 opções, incluindo 15 sabores de pizza. As duas opções de iscas (frango e tilápia) foram separadas para identificar a produção.
+- O usuário pediu para ignorar preços: não há cálculo nem exibição de valores no fluxo de produção. Os valores das fotos permanecem apenas no catálogo de origem.
+- Pizza regular ou especial exige escolher inteira ou dois sabores; o segundo sabor é escolhido explicitamente. Promocionais (Pepperoni e Mussarela) são somente inteiras e sem adicionais, conforme confirmação do usuário.
+- Foram fornecidos 24 extras. A interface permite indicar inteira, primeira ou segunda metade nas pizzas não promocionais; essa localização por metade é uma escolha de implementação. Sabores, extras e observações são preservados no histórico e na reimpressão.
 - A impressão inicial é uma comanda de produção para a cozinha: deve conter produtos, quantidades, sabores e observações, sem preços ou totais financeiros. Isso também vale para reimpressões.
 - O ícone Android deve representar um gorro de chef de cozinha. A arte e sua configuração foram atualizadas nesta etapa; detalhes em `assets/ICONES.md`.
 - A impressão deve ser configurável dentro do aplicativo, sem fixar a solução em um único modelo ou conexão.
@@ -49,11 +52,10 @@ Essas opções devem ser avaliadas à luz do código existente e das decisões d
 ## Decisões ainda pendentes
 
 - Se mesa e plaquinha são o mesmo campo ou identificadores distintos.
-- Regra de preço para pizza com dois sabores.
 - Domínio e serviço de hospedagem do servidor do cardápio.
 - Quais conexões e modelos de impressora estarão disponíveis para os testes de impressão.
 
-Moeda, preços, cardápio final e equipamento não foram definidos no contexto recuperado. Não inventar esses dados nem apresentar exemplos como escolhas confirmadas.
+O equipamento de impressão ainda precisa de teste físico. Não inventar sabores ou ingredientes ausentes das fotos e da lista fornecida.
 
 ## Orientação para o assistente de programação
 

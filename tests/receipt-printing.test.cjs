@@ -25,7 +25,7 @@ for (const paperWidth of ['58', '80']) {
   test(`production receipt uses ${paperWidth} mm for both HTML and print dialog`, async () => {
     const printer = loadPrinter();
     const order = { plate: '7', customer: 'Ana & João', createdAt: '2026-09-22T18:30:00Z', items: [
-      { name: 'Pizza <especial>', quantity: 2, price: 47.83, flavors: ['Calabresa', 'Queijo'], note: 'Sem cebola\nMolho à parte' },
+      { name: 'Pizza <especial>', quantity: 2, price: 47.83, flavors: ['Calabresa', 'Queijo'], extras: [{ name: 'Bacon & alho', placement: 'second' }, { name: 'Milho', placement: 'whole' }], note: 'Sem cebola\nMolho à parte' },
     ] };
     await printer.printOrder(order, { connection: 'system', paperWidth });
     assert.equal(printer.calls.length, 1);
@@ -35,7 +35,7 @@ for (const paperWidth of ['58', '80']) {
     assert.ok(options.html.includes(`size: ${paperWidth}mm 200mm`));
     assert.match(options.html, /margin: 0 auto/);
     assert.match(options.html, /text-align: center/);
-    for (const value of ['Plaquinha: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', 'Calabresa / Queijo', 'Sem cebola\nMolho à parte']) {
+    for (const value of ['Plaquinha: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', '1ª metade: Calabresa', '2ª metade: Queijo', '+ Bacon &amp; alho', '(2ª metade: Queijo)', '+ Milho', '(inteira)', 'Sem cebola\nMolho à parte']) {
       assert.ok(options.html.includes(value));
     }
     assert.doesNotMatch(options.html, /R\$|47[.,]83|95[.,]66|subtotal|total:/i);
