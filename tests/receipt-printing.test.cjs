@@ -22,6 +22,18 @@ function loadPrinter() {
 }
 
 for (const paperWidth of ['58', '80']) {
+  test(`printer test sends its own centered document at ${paperWidth} mm`, async () => {
+    const printer = loadPrinter();
+    await printer.printPrinterTest({ connection: 'system', paperWidth });
+    assert.equal(printer.calls.length, 1);
+    const options = printer.calls[0];
+    assert.match(options.html, /Impressora configurada com sucesso/);
+    assert.match(options.html, /text-align: center/);
+    assert.ok(options.html.includes(`size: ${paperWidth}mm 200mm`));
+    assert.ok(Math.abs(options.width * 25.4 / 72 - Number(paperWidth)) < 0.2);
+    assert.doesNotMatch(options.html, /Plaquinha|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
+  });
+
   test(`production receipt uses ${paperWidth} mm for both HTML and print dialog`, async () => {
     const printer = loadPrinter();
     const order = { plate: '7', customer: 'Ana & João', createdAt: '2026-09-22T18:30:00Z', items: [
@@ -41,6 +53,12 @@ for (const paperWidth of ['58', '80']) {
     assert.doesNotMatch(options.html, /R\$|47[.,]83|95[.,]66|subtotal|total:/i);
   });
 }
+
+test('unsupported direct connection fails without pretending to print a test', async () => {
+  const printer = loadPrinter();
+  await assert.rejects(printer.printPrinterTest({ connection: 'bluetooth', paperWidth: '58' }), /módulo nativo/);
+  assert.equal(printer.calls.length, 0);
+});
 
 test('native print dialog patch is compatible with installed expo-print and idempotent', () => {
   const root = path.dirname(require.resolve('expo-print/package.json'));

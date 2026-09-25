@@ -3,6 +3,7 @@
     "name": "Comandadigitalprint",
     "owner": "onlybeones-team",
     "slug": "matheus-sampaio",
+    "scheme": "comandadigitalprint",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/chef-icon.png",
@@ -15,7 +16,8 @@
           "photosPermission": "Permita o acesso às fotos para escolher o logotipo do restaurante.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-router"
     ],
     "ios": {
       "supportsTablet": true

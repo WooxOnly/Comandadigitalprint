@@ -1,5 +1,7 @@
 # Revisão do projeto — 22/09/2026
 
+> Atualização de 25/09/2026: este documento preserva a revisão histórica. Os itens 1 e 3 foram resolvidos no cadastro Seabra; 2, 5, 6 e 7 foram tratados na etapa de envio/servidor/Expo Router. Permanecem integração direta com impressoras e validação física. Hospedagem definida como Cloudflare Workers + D1, ainda não publicada. Consulte `PENDENCIAS.md` e `server/README.md` para o estado atual.
+
 ## Resultado desta etapa
 
 - O aplicativo já tem cadastro local de produtos, categorias, pedidos, observações, histórico, reimpressão e atualização do cardápio por URL.

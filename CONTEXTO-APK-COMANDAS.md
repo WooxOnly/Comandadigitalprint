@@ -48,11 +48,15 @@ Essas opções devem ser avaliadas à luz do código existente e das decisões d
 - O cardápio ficará hospedado fora da rede local em um servidor HTTPS.
 - O aplicativo consultará o servidor ao abrir e terá um botão para forçar uma nova atualização.
 - O servidor terá leitura pública do cardápio e atualização administrativa protegida por token.
+- Em 25/09/2026: envio protegido contra toques repetidos; pedido só é limpo após persistência. Navegação migrada para Expo Router em `src/app/`, com estado compartilhado em `src/state/`.
+- Orientação mais recente: sem campo de URL no app. Endereço fixo interno em `src/config/menu.ts`; botão “Atualizar cardápio” e consulta automática ao abrir. Mostrar “Cardápio atualizado com sucesso” somente se houver mudança e ela tiver sido salva; preservar o catálogo local em caso de falha.
+- Hospedagem escolhida: Cloudflare Workers + D1, plano gratuito. Código/configuração preparados; publicação depende de conta Cloudflare e solicitação do usuário. Instruções em `server/README.md`.
+- Melhoria adicional da comanda impressa fica para depois, registrada em `PENDENCIAS.md`. Não modificar agora.
 
 ## Decisões ainda pendentes
 
 - Se mesa e plaquinha são o mesmo campo ou identificadores distintos.
-- Domínio e serviço de hospedagem do servidor do cardápio.
+- Conta Cloudflare e URL final para publicar o servidor já preparado.
 - Quais conexões e modelos de impressora estarão disponíveis para os testes de impressão.
 
 O equipamento de impressão ainda precisa de teste físico. Não inventar sabores ou ingredientes ausentes das fotos e da lista fornecida.

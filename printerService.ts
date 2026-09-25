@@ -53,13 +53,42 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80') {
 </html>`;
 }
 
-export async function printOrder(order: PrintableOrder, settings: PrinterSettings) {
+export function buildPrinterTestHtml(paperWidth: PrinterSettings['paperWidth']) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teste de impressão</title>
+  <style>
+    @page { size: ${paperWidth}mm 200mm; margin: 0; }
+    body { box-sizing: border-box; width: ${paperWidth}mm; max-width: 100%; margin: 0 auto; padding: 4mm 2mm; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; text-align: center; color: #000; overflow-wrap: anywhere; }
+    h1 { font-size: 16px; margin: 0 0 6mm; }
+    p { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4mm 0; }
+  </style>
+</head>
+<body>
+  <h1>TESTE DE IMPRESSÃO</h1>
+  <p><strong>Impressora configurada com sucesso</strong></p>
+</body>
+</html>`;
+}
+
+async function printHtml(html: string, settings: PrinterSettings) {
   if (settings.connection !== 'system') {
     throw new Error(`A conexão ${settings.connection} precisa do módulo nativo da impressora e de um dispositivo configurado.`);
   }
 
   await Print.printAsync({
-    html: buildOrderHtml(order, settings.paperWidth),
+    html,
     ...getReceiptPageSize(settings.paperWidth),
   });
+}
+
+export async function printOrder(order: PrintableOrder, settings: PrinterSettings) {
+  await printHtml(buildOrderHtml(order, settings.paperWidth), settings);
+}
+
+export async function printPrinterTest(settings: PrinterSettings) {
+  await printHtml(buildPrinterTestHtml(settings.paperWidth), settings);
 }
