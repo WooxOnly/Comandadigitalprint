@@ -14,12 +14,28 @@ function loadPrinter() {
   vm.runInNewContext(compiled, {
     exports,
     require(name) {
+      if (name.endsWith('/translations')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output }); return output; }
       assert.equal(name, 'expo-print');
       return { printAsync: async (options) => { calls.push(options); } };
     },
   });
   return { ...exports, calls };
 }
+
+test('all receipt languages preserve product names and extras, including reprints', async () => {
+  const printer = loadPrinter();
+  const order = { plate: '7', customer: '', createdAt: '2026-09-22T18:30:00Z', items: [
+    { name: 'Pizza inteira — Rúcula com tomate seco', quantity: 1, note: 'Sem cebola', extras: [{ name: 'Requeijão cremoso', placement: 'whole' }] },
+    { name: 'Pizza de dois sabores', quantity: 1, note: '', flavors: ['Frango com Catupiry', 'Calabresa com cebola'], extras: [{ name: 'Mussarela', placement: 'first' }] },
+  ] };
+  for (const [language, title, half, success] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente']]) {
+    await printer.printOrder(order, { connection: 'system', paperWidth: '58' }, language);
+    const html = printer.calls.at(-1).html;
+    for (const text of [title, half, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
+    assert.ok(printer.buildPrinterTestHtml('80', language).includes(success));
+    if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
+  }
+});
 
 for (const paperWidth of ['58', '80']) {
   test(`printer test sends its own centered document at ${paperWidth} mm`, async () => {
@@ -56,7 +72,7 @@ for (const paperWidth of ['58', '80']) {
 
 test('unsupported direct connection fails without pretending to print a test', async () => {
   const printer = loadPrinter();
-  await assert.rejects(printer.printPrinterTest({ connection: 'bluetooth', paperWidth: '58' }), /módulo nativo/);
+  await assert.rejects(printer.printPrinterTest({ connection: 'bluetooth', paperWidth: '58' }), /Conexão direta indisponível/);
   assert.equal(printer.calls.length, 0);
 });
 

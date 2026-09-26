@@ -7,8 +7,7 @@
     {
       "binding": "DB",
       "database_name": "seabra-cardapio",
-      // Replace with the database ID from your Cloudflare account before publishing.
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "8635f667-3197-49f9-a83f-d8490ff5d939"
     }
   ]
 }

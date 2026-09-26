@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -8,6 +9,7 @@ import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../
 import { isValidMenu } from '../../shared/menu-validation.mjs';
 import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
 import { MENU_ENDPOINT } from '../config/menu';
+import { ORDER_SETTINGS_KEY, DEFAULT_ORDER_SETTINGS, parseOrderSettings, customerValidationMessage } from '../services/orderSettings';
 import { applyMenuUpdate } from '../services/menuUpdate';
 import { createOrderSubmitter } from '../services/orderSubmission';
 import { persistSettings, normalizeMenuUrl, PRINTER_SETTINGS_KEY } from '../services/settings';
@@ -18,10 +20,15 @@ const MENU_KEY = '@comandadigitalprint/menu';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
 
 function useAppState() {
+  const { t, language } = useLanguage();
   const [category, setCategory] = useState('Todos');
   const [plate, setPlate] = useState('1');
   const [customPlate, setCustomPlate] = useState('');
   const [customer, setCustomer] = useState('');
+  const [customerError, setCustomerError] = useState('');
+  const [orderSettings, setOrderSettings] = useState(DEFAULT_ORDER_SETTINGS);
+  const [savingOrderSettings, setSavingOrderSettings] = useState(false);
+  const orderSettingsLock = useRef(false);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [history, setHistory] = useState<SavedOrder[]>([]);
   const [menu, setMenu] = useState<Product[]>(DEFAULT_MENU);
@@ -46,7 +53,8 @@ function useAppState() {
   useEffect(() => { menuRef.current = menu; }, [menu]);
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(([storedOrders, storedPrinter, storedMenu, storedLogo]) => {
+    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(LOGO_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY)]).then(([storedOrders, storedPrinter, storedMenu, storedLogo, storedOrderSettings]) => {
+      setOrderSettings(parseOrderSettings(storedOrderSettings));
       if (storedOrders) {
         const saved = JSON.parse(storedOrders) as SavedOrder[];
         if (!Array.isArray(saved)) throw new Error('Histórico inválido');
@@ -62,7 +70,9 @@ function useAppState() {
       if (storedLogo) setLogoUri(storedLogo);
       setIsReady(true);
       void updateMenu(false);
-    }).catch(() => Alert.alert('Dados indisponíveis', 'Não foi possível carregar os dados salvos. Feche e abra o aplicativo para tentar novamente. O envio ficará bloqueado para proteger o histórico.'));
+    }).catch(() => Alert.alert(t('Dados indisponíveis'), t('Não foi possível carregar os dados salvos. Feche e abra o aplicativo para tentar novamente. O envio ficará bloqueado para proteger o histórico.')));
+  // Hydrate once; changing the display language must not overwrite an active order.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredMenu = useMemo(() => category === 'Todos' ? menu : menu.filter((item) => item.category === category), [category, menu]);
@@ -86,7 +96,7 @@ function useAppState() {
       setItems((current) => [...current, item]);
       setSelectedProduct(null);
     } catch (error) {
-      Alert.alert('Confira a pizza', error instanceof Error ? error.message : 'Confira os sabores.');
+      Alert.alert(t('Confira a pizza'), t(error instanceof Error ? error.message : 'Confira os sabores.'));
     }
   }
 
@@ -104,10 +114,32 @@ function useAppState() {
     setPrinterSettings((current) => ({ ...current, ...change }));
   }
 
+  function changeCustomer(value: string) {
+    setCustomer(value);
+    if (customerError) setCustomerError(customerValidationMessage(value, orderSettings.requireCustomer));
+  }
+
+  async function setRequireCustomer(required: boolean) {
+    if (orderSettingsLock.current) return;
+    orderSettingsLock.current = true;
+    setSavingOrderSettings(true);
+    try {
+      const next = { requireCustomer: required };
+      await AsyncStorage.setItem(ORDER_SETTINGS_KEY, JSON.stringify(next));
+      setOrderSettings(next);
+      setCustomerError('');
+    } catch {
+      Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar a regra do cliente. Tente novamente.'));
+    } finally {
+      orderSettingsLock.current = false;
+      setSavingOrderSettings(false);
+    }
+  }
+
   async function chooseLogo() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permissão necessária', 'Permita o acesso às fotos para escolher o logotipo do restaurante.');
+      Alert.alert(t('Permissão necessária'), t('Permita o acesso às fotos para escolher o logotipo do restaurante.'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 });
@@ -122,9 +154,9 @@ function useAppState() {
     try {
       if (!isValidMenu(menu)) throw new Error('Confira nomes, categorias e identificadores do cardápio.');
       await AsyncStorage.setItem(MENU_KEY, JSON.stringify(menu));
-      Alert.alert('Cardápio salvo', 'Os produtos foram salvos neste aparelho.');
+      Alert.alert(t('Cardápio salvo'), t('Os produtos foram salvos neste aparelho.'));
     } catch (error) {
-      Alert.alert('Falha ao salvar', error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.');
+      Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'));
     }
   }
 
@@ -159,14 +191,14 @@ function useAppState() {
         setMenu(menuRef.current);
         setCategory('Todos');
         setMenuUpdateStatus('Cardápio atualizado com sucesso');
-        Alert.alert('Cardápio atualizado', 'Cardápio atualizado com sucesso.');
+        Alert.alert(t('Cardápio atualizado'), t('Cardápio atualizado com sucesso.'));
       } else {
         setMenuUpdateStatus('Seu cardápio já está atualizado');
-        if (manual) Alert.alert('Cardápio em dia', 'Seu cardápio já está atualizado.');
+        if (manual) Alert.alert(t('Cardápio em dia'), t('Seu cardápio já está atualizado.'));
       }
     } catch {
       setMenuUpdateStatus('Cardápio salvo disponível');
-      if (manual) Alert.alert('Atualização indisponível', 'Não foi possível verificar atualizações agora. O cardápio salvo continua disponível.');
+      if (manual) Alert.alert(t('Atualização indisponível'), t('Não foi possível verificar atualizações agora. O cardápio salvo continua disponível.'));
     } finally {
       clearTimeout(timeout);
       menuUpdateLock.current = false;
@@ -177,9 +209,9 @@ function useAppState() {
   async function savePrinterSettings() {
     try {
       await persistSettings(AsyncStorage, printerSettings);
-      Alert.alert('Configuração salva', 'As preferências da impressora foram salvas neste aparelho.');
+      Alert.alert(t('Configuração salva'), t('As preferências da impressora foram salvas neste aparelho.'));
     } catch (error) {
-      Alert.alert('Falha ao salvar', error instanceof Error ? error.message : 'Não foi possível salvar a configuração.');
+      Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'));
     }
   }
 
@@ -190,7 +222,7 @@ function useAppState() {
 
   async function printSavedOrder(order: SavedOrder) {
     try {
-      await printOrder(order, printerSettings);
+      await printOrder(order, printerSettings, language);
       showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       showFeedback('Impressão indisponível', error instanceof Error ? error.message : 'Não foi possível iniciar a impressão.', 'error');
@@ -199,7 +231,7 @@ function useAppState() {
 
   async function testPrinter() {
     try {
-      await printPrinterTest(printerSettings);
+      await printPrinterTest(printerSettings, language);
       showFeedback('Teste de impressão aberto', 'Selecione a impressora e confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       showFeedback('Teste não iniciado', error instanceof Error ? error.message : 'Não foi possível iniciar o teste de impressão.', 'error');
@@ -207,9 +239,15 @@ function useAppState() {
   }
 
   async function sendOrder() {
-    if (!isReady || submitter.busy) return;
+    if (!isReady || submitter.busy || orderSettingsLock.current) return;
     if (items.length === 0) {
-      Alert.alert('Comanda vazia', 'Adicione pelo menos um item antes de enviar.');
+      Alert.alert(t('Comanda vazia'), t('Adicione pelo menos um item antes de enviar.'));
+      return;
+    }
+    const validation = customerValidationMessage(customer, orderSettings.requireCustomer);
+    setCustomerError(validation);
+    if (validation) {
+      Alert.alert(t('Cliente obrigatório'), t(validation));
       return;
     }
     const order: SavedOrder = { id: `${Date.now()}`, plate: customPlate.trim() || plate, customer: customer.trim(), items, createdAt: new Date().toISOString() };
@@ -221,12 +259,12 @@ function useAppState() {
         onBusy: setSending,
       });
     } catch {
-      Alert.alert('Falha ao salvar', 'Seu pedido foi mantido. Tente enviar novamente. A impressão não foi iniciada.');
+      Alert.alert(t('Falha ao salvar'), t('Seu pedido foi mantido. Tente enviar novamente. A impressão não foi iniciada.'));
     }
   }
 
 
-  return { category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

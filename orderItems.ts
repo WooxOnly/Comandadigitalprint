@@ -1,4 +1,5 @@
 import type { Product } from './menuData';
+import { translate, type Language } from './src/i18n/translations';
 
 export type PizzaMode = 'whole' | 'halves';
 export type Extra = { name: string; placement: 'whole' | 'first' | 'second' };
@@ -20,7 +21,7 @@ export function createOrderItem(product: Product, note: string, mode: PizzaMode 
   };
 }
 
-export function describeExtra(extra: Extra, flavors?: string[]) {
-  const location = extra.placement === 'first' ? `1ª metade: ${flavors?.[0] || ''}` : extra.placement === 'second' ? `2ª metade: ${flavors?.[1] || ''}` : 'inteira';
+export function describeExtra(extra: Extra, flavors?: string[], language: Language = 'pt') {
+  const location = extra.placement === 'first' ? `${translate('1ª metade:', language)} ${flavors?.[0] || ''}` : extra.placement === 'second' ? `${translate('2ª metade:', language)} ${flavors?.[1] || ''}` : translate('inteira', language);
   return `${extra.name} (${location})`;
 }

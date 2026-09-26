@@ -1,4 +1,5 @@
 import defaultMenu from '../menu.json' with { type: 'json' };
+import { adminResponse } from './admin-auth.mjs';
 import { isValidMenu, MAX_BODY_BYTES } from '../../shared/menu-validation.mjs';
 
 const headers = {
@@ -28,6 +29,8 @@ async function readBody(request) {
 
 export default {
   async fetch(request, env) {
+    const authentication = await adminResponse(request, env);
+    if (authentication) return authentication;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const pathname = new URL(request.url).pathname;
     try {

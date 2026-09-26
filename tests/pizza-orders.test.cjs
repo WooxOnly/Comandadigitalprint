@@ -8,7 +8,7 @@ const catalog = require('../server/menu.json');
 function loadModule(file) {
   const exports = {};
   const compiled = ts.transpileModule(fs.readFileSync(require.resolve(file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
-  vm.runInNewContext(compiled, { exports, require: () => catalog });
+  vm.runInNewContext(compiled, { exports, require: (name) => name.endsWith('/translations') ? loadModule('../src/i18n/translations.ts') : catalog });
   return exports;
 }
 const { createOrderItem, describeExtra } = loadModule('../orderItems.ts');

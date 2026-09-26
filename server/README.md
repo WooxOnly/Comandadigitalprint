@@ -2,7 +2,7 @@
 
 ## Hospedagem definida: Cloudflare Workers + D1 (plano gratuito)
 
-O Worker fornece HTTPS e o D1 guarda o cardápio em banco, sem depender de arquivos temporários da hospedagem. O projeto está preparado em `server/cloudflare/`. **Não está publicado:** ainda são necessários a conta Cloudflare, o banco e a URL final. Nenhum serviço pago foi contratado.
+O Worker fornece HTTPS e o D1 guarda o cardápio em banco, sem depender de arquivos temporários da hospedagem. O projeto está preparado em `server/cloudflare/`. **Publicado em 26/09/2026:** https://seabra-cardapio.wooxonly-comandas.workers.dev . Painel de senha em `/admin`; instruções e localização da chave privada em `../ACESSO-E-IDIOMAS.md`. Nenhum serviço pago foi contratado.
 
 Na documentação consultada em 25/09/2026, o plano gratuito oferece 100 mil requisições/dia no Workers; o D1 inclui 5 milhões de linhas lidas/dia, 100 mil escritas/dia e 5 GB de armazenamento. Permanecer no plano gratuito; ao atingir limites, o serviço pode ficar indisponível e o aplicativo continua com o cardápio local. Não habilitar cobrança sem nova decisão do usuário.
 
@@ -27,7 +27,7 @@ npx.cmd wrangler@4 deploy --config server/cloudflare/wrangler.jsonc
 
 No prompt de segredo, inserir um token aleatório forte (pelo menos 32 bytes). Não salvar esse token no Git, no app ou na URL. O Worker começa com o cardápio Seabra incluído no código quando o banco está vazio. O primeiro `PUT /menu` grava no D1 e atualizações/deploys posteriores preservam esse conteúdo.
 
-Testar `https://<endereço-retornado>/health` e `/menu`. Configurar a URL completa terminada em `/menu` em `src/config/menu.ts` antes de distribuir o próximo aplicativo. O operador não informa links: usa apenas **Atualizar cardápio**. O app verifica também ao abrir, compara o conteúdo e avisa “Cardápio atualizado com sucesso” somente depois de persistir uma mudança. Sem internet, mantém o cardápio local. Até a publicação, o endereço interno permanece vazio e o app não simula uma atualização bem-sucedida.
+Testar `https://<endereço-retornado>/health` e `/menu`. Configurar a URL completa terminada em `/menu` em `src/config/menu.ts` antes de distribuir o próximo aplicativo. O operador não informa links: usa apenas **Atualizar cardápio**. O app verifica também ao abrir, compara o conteúdo e avisa “Cardápio atualizado com sucesso” somente depois de persistir uma mudança. Sem internet, mantém o cardápio local. O endereço interno já aponta para o serviço publicado; o app instalado receberá essa configuração no próximo build.
 
 ### Verificação local sem publicar
 
