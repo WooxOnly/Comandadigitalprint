@@ -27,7 +27,8 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "react-native-quick-crypto"
     ],
     "ios": {
       "supportsTablet": true

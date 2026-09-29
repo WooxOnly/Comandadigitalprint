@@ -3,14 +3,14 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
-import { ScreenFrame } from '../ui/ScreenFrame';
+import { OrderWorkspace } from '../ui/OrderWorkspace';
 import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
 
 export default function OrderScreen() {
   const { t, language } = useLanguage();
-  const { isWide, plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady } = useApp();
-  return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
-                  <View style={[styles.column, isWide && styles.columnWide]}>
+  const { plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady } = useApp();
+  const catalog = <>
+                  <View style={styles.column}>
                     <View style={styles.panel}>
                       <Text style={styles.panelTitle}>{t("Identificação")}</Text>
                       <Text style={styles.fieldLabel}>{t("Plaquinha")}</Text>
@@ -25,7 +25,8 @@ export default function OrderScreen() {
                     {filteredMenu.length === 0 && <Text style={styles.emptyText}>{t("Nenhum produto nesta categoria.")}</Text>}
                     {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t("Adicionar ") + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{t(product.category)}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
                   </View>
-                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
+                  </>;
+  const order = <View style={[styles.panel, styles.column]}>
                     <View style={styles.orderHeader}><Text style={styles.panelTitle}>{t("Pedido atual")}</Text><Text style={styles.itemCount}>{items.length} {items.length === 1 ? t("item") : t("itens")}</Text></View>
                     {items.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t("Vamos montar uma comanda?")}</Text><Text style={styles.emptyText}>{t("Toque em um produto do cardápio para adicioná-lo ao pedido.")}</Text></View> : items.map((item) => <View key={item.id} style={styles.orderCard}>
                       <Text style={styles.cardTitle}>{itemName(item.name, language)}</Text>
@@ -39,5 +40,6 @@ export default function OrderScreen() {
                     </View>)}
                     <Pressable disabled={sending || !isReady} accessibilityState={{ disabled: sending || !isReady, busy: sending }} style={[styles.sendButton, (sending || !isReady) && styles.pressed]} onPress={sendOrder}><Text style={styles.sendButtonText}>{sending ? t("Salvando e abrindo impressão…") : t("Enviar comanda")}</Text><Text style={styles.sendButtonHint}>{t("Salvar e abrir a impressão")}</Text></Pressable>
                   </View>
-                </View></ScreenFrame>;
+                ;
+  return <OrderWorkspace catalog={catalog} order={order} />;
 }

@@ -1,5 +1,7 @@
 import { useLanguage } from '../i18n/LanguageContext';
 import { LanguageSettings } from '../ui/LanguageSettings';
+import { UserSettings } from '../ui/UserSettings';
+import { TabletSettings } from '../ui/TabletSettings';
 import { Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
@@ -43,5 +45,5 @@ export default function PrinterScreen() {
                     <Text style={styles.helperText}>{t(menuUpdateStatus) || t("Seu cardápio fica disponível mesmo sem internet.")}</Text>
                     <Pressable disabled={updatingMenu} accessibilityState={{ disabled: updatingMenu, busy: updatingMenu }} style={[styles.secondaryWideButton, updatingMenu && styles.pressed]} onPress={() => updateMenu(true)}><Text style={styles.secondaryButtonText}>{updatingMenu ? t("Verificando…") : t("Atualizar cardápio")}</Text></Pressable>
                   </View>
-                </View></ScreenFrame>;
+                </View><TabletSettings /><UserSettings /></ScreenFrame>;
 }

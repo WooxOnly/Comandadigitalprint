@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appStorage as AsyncStorage, cloud } from '../services/cloudStorage';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { translate, LOCALES, type Language } from './translations';
 
@@ -11,6 +11,9 @@ function useLanguageState() {
   useEffect(() => { AsyncStorage.getItem(KEY).then((value) => {
     if (value === 'pt' || value === 'en' || value === 'es') setCurrent(value);
   }).finally(() => setReady(true)).catch(() => {}); }, []);
+  useEffect(() => cloud.subscribe(() => {
+    void AsyncStorage.getItem(KEY).then((value) => { if (value === 'pt' || value === 'en' || value === 'es') setCurrent(value); }).catch(() => {});
+  }), []);
   async function setLanguage(value: Language) {
     if (lock.current) return;
     lock.current = true;

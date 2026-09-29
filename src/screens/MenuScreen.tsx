@@ -1,18 +1,16 @@
 import { useLanguage } from '../i18n/LanguageContext';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_MENU } from '../../menuData';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles, COLORS } from '../ui/theme';
-const MENU_KEY = '@comandadigitalprint/menu';
 
 export default function MenuScreen() {
   const { t } = useLanguage();
-  const { menu, isWide, setMenu, setCategory, updateMenuProduct, removeMenuProduct, addMenuProduct, saveMenu } = useApp();
+  const { menu, isWide, updateMenuProduct, removeMenuProduct, addMenuProduct, saveMenu } = useApp();
   return <ScreenFrame><View>
                   <Text style={styles.settingsIntro}>{t("Organize os produtos e as categorias do seu cardápio.")}</Text>
-                  <Pressable style={styles.secondaryWideButton} onPress={() => Alert.alert(t("Carregar cardápio Seabra"), t("Substituir os produtos deste aparelho pelo cardápio das fotos? O histórico será mantido."), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Carregar"), onPress: () => { setMenu(DEFAULT_MENU); setCategory('Todos'); AsyncStorage.setItem(MENU_KEY, JSON.stringify(DEFAULT_MENU)).catch(() => Alert.alert(t("Falha ao salvar"), t("Tente salvar o cardápio novamente."))); } }])}><Text style={styles.secondaryButtonText}>{t("Carregar cardápio Seabra")}</Text></Pressable>
+                  <Pressable style={styles.secondaryWideButton} onPress={() => Alert.alert(t("Carregar cardápio Seabra"), t("Substituir os produtos deste aparelho pelo cardápio das fotos? O histórico será mantido."), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Carregar"), onPress: () => { void saveMenu(DEFAULT_MENU); } }])}><Text style={styles.secondaryButtonText}>{t("Carregar cardápio Seabra")}</Text></Pressable>
                   <View style={styles.menuGrid}>
                     {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
                       <Text style={styles.fieldLabel}>{t("Nome do produto")}</Text>
@@ -27,6 +25,6 @@ export default function MenuScreen() {
                     </View>)}
                   </View>
                   <Pressable style={styles.secondaryWideButton} onPress={addMenuProduct}><Text style={styles.secondaryButtonText}>{t("+ Adicionar produto")}</Text></Pressable>
-                  <Pressable style={styles.sendButton} onPress={saveMenu}><Text style={styles.sendButtonText}>{t("Salvar cardápio")}</Text></Pressable>
+                  <Pressable style={styles.sendButton} onPress={() => saveMenu()}><Text style={styles.sendButtonText}>{t("Salvar cardápio")}</Text></Pressable>
                 </View></ScreenFrame>;
 }

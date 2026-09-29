@@ -851,6 +851,145 @@ export const translations: Record<string, readonly [string, string]> = {
   ]
 };
 
+Object.assign(translations, {
+  "Sincronizando…": [
+    "Synchronizing…",
+    "Sincronizando…"
+  ],
+  "Dados sincronizados": [
+    "Data synchronized",
+    "Datos sincronizados"
+  ],
+  "Alterações em conflito": [
+    "Conflicting changes",
+    "Cambios en conflicto"
+  ],
+  "Entre na nuvem para sincronizar": [
+    "Sign in online to synchronize",
+    "Inicie sesión en línea para sincronizar"
+  ],
+  "Falha no armazenamento local": [
+    "Local storage error",
+    "Error de almacenamiento local"
+  ],
+  "Pendente de sincronização": [
+    "Pending synchronization",
+    "Pendiente de sincronización"
+  ],
+  "Sincronização": [
+    "Synchronization",
+    "Sincronización"
+  ],
+  "Entre novamente com internet para conectar este tablet. Os pedidos locais serão mantidos.": [
+    "Sign in again with internet to connect this tablet. Local orders will be kept.",
+    "Inicie sesión de nuevo con internet para conectar este dispositivo. Se conservarán los pedidos locales."
+  ],
+  "Este cadastro foi alterado em outro tablet. Escolha qual versão manter. Para pedidos, manter local preserva as duas comandas.": [
+    "This record was changed on another tablet. Choose which version to keep. For orders, keeping local preserves both orders.",
+    "Este registro cambió en otra tablet. Elija qué versión conservar. Para pedidos, conservar local mantiene ambas comandas."
+  ],
+  "Usar servidor": [
+    "Use server version",
+    "Usar versión del servidor"
+  ],
+  "Manter local": [
+    "Keep local version",
+    "Conservar versión local"
+  ],
+  "Última sincronização": [
+    "Last synchronization",
+    "Última sincronización"
+  ],
+  "Salvo no servidor": [
+    "Saved on server",
+    "Guardado en el servidor"
+  ],
+  "Tablet": [
+    "Tablet",
+    "Tablet"
+  ],
+  "Entre como admin para gerenciar os usuários compartilhados.": [
+    "Sign in as admin to manage shared users.",
+    "Entre como admin para gestionar los usuarios compartidos."
+  ],
+  "Usuários são compartilhados entre tablets após sincronizar. Offline, ficam disponíveis os acessos já recebidos neste aparelho.": [
+    "Users are shared between tablets after synchronization. Offline access is available for accounts already received on this device.",
+    "Los usuarios se comparten entre tablets al sincronizar. Sin conexión, están disponibles las cuentas ya recibidas en este dispositivo."
+  ],
+  "Este tablet": [
+    "This tablet",
+    "Esta tablet"
+  ],
+  "Nome do tablet": [
+    "Tablet name",
+    "Nombre de la tablet"
+  ],
+  "Salvar nome do tablet": [
+    "Save tablet name",
+    "Guardar nombre de la tablet"
+  ],
+  "Informe um nome para o tablet.": [
+    "Enter a tablet name.",
+    "Introduzca un nombre para la tablet."
+  ],
+  "Copiar preferências": [
+    "Copy preferences",
+    "Copiar preferencias"
+  ],
+  "Copiar": [
+    "Copy",
+    "Copiar"
+  ],
+  "Impressora e idioma são separados por tablet. Após reinstalar, você pode copiar as preferências do aparelho anterior.": [
+    "Printer and language are separate for each tablet. After reinstalling, you can copy preferences from the previous device.",
+    "La impresora y el idioma son independientes por tablet. Al reinstalar, puede copiar las preferencias del dispositivo anterior."
+  ],
+  "Produtos salvos. Alterações sem conexão ficam pendentes de sincronização.": [
+    "Products saved. Offline changes remain pending synchronization.",
+    "Productos guardados. Los cambios sin conexión quedan pendientes de sincronización."
+  ],
+  "Salve as alterações do cardápio antes de atualizar.": [
+    "Save menu edits before refreshing.",
+    "Guarde los cambios del menú antes de actualizar."
+  ],
+  "Escolha uma imagem menor para sincronizar o logotipo.": [
+    "Choose a smaller image to synchronize the logo.",
+    "Elija una imagen más pequeña para sincronizar el logotipo."
+  ]
+});
+
+Object.assign(translations, {
+  'O admin já está configurado. Use a senha de entrada.': ['Admin is already configured. Use the sign-in password.', 'Admin ya está configurado. Use la contraseña de acceso.'],
+  'Chave de recuperação incorreta.': ['Incorrect recovery key.', 'Clave de recuperación incorrecta.'],
+  'Chave de recuperação': ['Recovery key', 'Clave de recuperación'],
+  'Senha temporária': ['Temporary password', 'Contraseña temporal'],
+  'Recuperar sem internet': ['Recover offline', 'Recuperar sin internet'],
+  'Ativar acesso offline': ['Activate offline access', 'Activar acceso sin internet'],
+  'Acesso do admin não encontrado. Recupere pela internet ou use sua chave de recuperação offline.': ['Admin access not found. Recover online or use your offline recovery key.', 'No se encontró el acceso del admin. Recupérelo por internet o use su clave de recuperación sin conexión.'],
+  'Informe a chave de recuperação guardada fora do aparelho e crie uma senha temporária de 4 a 6 caracteres. Ao conectar, o admin voltará a usar a senha semanal. Pedidos e usuários apagados não serão recuperados.': ['Enter the recovery key kept outside this device and create a temporary password of 4 to 6 characters. After connecting, admin will use the weekly password again. Deleted orders and users will not be restored.', 'Introduzca la clave de recuperación guardada fuera del dispositivo y cree una contraseña temporal de 4 a 6 caracteres. Al conectarse, admin volverá a usar la contraseña semanal. Los pedidos y usuarios eliminados no se recuperarán.'],
+  'Observações': ['Notes', 'Observaciones'],
+  'Ver detalhes': ['View details', 'Ver detalles'],
+  'Ocultar detalhes': ['Hide details', 'Ocultar detalles'],
+  'Use uma senha de 4 a 6 caracteres e confirme a mesma senha.': ['Use a password of 4 to 6 characters and confirm it.', 'Use una contraseña de 4 a 6 caracteres y confírmela.'],
+  'A verificação demorou demais. Tente novamente.': ['Verification took too long. Try again.', 'La verificación tardó demasiado. Inténtelo de nuevo.'],
+  'Não foi possível verificar a senha. Tente novamente.': ['Could not verify the password. Try again.', 'No se pudo verificar la contraseña. Inténtelo de nuevo.'],
+  'Recupere o acesso do admin antes de entrar.': ['Recover admin access before signing in.', 'Recupere el acceso del admin antes de entrar.'],
+  'Use de 3 a 24 letras, números, ponto, hífen ou sublinhado. Admin é reservado.': ['Use 3 to 24 letters, numbers, dots, hyphens or underscores. Admin is reserved.', 'Use de 3 a 24 letras, números, puntos, guiones o guiones bajos. Admin está reservado.'],
+  'Este usuário já existe.': ['This user already exists.', 'Este usuario ya existe.'],
+  'Limite de 30 usuários neste aparelho.': ['Limit of 30 users on this device.', 'Límite de 30 usuarios en este dispositivo.'],
+  'Usuário não encontrado.': ['User not found.', 'Usuario no encontrado.'],
+  'Não é possível desativar o usuário conectado.': ['You cannot deactivate the signed-in user.', 'No se puede desactivar el usuario conectado.'],
+  'Não foi possível recuperar o acesso. Conecte à internet e tente novamente.': ['Could not recover access. Connect to the internet and try again.', 'No se pudo recuperar el acceso. Conéctese a internet e inténtelo de nuevo.'],
+  'Acesso do admin não encontrado neste aparelho. Recupere a senha vigente sem criar outra senha.': ['Admin access was not found on this device. Recover the current password without creating another one.', 'No se encontró el acceso del admin en este dispositivo. Recupere la contraseña vigente sin crear otra.'],
+  'Recuperar acesso do admin': ['Recover admin access', 'Recuperar acceso del admin'],
+  'Usuários': ['Users', 'Usuarios'],
+  'Usuários deste aparelho funcionam sem internet. O admin usa a senha semanal e não pode ser removido.': ['Users on this device work offline. Admin uses the weekly password and cannot be removed.', 'Los usuarios de este dispositivo funcionan sin internet. Admin usa la contraseña semanal y no se puede eliminar.'],
+  'Usuário ativo': ['Active user', 'Usuario activo'],
+  'Redefinir senha': ['Reset password', 'Restablecer contraseña'],
+  'Cadastrar usuário': ['Create user', 'Crear usuario'],
+  'Salvar usuário': ['Save user', 'Guardar usuario'],
+});
+
 export function translate(text: string, language: Language = 'pt'): string {
   const source = translations[text] ? text : Object.keys(translations).find((key) => translations[key].includes(text)) || text;
   return language === 'pt' ? source : translations[source]?.[language === 'en' ? 0 : 1] ?? text;

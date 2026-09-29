@@ -8,7 +8,8 @@ export async function weeklyAdmin(secret, timestamp = Date.now(), revision = 0) 
   const week = Math.floor((timestamp - MONDAY) / WEEK);
   const key = await crypto.subtle.importKey('raw', encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const derive = async (purpose) => hex(await crypto.subtle.sign('HMAC', key, encode(`${purpose}:${week}:${revision}`)));
-  const password = (await derive('admin-password')).slice(0, 24);
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const password = (await derive('admin-password')).slice(0, 12).match(/../g).map((value) => alphabet[parseInt(value, 16) % alphabet.length]).join('');
   const salt = (await derive('admin-salt')).slice(0, 32);
   const saltBytes = Uint8Array.from(salt.match(/../g), (value) => parseInt(value, 16));
   const passwordKey = await crypto.subtle.importKey('raw', encode(password), 'PBKDF2', false, ['deriveBits']);
@@ -63,7 +64,7 @@ export async function adminResponse(request, env) {
     const state = env.DB ? await env.DB.prepare('SELECT revision FROM admin_rotation WHERE id = 1').first() : { revision: 0 };
     if (!state || !Number.isSafeInteger(state.revision) || state.revision < 0) throw new Error('Invalid rotation state');
     const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), state.revision);
-    // Only the verifier is public; the random 96-bit password requires the owner token.
+    // Only the verifier is public; viewing the password requires the owner token.
     return json(privateRoute ? { username: credential.username, password, nextRotation: credential.nextRotation } : credential);
   } catch { return json({ error: 'Admin service unavailable' }, 503); }
 }

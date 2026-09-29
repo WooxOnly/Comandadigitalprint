@@ -4,14 +4,20 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { AppState, Platform } from 'react-native';
 import { createLocalAuth } from '../services/localAuth';
 import { ADMIN_CREDENTIAL_ENDPOINT } from '../config/auth';
+import { passwordDigest } from '../services/passwordDigest';
+import { authStorage, cloud } from '../services/cloudStorage';
+import { CloudError } from '../services/cloudSync';
 
 const AuthContext = createContext<ReturnType<typeof useAuthState> | null>(null);
 function useAuthState() {
-  const [service] = useState(() => createLocalAuth(SecureStore, getRandomBytesAsync));
+  const [service] = useState(() => createLocalAuth(authStorage, getRandomBytesAsync, Date.now, passwordDigest));
+  const [currentUser, setCurrentUser] = useState('');
   const [ready, setReady] = useState(false);
   const [exists, setExists] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [error, setError] = useState('');
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
   const sync = useCallback(async () => {
     try { if (await service.syncAdmin(ADMIN_CREDENTIAL_ENDPOINT)) setExists(true); }
     catch { /* Offline or failed writes keep the last usable credential. */ }
@@ -28,13 +34,40 @@ function useAuthState() {
     const interval = setInterval(() => { if (AppState.currentState === 'active') void sync(); }, 60000);
     return () => { subscription.remove(); clearInterval(interval); };
   }, [sync]);
-  async function login(username: string, password: string, confirmation: string) {
-    if (exists) await service.verify('login', password, username);
-    else { await service.setup(username, password, confirmation); setExists(true); }
-    setSignedIn(true);
+  async function recover() {
+    setRecovering(true); setRecoveryError('');
+    try { await service.syncAdmin(ADMIN_CREDENTIAL_ENDPOINT); setExists(true); }
+    catch { setRecoveryError('Não foi possível recuperar o acesso. Conecte à internet e tente novamente.'); }
+    finally { setRecovering(false); }
   }
-  function logout() { service.logout(); setSignedIn(false); }
-  return { ready, exists, signedIn, error, load, login, logout, service };
+  async function login(username: string, password: string) {
+    const name = username.trim().toLowerCase();
+    try {
+      const result = await cloud.authenticate(name, password);
+      if (name === 'admin') await service.syncAdmin(ADMIN_CREDENTIAL_ENDPOINT, async () => ({ ok: true, json: async () => result.credential }) as Response);
+      else await cloud.cacheUser(name, result.credential, result.revision);
+      setExists(await service.load());
+      await service.verify('login', password, name);
+      await SecureStore.setItemAsync('comandadigitalprint.cloud-session.' + name, result.token);
+      await cloud.setSession({ username: name, token: result.token });
+    } catch (error) {
+      if (!(error instanceof CloudError) || error.code !== 'UNAVAILABLE') {
+        if (error instanceof CloudError) throw new Error(error.code === 'RATE_LIMIT' ? 'Muitas tentativas. Aguarde um minuto.' : 'Usuário ou senha incorretos.');
+        throw error;
+      }
+      await service.load();
+      await service.verify('login', password, name);
+      const token = await SecureStore.getItemAsync('comandadigitalprint.cloud-session.' + name);
+      await cloud.setSession(token ? { username: name, token } : null);
+    }
+    setCurrentUser(name); setSignedIn(true); void cloud.sync();
+  }
+  async function recoverOffline(code: string, password: string, confirmation: string) {
+    await service.recoverOffline(code, password, confirmation);
+    setExists(true); setCurrentUser('admin'); setSignedIn(true);
+  }
+  function logout() { service.logout(); void cloud.setSession(null); setCurrentUser(''); setSignedIn(false); }
+  return { ready, exists, signedIn, currentUser, error, load, login, logout, service, recover, recoverOffline, recovering, recoveryError };
 }
 export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useAuthState();

@@ -4,7 +4,7 @@ const { randomBytes } = require('node:crypto');
 const fs = require('node:fs');
 const ts = require('typescript');
 const output = {};
-new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(output, require);
+new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
 const { createLocalAuth, settingsAccessCode } = output;
 test('panel requires login before serving HTML and rejects cross-origin password changes', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
@@ -36,16 +36,105 @@ test('owner panel never embeds credentials and password endpoint requires the ow
   const denied = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer wrong' } }), env);
   assert.equal(denied.status, 401);
   const allowed = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env);
-  assert.equal(allowed.status, 200); assert.match((await allowed.json()).password, /^[a-f0-9]{24}$/);
+  assert.equal(allowed.status, 200); assert.match((await allowed.json()).password, /^[A-HJ-NP-Z2-9]{6}$/);
   assert.equal(allowed.headers.get('Cache-Control'), 'no-store');
 });
-function fixture() {
-  let saved = null, fail = false;
-  const storage = { getItemAsync: async () => saved, setItemAsync: async (_, value) => { if (fail) throw Error(); saved = value; } };
+function fixture(recovery) {
+  const values = new Map(); let fail = false;
+  const storage = { getItemAsync: async (key) => values.get(key) ?? null, setItemAsync: async (key, value) => { if (fail) throw Error(); values.set(key, value); } };
   const time = { value: new Date(2026, 8, 25, 6).getTime() };
-  const create = () => createLocalAuth(storage, async (size) => randomBytes(size), () => time.value);
-  return { create, time, get saved() { return saved; }, set fail(value) { fail = value; } };
+  const create = () => createLocalAuth(storage, async (size) => randomBytes(size), () => time.value, undefined, recovery);
+  return { create, time, get saved() { return values.get('comandadigitalprint.credentials.v1') ?? null; }, set fail(value) { fail = value; } };
 }
+
+test('offline recovery survives cleared storage, persists lockout and resumes weekly admin after reconnecting', async () => {
+  const { pbkdf2Sync } = require('node:crypto');
+  const code = 'ABCDEFGHJKLMNPQR';
+  const salt = randomBytes(16).toString('hex');
+  const recovery = { salt, hash: pbkdf2Sync(code, Buffer.from(salt, 'hex'), 600000, 32, 'sha256').toString('hex'), iterations: 600000 };
+  const f = fixture(recovery), fresh = f.create(); await fresh.load();
+  await assert.rejects(fresh.recoverOffline(code, '1234567', '1234567'));
+  for (let i = 0; i < 5; i++) await assert.rejects(fresh.recoverOffline('wrong', '123456', '123456'), /incorreta/);
+  const restarted = f.create(); await restarted.load();
+  await assert.rejects(restarted.recoverOffline(code, '123456', '123456'), /minuto/);
+  f.time.value += 60001;
+  f.fail = true;
+  await assert.rejects(restarted.recoverOffline(code, '123456', '123456'));
+  assert.equal(f.saved, null);
+  await assert.rejects(restarted.verify('login', '123456', 'admin'));
+  f.fail = false;
+  await restarted.recoverOffline('abcd-efgh-jklm-npqr', '123456', '123456');
+  assert.ok(!f.saved.includes(code)); assert.ok(!f.saved.includes('123456'));
+  const offline = f.create(); await offline.load();
+  await offline.verify('login', '123456', 'admin');
+  await assert.rejects(offline.recoverOffline(code, '654321', '654321'), /configurado/);
+  await assert.rejects(offline.syncAdmin('https://example.com/auth/admin', async () => { throw Error('offline'); }));
+  await offline.verify('login', '123456', 'admin');
+  const { weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');
+  const weekly = await weeklyAdmin('test-only-secret-not-for-deployment-1234');
+  await offline.syncAdmin('https://example.com/auth/admin', async () => ({ ok: true, json: async () => weekly }));
+  await assert.rejects(offline.verify('login', '123456', 'admin'));
+  await offline.verify('login', weekly.password, 'admin');
+});
+
+test('local users survive restart, require unlocked settings and support disable and password reset offline', async () => {
+  const f = fixture(), auth = f.create(); await auth.load();
+  await assert.rejects(auth.verify('login', 'abc123', 'admin'), /Recupere/);
+  await auth.setup('admin', 'abc123', 'abc123');
+  await assert.rejects(auth.createUser('staff', '123456', '123456'));
+  await auth.verify('settings', '2066');
+  await assert.rejects(auth.createUser('admin', '123456', '123456'));
+  await assert.rejects(auth.createUser('staff', '1234567', '1234567'));
+  await auth.createUser('Staff', '123456', '123456');
+  await assert.rejects(auth.createUser('staff', '123456', '123456'));
+  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
+  f.fail = true;
+  await assert.rejects(auth.updateUser('staff', false));
+  await assert.rejects(auth.createUser('other', '123456', '123456'));
+  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
+  f.fail = false;
+  const reopened = f.create(); await reopened.load();
+  await assert.rejects(reopened.verify('login', 'wrong', 'staff'));
+  await reopened.verify('login', '123456', 'STAFF');
+  await reopened.verify('settings', '2066');
+  await assert.rejects(reopened.updateUser('staff', false));
+  reopened.logout();
+  await assert.rejects(reopened.updateUser('staff', true, '654321', '654321'));
+  await reopened.verify('login', 'abc123', 'admin');
+  await reopened.verify('settings', '2066');
+  await reopened.updateUser('staff', false);
+  await assert.rejects(reopened.verify('login', '123456', 'staff'));
+  await reopened.updateUser('staff', true, '654321', '654321');
+  reopened.lockSettings();
+  await assert.rejects(reopened.updateUser('staff', false));
+  reopened.logout();
+  await assert.rejects(reopened.verify('login', '123456', 'staff'));
+  await reopened.verify('login', '654321', 'staff');
+});
+
+test('native password wrapper preserves old and weekly hashes and releases stalled verification', async (t) => {
+  const crypto = require('node:crypto');
+  const code = ts.transpileModule(fs.readFileSync('src/services/passwordDigest.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const load = (pbkdf2) => {
+    const result = {};
+    new Function('exports', 'require', code)(result, (name) => name === 'react-native-quick-crypto' ? { pbkdf2 } : require(name));
+    return result.passwordDigest;
+  };
+  const nativeDigest = load(crypto.pbkdf2);
+  const salt = '1234567890abcdef1234567890abcdef';
+  for (const iterations of [100000, 600000]) {
+    const expected = crypto.pbkdf2Sync('old-senha-á-123', Buffer.from(salt, 'hex'), iterations, 32, 'sha256').toString('hex');
+    assert.equal(await nativeDigest('old-senha-á-123', salt, iterations), expected);
+  }
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let finish;
+  const stalled = load((...args) => { finish = args.at(-1); })('123456', salt, 100000);
+  const rejected = assert.rejects(stalled, /demorou/);
+  t.mock.timers.tick(10000);
+  await rejected;
+  finish(null, Buffer.alloc(32)); // A late response must not turn failure into a successful login.
+  await assert.rejects(stalled, /demorou/);
+});
 test('manual rotation requires authorization and replaces the cached password in the same week', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const { DatabaseSync } = require('node:sqlite');
@@ -78,12 +167,12 @@ test('manual rotation requires authorization and replaces the cached password in
 test('offline login persists hashed credentials, rejects wrong passwords and protects settings', async () => {
   const f = fixture(), first = f.create();
   assert.equal(await first.load(), false);
-  await first.setup('admin', 'local-password', 'local-password');
-  assert.ok(!f.saved.includes('local-password'));
+  await first.setup('admin', 'abc123', 'abc123');
+  assert.ok(!f.saved.includes('abc123'));
   const reopened = f.create(); await reopened.load();
   await assert.rejects(reopened.verify('settings', '2066'));
   await assert.rejects(reopened.verify('login', 'incorrect', 'admin'));
-  await reopened.verify('login', 'local-password', 'admin');
+  await reopened.verify('login', 'abc123', 'admin');
   await reopened.verify('settings', '2066');
   f.time.value += 3600000;
   await assert.rejects(reopened.verify('settings', '2066'));
@@ -93,12 +182,12 @@ test('offline login persists hashed credentials, rejects wrong passwords and pro
 });
 test('failed credential writes never create access; corrupt storage fails closed', async () => {
   const f = fixture(), auth = f.create(); await auth.load(); f.fail = true;
-  await assert.rejects(auth.setup('admin', 'local-password', 'local-password'));
+  await assert.rejects(auth.setup('admin', 'abc123', 'abc123'));
   assert.equal(f.saved, null);
-  await assert.rejects(auth.verify('login', 'local-password', 'admin'));
+  await assert.rejects(auth.verify('login', 'abc123', 'admin'));
   const corrupt = createLocalAuth({ getItemAsync: async () => 'null', setItemAsync: async () => {} }, randomBytes);
   await assert.rejects(corrupt.load());
-  await assert.rejects(corrupt.setup('admin', 'local-password', 'local-password'));
+  await assert.rejects(corrupt.setup('admin', 'abc123', 'abc123'));
 });
 test('admin rotation is weekly; offline, invalid responses and failed writes retain the last password', async () => {
   const { weeklyAdmin, adminResponse } = await import('../server/cloudflare/admin-auth.mjs');

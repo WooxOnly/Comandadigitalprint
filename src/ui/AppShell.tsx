@@ -8,6 +8,7 @@ import { TOPPINGS } from '../../menuData';
 import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
 import { styles, COLORS, TABS, ROUTES } from './theme';
+import { CloudStatus } from './CloudStatus';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
   const path = usePathname();
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
           </View>
 
+          <CloudStatus />
           <View style={styles.flex}>{children}</View>
 
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}

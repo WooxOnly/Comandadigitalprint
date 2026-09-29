@@ -1,5 +1,6 @@
 import defaultMenu from '../menu.json' with { type: 'json' };
 import { adminResponse } from './admin-auth.mjs';
+import { cloudResponse } from './cloud-api.mjs';
 import { isValidMenu, MAX_BODY_BYTES } from '../../shared/menu-validation.mjs';
 
 const headers = {
@@ -29,13 +30,15 @@ async function readBody(request) {
 
 export default {
   async fetch(request, env) {
+    const cloud = await cloudResponse(request, env);
+    if (cloud) return cloud;
     const authentication = await adminResponse(request, env);
     if (authentication) return authentication;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const pathname = new URL(request.url).pathname;
     try {
       if (request.method === 'GET' && (pathname === '/menu' || pathname === '/health')) {
-        const record = await env.DB.prepare('SELECT data FROM menu WHERE id = 1').first();
+        const record = await env.DB.prepare("SELECT data FROM cloud_records WHERE key = 'menu'").first() || await env.DB.prepare('SELECT data FROM menu WHERE id = 1').first();
         const menu = record ? JSON.parse(record.data) : defaultMenu;
         if (!isValidMenu(menu)) throw new Error('Invalid stored menu');
         return json(pathname === '/health' ? { ok: true } : menu);
@@ -46,7 +49,7 @@ export default {
         const menu = await readBody(request);
         if (!isValidMenu(menu)) return json({ error: 'Formato de cardápio inválido' }, 400);
         const updatedAt = new Date().toISOString();
-        await env.DB.prepare('INSERT INTO menu (id, data, updated_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at').bind(JSON.stringify(menu), updatedAt).run();
+        await env.DB.prepare('INSERT INTO cloud_events(mutation, key, data, actor, created_at) VALUES(?, ?, ?, ?, ?)').bind(crypto.randomUUID(), 'menu', JSON.stringify(menu), 'owner', updatedAt).run();
         return json({ ok: true, updatedAt, count: menu.length });
       }
       return json({ error: 'Recurso ou método indisponível' }, pathname === '/menu' ? 405 : 404);

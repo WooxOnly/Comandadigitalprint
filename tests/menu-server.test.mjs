@@ -52,6 +52,7 @@ test('Node server authenticates, rejects bad input, and preserves complete files
 test('Cloudflare handler executes real SQLite reads and durable updates, with the same validation', async () => {
   const db = new DatabaseSync(':memory:');
   db.exec(await readFile(new URL('../server/cloudflare/schema.sql', import.meta.url), 'utf8'));
+  db.exec(await readFile(new URL('../server/cloudflare/cloud-schema.sql', import.meta.url), 'utf8'));
   const env = { MENU_ADMIN_TOKEN: 'test-only-secret', DB: { prepare(sql) {
     return { async first() { return db.prepare(sql).get(); }, bind(...values) { return { async run() { return db.prepare(sql).run(...values); } }; } };
   } } };
