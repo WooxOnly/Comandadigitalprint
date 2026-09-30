@@ -8,7 +8,7 @@ import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
 
 export default function OrderScreen() {
   const { t, language } = useLanguage();
-  const { plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady } = useApp();
+  const { plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady } = useApp();
   const catalog = <>
                   <View style={styles.column}>
                     <View style={styles.panel}>
@@ -22,8 +22,9 @@ export default function OrderScreen() {
                     </View>
                     <Text style={styles.sectionTitle}>{t("Escolha os produtos")}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === category }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{t(value)}</Text></Pressable>)}</ScrollView>
+                    {subcategories.length > 0 && <View><Text style={styles.fieldLabel}>{t('Subgrupos')}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{['', ...subcategories].map(value => <Pressable key={value || 'all'} onPress={() => setSubcategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === subcategory }} style={[styles.category, value === subcategory && styles.selectedCategory]}><Text style={[styles.categoryText, value === subcategory && styles.selectedCategoryText]}>{t(value || 'Todos')}</Text></Pressable>)}</ScrollView></View>}
                     {filteredMenu.length === 0 && <Text style={styles.emptyText}>{t("Nenhum produto nesta categoria.")}</Text>}
-                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t("Adicionar ") + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{t(product.category)}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
+                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t("Adicionar ") + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
                   </View>
                   </>;
   const order = <View style={[styles.panel, styles.column]}>

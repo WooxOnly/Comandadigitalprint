@@ -7,6 +7,7 @@ export function isValidMenu(menu) {
     if (!item || typeof item !== 'object' || Array.isArray(item) ||
       !text(item.id, 120) || ids.has(item.id.trim()) || !text(item.name, 200) || !text(item.category, 100) ||
       typeof item.price !== 'number' || !Number.isFinite(item.price) || item.price < 0 || item.price > 1000000 ||
+      (item.subcategory !== undefined && (typeof item.subcategory !== 'string' || item.subcategory.length > 100)) ||
       (item.kind !== undefined && item.kind !== 'pizza') ||
       (item.description !== undefined && (typeof item.description !== 'string' || item.description.length > 2000)) ||
       (item.code !== undefined && (typeof item.code !== 'string' || item.code.length > 100)) ||

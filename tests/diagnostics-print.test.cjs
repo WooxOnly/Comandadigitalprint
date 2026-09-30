@@ -48,3 +48,19 @@ test('old catalogs get bilingual names and ingredients without restoring exclude
   assert.match(result[0].description, /Pão francês.*French bread/);
   assert.equal(DEFAULT_MENU.some(p => ['Fatias', 'Salgados'].includes(p.category)), false);
 });
+
+ test('legacy pizza categories migrate to subgroups without changing promotional restrictions or custom groups', () => {
+  const { standardizeMenu, filterProducts } = load('menuData.ts');
+  const products = standardizeMenu([
+    { id: 'pizza-25', name: 'Pepperoni', category: 'Pizzas promocionais', kind: 'pizza', allowsExtras: false, price: 0 },
+    { id: 'pizza-27', name: 'Calabresa', category: 'Pizzas regulares', kind: 'pizza', price: 0 },
+    { id: 'pizza-35', name: 'Lombinho', category: 'Pizzas especiais', kind: 'pizza', price: 0 },
+    { id: 'custom', name: 'Suco', category: 'Bebidas', subcategory: 'Naturais', price: 0 },
+  ]);
+  assert.equal(filterProducts(products, 'Pizzas').length, 3);
+  assert.equal(filterProducts(products, 'Pizzas', 'Promocionais')[0].allowsExtras, false);
+  assert.equal(filterProducts(products, 'Pizzas', 'Especiais')[0].id, 'pizza-35');
+  assert.equal(filterProducts(products, 'Bebidas', 'Naturais')[0].id, 'custom');
+  assert.equal(filterProducts(products, 'Todos').length, 4);
+  assert.deepEqual(standardizeMenu(products), products);
+});

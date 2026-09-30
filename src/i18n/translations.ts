@@ -1004,6 +1004,16 @@ Object.assign(translations, {
   'Pedido salvo. Você pode reimprimir pelo histórico.': ['Order saved. You can reprint it from history.', 'Pedido guardado. Puede reimprimirlo desde el historial.'],
 });
 
+Object.assign(translations, {
+  'Grupo': ['Group', 'Grupo'], 'Subgrupos': ['Subgroups', 'Subgrupos'],
+  'Grupo do produto': ['Product group', 'Grupo del producto'],
+  'Subgrupo do produto': ['Product subgroup', 'Subgrupo del producto'],
+  'Subgrupo (opcional)': ['Subgroup (optional)', 'Subgrupo (opcional)'],
+  'Ex.: especiais': ['E.g.: specials', 'Ej.: especiales'],
+  'Organize os produtos em grupos e subgrupos.': ['Organize products into groups and subgroups.', 'Organice los productos en grupos y subgrupos.'],
+  'Promocionais': ['Promotional', 'Promocionales'], 'Regulares': ['Regular', 'Regulares'], 'Especiais': ['Specials', 'Especiales'],
+});
+
 export function translate(text: string, language: Language = 'pt'): string {
   const source = translations[text] ? text : Object.keys(translations).find((key) => translations[key].includes(text)) || text;
   return language === 'pt' ? source : translations[source]?.[language === 'en' ? 0 : 1] ?? text;

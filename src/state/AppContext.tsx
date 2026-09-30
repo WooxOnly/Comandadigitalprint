@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, useWindowDimensions } from 'react-native';
 import { printOrder, printPrinterTest, type PrinterSettings } from '../../printerService';
-import { DEFAULT_MENU, standardizeMenu, isDemoMenu, type Product } from '../../menuData';
+import { DEFAULT_MENU, standardizeMenu, filterProducts, isDemoMenu, type Product } from '../../menuData';
 import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../../orderItems';
 import { isValidMenu } from '../../shared/menu-validation.mjs';
 import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
@@ -22,7 +22,9 @@ const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
 
 function useAppState() {
   const { t, language } = useLanguage();
-  const [category, setCategory] = useState('Todos');
+  const [category, setCategoryState] = useState('Todos');
+  const [subcategory, setSubcategory] = useState('');
+  function setCategory(value: string) { setCategoryState(value); setSubcategory(''); }
   const [plate, setPlate] = useState('1');
   const [customPlate, setCustomPlate] = useState('');
   const [customer, setCustomer] = useState('');
@@ -89,7 +91,9 @@ function useAppState() {
     }).catch(error => logError('storage.refresh_failed', error));
   }), [isReady]);
 
-  const filteredMenu = useMemo(() => category === 'Todos' ? menu : menu.filter((item) => item.category === category), [category, menu]);
+  const subcategories = useMemo(() => category === 'Todos' ? [] : Array.from(new Set(menu.filter(item => item.category === category).map(item => item.subcategory).filter((value): value is string => !!value))), [category, menu]);
+  const activeSubcategory = subcategories.includes(subcategory) ? subcategory : '';
+  const filteredMenu = useMemo(() => filterProducts(menu, category, activeSubcategory), [menu, category, activeSubcategory]);
   const categories = useMemo(() => ['Todos', ...Array.from(new Set(menu.map((item) => item.category).filter(Boolean)))], [menu]);
   const pizzaMenu = useMemo(() => menu.filter((item) => item.kind === 'pizza'), [menu]);
 
@@ -284,7 +288,7 @@ function useAppState() {
   }
 
 
-  return { orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

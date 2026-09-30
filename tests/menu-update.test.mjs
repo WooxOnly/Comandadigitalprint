@@ -36,3 +36,12 @@ test('invalid response and storage failure cannot produce update success', async
   await assert.rejects(applyMenuUpdate(current, [], async () => { throw new Error('storage failed'); }), /storage failed/);
   assert.equal(current[0].name, 'Pizza');
 });
+
+test('changing only the subgroup is persisted and invalid subgroups are rejected', async () => {
+  const next = [{ ...current[0], subcategory: 'Especiais' }];
+  let written;
+  assert.equal(await applyMenuUpdate(current, next, async value => { written = value; }), true);
+  assert.equal(written[0].subcategory, 'Especiais');
+  assert.equal(isValidMenu([{ ...current[0], subcategory: {} }]), false);
+  assert.equal(isValidMenu([{ ...current[0], subcategory: 'a'.repeat(101) }]), false);
+});

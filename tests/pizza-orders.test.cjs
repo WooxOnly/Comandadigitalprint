@@ -17,14 +17,16 @@ const pizzas = catalog.filter((item) => item.kind === 'pizza');
 const promo = pizzas.find((item) => item.allowsExtras === false);
 const [first, second] = pizzas.filter((item) => item.allowsExtras !== false);
 
-test('catalog contains all photographed categories and 24 distinct extras', () => {
-  assert.equal(catalog.length, 41);
-  assert.equal(new Set(catalog.map((item) => item.id)).size, 41);
+test('catalog groups pizzas into three subgroups and keeps 24 distinct extras', () => {
+  assert.equal(catalog.length, 39);
+  assert.equal(new Set(catalog.map((item) => item.id)).size, 39);
+  assert.deepEqual([...new Set(pizzas.map((item) => item.subcategory))], ['Promocionais', 'Regulares', 'Especiais']);
+  assert.ok(pizzas.every((item) => item.category === 'Pizzas'));
   assert.equal(pizzas.length, 15);
   assert.equal(pizzas.filter((item) => item.allowsExtras === false).length, 2);
   assert.equal(TOPPINGS.length, 24);
   assert.equal(new Set(TOPPINGS).size, 24);
-  assert.ok(!catalog.find((item) => item.id === 'pizza-fatia').kind);
+  assert.ok(!catalog.some((item) => item.id === 'pizza-fatia' || item.category === 'Salgados'));
 });
 
 test('two flavors require an explicit valid second choice', () => {

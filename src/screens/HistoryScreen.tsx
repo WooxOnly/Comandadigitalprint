@@ -14,11 +14,11 @@ export default function HistoryScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   return <ScreenFrame><View>
                   <Text style={styles.settingsIntro}>{t("Consulte suas comandas e reimprima quando precisar.")}</Text>
-                  {history.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t("Seu histórico começa aqui")}</Text><Text style={styles.emptyText}>{t("As comandas salvas aparecerão nesta tela.")}</Text></View> : history.map((order) => <View key={order.id} style={[styles.historyCard, { flexDirection: 'column', alignItems: 'stretch' }]}>
-                    <View style={styles.productInfo}><Text style={styles.cardTitle}>{t("Plaquinha")} {order.plate}</Text><Text style={styles.mutedText}>{order.customer || t("Cliente não informado")}</Text><Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)}</Text><Text style={styles.priceText}>{order.items.length} {order.items.length === 1 ? t("item") : t("itens")}</Text></View>
-                    <Text style={styles.helperText}>{t(cloud.pending('order:' + order.id) ? 'Pendente de sincronização' : 'Salvo no servidor')}</Text>
-                    {order.tabletId && <Text style={styles.mutedText}>{t('Tablet')}: {order.tabletId.slice(0, 8)}</Text>}
-                    <Pressable accessibilityRole="button" accessibilityState={{ expanded: expandedId === order.id }} style={styles.addButton} onPress={() => setExpandedId(expandedId === order.id ? null : order.id)}><Text style={styles.addButtonText}>{t(expandedId === order.id ? 'Ocultar detalhes' : 'Ver detalhes')}</Text></Pressable>
+                  {history.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t("Seu histórico começa aqui")}</Text><Text style={styles.emptyText}>{t("As comandas salvas aparecerão nesta tela.")}</Text></View> : history.map((order) => <View key={order.id} style={styles.historyCard}>
+                    <View style={styles.historyHeading}><Text style={[styles.cardTitle, styles.historyHeadingText]}>{t("Plaquinha")} {order.plate}</Text><Text style={styles.historyCount}>{order.items.length} {order.items.length === 1 ? t("item") : t("itens")}</Text></View>
+                    <Text style={styles.mutedText}>{order.customer || t("Cliente não informado")}</Text>
+                    <Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)}</Text>
+                    <View style={styles.historyMeta}><Text style={styles.helperText}>{t(cloud.pending('order:' + order.id) ? 'Pendente de sincronização' : 'Salvo no servidor')}</Text>{order.tabletId && <Text style={styles.helperText}>{t('Tablet')}: {order.tabletId.slice(0, 8)}</Text>}</View>
                     {expandedId === order.id && <View style={{ gap: 12 }}>
                       {order.items.map((item, index) => <View key={`${item.id}-${index}`} style={{ gap: 4 }}>
                         <Text style={styles.cardTitle}>{item.quantity} × {itemName(item.name, language)}</Text>
@@ -27,7 +27,10 @@ export default function HistoryScreen() {
                         {!!item.note && <Text style={styles.mutedText}>{t('Observações')}: {translatedNote(item.note, language)}</Text>}
                       </View>)}
                     </View>}
-                    <Pressable style={styles.addButton} onPress={() => printSavedOrder(order)}><Text style={styles.addButtonText}>{t("Reimprimir")}</Text></Pressable>
+                    <View style={styles.historyActions}>
+                      <Pressable accessibilityRole="button" accessibilityState={{ expanded: expandedId === order.id }} style={styles.addButton} onPress={() => setExpandedId(expandedId === order.id ? null : order.id)}><Text style={styles.addButtonText}>{t(expandedId === order.id ? 'Ocultar detalhes' : 'Ver detalhes')}</Text></Pressable>
+                      <Pressable style={styles.addButton} onPress={() => printSavedOrder(order)}><Text style={styles.addButtonText}>{t("Reimprimir")}</Text></Pressable>
+                    </View>
                   </View>)}
                 </View></ScreenFrame>;
 }

@@ -183,108 +183,123 @@
   {
     "id": "pizza-25",
     "name": "Pepperoni",
-    "category": "Pizzas promocionais",
+    "category": "Pizzas",
     "price": 16.99,
     "kind": "pizza",
-    "allowsExtras": false
+    "allowsExtras": false,
+    "subcategory": "Promocionais"
   },
   {
     "id": "pizza-26",
     "name": "Mussarela",
-    "category": "Pizzas promocionais",
+    "category": "Pizzas",
     "price": 16.99,
     "kind": "pizza",
-    "allowsExtras": false
+    "allowsExtras": false,
+    "subcategory": "Promocionais"
   },
   {
     "id": "pizza-27",
     "name": "Calabresa com cebola",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-28",
     "name": "Portuguesa",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-29",
     "name": "Vegetariana",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-30",
     "name": "Margarita",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-31",
     "name": "Atum",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-32",
     "name": "Milho e bacon com alho",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-33",
     "name": "Mussarela com alho",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-34",
     "name": "Rúcula com tomate seco",
-    "category": "Pizzas regulares",
+    "category": "Pizzas",
     "price": 23.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Regulares"
   },
   {
     "id": "pizza-35",
     "name": "Lombinho com Catupiry",
-    "category": "Pizzas especiais",
+    "category": "Pizzas",
     "price": 27.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Especiais"
   },
   {
     "id": "pizza-36",
     "name": "Quatro queijos",
-    "category": "Pizzas especiais",
+    "category": "Pizzas",
     "price": 27.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Especiais"
   },
   {
     "id": "pizza-37",
     "name": "Havaiana",
-    "category": "Pizzas especiais",
+    "category": "Pizzas",
     "price": 27.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Especiais"
   },
   {
     "id": "pizza-38",
     "name": "Prosciutto com mussarela",
-    "category": "Pizzas especiais",
+    "category": "Pizzas",
     "price": 27.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Especiais"
   },
   {
     "id": "pizza-39",
     "name": "Frango com Catupiry",
-    "category": "Pizzas especiais",
+    "category": "Pizzas",
     "price": 27.99,
-    "kind": "pizza"
+    "kind": "pizza",
+    "subcategory": "Especiais"
   }
 ]

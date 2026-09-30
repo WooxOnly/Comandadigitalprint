@@ -4,7 +4,7 @@ import { isValidMenu } from '../../shared/menu-validation.mjs';
 
 function menuSignature(menu: Product[]) {
   // Fixed field order prevents JSON property ordering from causing false updates.
-  return JSON.stringify(menu.map((item) => [item.id, item.name, item.category, item.price, item.kind ?? null, item.description ?? '', item.code ?? '', item.allowsExtras ?? true]));
+  return JSON.stringify(menu.map((item) => [item.id, item.name, item.category, item.subcategory ?? '', item.price, item.kind ?? null, item.description ?? '', item.code ?? '', item.allowsExtras ?? true]));
 }
 
 export async function applyMenuUpdate(current: Product[], remote: unknown, persist: (menu: Product[]) => Promise<void>) {

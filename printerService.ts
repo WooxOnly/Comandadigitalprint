@@ -52,7 +52,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80', l
     .flavor { font-size: 15px; font-weight: 700; margin-top: 1mm; }
     .extra { margin-top: 2mm; font-size: 14px; }
     .extra span { font-size: 12px; }
-    .note { border: 1px solid #000; padding: 2mm 1mm; margin-top: 2mm; font-size: 15px; font-weight: 700; white-space: pre-wrap; }
+    .note { margin-top: 2mm; font-size: 15px; font-weight: 700; white-space: pre-wrap; }
   </style>
 </head>
 <body>

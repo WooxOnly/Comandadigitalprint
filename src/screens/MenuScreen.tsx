@@ -9,7 +9,7 @@ export default function MenuScreen() {
   const { t } = useLanguage();
   const { menu, isWide, updateMenuProduct, removeMenuProduct, addMenuProduct, saveMenu } = useApp();
   return <ScreenFrame><View>
-                  <Text style={styles.settingsIntro}>{t("Organize os produtos e as categorias do seu cardápio.")}</Text>
+                  <Text style={styles.settingsIntro}>{t("Organize os produtos em grupos e subgrupos.")}</Text>
                   <Pressable style={styles.secondaryWideButton} onPress={() => Alert.alert(t("Carregar cardápio Seabra"), t("Substituir os produtos deste aparelho pelo cardápio das fotos? O histórico será mantido."), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Carregar"), onPress: () => { void saveMenu(DEFAULT_MENU); } }])}><Text style={styles.secondaryButtonText}>{t("Carregar cardápio Seabra")}</Text></Pressable>
                   <View style={styles.menuGrid}>
                     {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
@@ -17,7 +17,8 @@ export default function MenuScreen() {
                       <TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} accessibilityLabel={t("Nome do produto")} placeholder={t("Ex.: pizza de calabresa")} placeholderTextColor={COLORS.placeholder} style={styles.input} />
                       {product.description ? <Text style={styles.mutedText}>{product.description}</Text> : null}
                       <View style={styles.menuEditRow}>
-                        <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t("Categoria")}</Text><TextInput value={t(product.category)} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel={t("Categoria do produto")} placeholder={t("Ex.: pizzas")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+                        <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t("Grupo")}</Text><TextInput value={product.category} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel={t("Grupo do produto")} placeholder={t("Ex.: pizzas")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+                        <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t('Subgrupo (opcional)')}</Text><TextInput value={product.subcategory || ''} onChangeText={subcategory => updateMenuProduct(product.id, { subcategory })} accessibilityLabel={t('Subgrupo do produto')} placeholder={t('Ex.: especiais')} placeholderTextColor={COLORS.placeholder} maxLength={100} style={styles.input} /></View>
                       </View>
                       <View style={styles.menuEditActions}>
                         <Pressable onPress={() => updateMenuProduct(product.id, { kind: product.kind === 'pizza' ? undefined : 'pizza' })} accessibilityRole="checkbox" accessibilityState={{ checked: product.kind === 'pizza' }} style={[styles.noteChip, product.kind === 'pizza' && styles.selectedCategory]}><Text style={[styles.noteChipText, product.kind === 'pizza' && styles.selectedCategoryText]}>{product.kind === 'pizza' ? t("✓ Pizza") : t("Marcar como pizza")}</Text></Pressable>
