@@ -990,6 +990,20 @@ Object.assign(translations, {
   'Salvar usuário': ['Save user', 'Guardar usuario'],
 });
 
+Object.assign(translations, {
+  'Gerenciar usuários': ['Manage users', 'Administrar usuarios'],
+  'Usuários cadastrados': ['Registered users', 'Usuarios registrados'],
+  'Ativo': ['Active', 'Activo'], 'Inativo': ['Inactive', 'Inactivo'],
+  'Administrador protegido. Senha semanal gerenciada pelo painel online.': ['Protected administrator. Weekly password managed in the online panel.', 'Administrador protegido. Contraseña semanal administrada en el panel online.'],
+  'Nenhum usuário adicional cadastrado.': ['No additional users registered.', 'No hay usuarios adicionales registrados.'],
+  'Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.': ['Could not load users. Reopen settings to try again.', 'No se pudieron cargar los usuarios. Vuelva a abrir ajustes para intentarlo de nuevo.'],
+  'Já existe uma impressão em andamento.': ['A print job is already in progress.', 'Ya hay una impresión en curso.'],
+  'A impressão não respondeu. Confira a impressora antes de tentar novamente pelo histórico.': ['Printing did not respond. Check the printer before retrying from history.', 'La impresión no respondió. Revise la impresora antes de reintentar desde el historial.'],
+  'Impressão enviada': ['Print job sent', 'Impresión enviada'],
+  'Pedido salvo': ['Order saved', 'Pedido guardado'],
+  'Pedido salvo. Você pode reimprimir pelo histórico.': ['Order saved. You can reprint it from history.', 'Pedido guardado. Puede reimprimirlo desde el historial.'],
+});
+
 export function translate(text: string, language: Language = 'pt'): string {
   const source = translations[text] ? text : Object.keys(translations).find((key) => translations[key].includes(text)) || text;
   return language === 'pt' ? source : translations[source]?.[language === 'en' ? 0 : 1] ?? text;

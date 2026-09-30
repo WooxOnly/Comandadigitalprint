@@ -1,5 +1,7 @@
 import { translate, itemName, translatedNote, LOCALES, type Language } from './src/i18n/translations';
 import * as Print from 'expo-print';
+import { createPrintJob } from './src/services/printJob';
+const runPrintJob = createPrintJob();
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
 export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' };
@@ -88,13 +90,13 @@ export function buildPrinterTestHtml(paperWidth: PrinterSettings['paperWidth'], 
 
 async function printHtml(html: string, settings: PrinterSettings, language: Language = 'pt') {
   if (settings.connection !== 'system') {
-    throw new Error(translate('Conexão direta indisponível. Use a impressão pelo sistema.', language));
+    throw Object.assign(new Error(translate('Conexão direta indisponível. Use a impressão pelo sistema.', language)), { code: 'PRINT_UNSUPPORTED_CONNECTION' });
   }
 
-  await Print.printAsync({
+  await runPrintJob(() => Print.printAsync({
     html,
     ...getReceiptPageSize(settings.paperWidth),
-  });
+  }));
 }
 
 export async function printOrder(order: PrintableOrder, settings: PrinterSettings, language: Language = 'pt') {

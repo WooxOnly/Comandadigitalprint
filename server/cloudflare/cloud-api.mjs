@@ -71,6 +71,13 @@ export async function cloudResponse(request, env) {
   try {
     if (url.pathname === '/cloud/login' && request.method === 'POST') return await login(request, env);
     const actor = await session(request, env);
+    if (url.pathname === '/cloud/diagnostics' && request.method === 'POST') {
+      const entry = await body(request);
+      if (!entry || !/^[a-f0-9-]{36}$/.test(entry.id || '') || !/^[a-f0-9-]{36}$/.test(entry.deviceId || '') || typeof entry.createdAt !== 'string' || entry.createdAt.length > 40 || !Number.isFinite(Date.parse(entry.createdAt)) || !/^[a-zA-Z0-9_.-]{1,60}$/.test(entry.event || '') || !/^[a-zA-Z0-9_.-]{1,80}$/.test(entry.code || '') || (entry.orderId !== undefined && (typeof entry.orderId !== 'string' || !/^[a-zA-Z0-9-]{1,160}$/.test(entry.orderId)))) fail(400, 'INVALID_DATA');
+      await env.DB.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code, order_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(entry.id, entry.deviceId, entry.createdAt, new Date().toISOString(), actor.username, entry.event, entry.code, entry.orderId || null).run();
+      await env.DB.prepare('DELETE FROM diagnostics WHERE received_at < ?').bind(new Date(Date.now() - 30 * 86400000).toISOString()).run();
+      return reply({ ok: true });
+    }
     await env.DB.prepare("INSERT INTO cloud_events(mutation, key, data, actor, created_at) SELECT 'initial-menu', 'menu', COALESCE((SELECT data FROM menu WHERE id = 1), ?), 'server', ? WHERE NOT EXISTS(SELECT 1 FROM cloud_records WHERE key = 'menu') ON CONFLICT(mutation) DO NOTHING").bind(JSON.stringify(defaultMenu), new Date().toISOString()).run();
     if (request.method === 'GET' && url.pathname === '/cloud/changes') {
       const cursor = Number(url.searchParams.get('after') || 0);

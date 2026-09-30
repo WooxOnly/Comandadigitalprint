@@ -15,6 +15,7 @@ function loadPrinter() {
     exports,
     require(name) {
       if (name.endsWith('/translations')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output }); return output; }
+      if (name.endsWith('/printJob')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/printJob.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, setTimeout, clearTimeout }); return output; }
       assert.equal(name, 'expo-print');
       return { printAsync: async (options) => { calls.push(options); } };
     },

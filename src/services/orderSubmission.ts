@@ -18,12 +18,13 @@ export function createOrderSubmitter<T>() {
         const next = [order, ...history];
         await actions.persist(next);
         actions.onSaved(next);
-        await actions.print(order);
-        return 'saved';
       } finally {
         busy = false;
         actions.onBusy(false);
       }
+      // The saved order remains in history even if the native print dialog stalls.
+      await actions.print(order);
+      return 'saved';
     },
   };
 }

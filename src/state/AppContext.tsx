@@ -1,3 +1,5 @@
+import { diagnostics, logError } from '../services/diagnostics';
+import { printFailureMessage } from '../services/printJob';
 import { useLanguage } from '../i18n/LanguageContext';
 import { appStorage as AsyncStorage, cloud } from '../services/cloudStorage';
 import { randomUUID } from 'expo-crypto';
@@ -5,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, useWindowDimensions } from 'react-native';
 import { printOrder, printPrinterTest, type PrinterSettings } from '../../printerService';
-import { DEFAULT_MENU, isDemoMenu, type Product } from '../../menuData';
+import { DEFAULT_MENU, standardizeMenu, isDemoMenu, type Product } from '../../menuData';
 import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../../orderItems';
 import { isValidMenu } from '../../shared/menu-validation.mjs';
 import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
@@ -65,13 +67,13 @@ function useAppState() {
       if (storedMenu) {
         const saved = JSON.parse(storedMenu) as Product[];
         if (!isValidMenu(saved)) throw new Error('Cardápio inválido');
-        menuRef.current = isDemoMenu(saved) ? DEFAULT_MENU : saved;
+        menuRef.current = isDemoMenu(saved) ? DEFAULT_MENU : standardizeMenu(saved);
         setMenu(menuRef.current);
       }
       if (storedLogo) setLogoUri(storedLogo);
       setIsReady(true);
       void updateMenu(false);
-    }).catch(() => Alert.alert(t('Dados indisponíveis'), t('Não foi possível carregar os dados salvos. Feche e abra o aplicativo para tentar novamente. O envio ficará bloqueado para proteger o histórico.')));
+    }).catch(error => { logError('storage.load_failed', error); Alert.alert(t('Dados indisponíveis'), t('Não foi possível carregar os dados salvos. Feche e abra o aplicativo para tentar novamente. O envio ficará bloqueado para proteger o histórico.')); });
   // Hydrate once; changing the display language must not overwrite an active order.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,11 +82,11 @@ function useAppState() {
     if (!isReady) return;
     void Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(([orders, storedMenu, printer, settings, logo]) => {
       if (orders) setHistory(JSON.parse(orders));
-      if (storedMenu && !menuDirty.current) { menuRef.current = JSON.parse(storedMenu); setMenu(menuRef.current); }
+      if (storedMenu && !menuDirty.current) { menuRef.current = standardizeMenu(JSON.parse(storedMenu)); setMenu(menuRef.current); }
       if (printer && !printerDirty.current) setPrinterSettings(JSON.parse(printer));
       if (settings) setOrderSettings(parseOrderSettings(settings));
       if (logo) setLogoUri(logo);
-    }).catch(() => {});
+    }).catch(error => logError('storage.refresh_failed', error));
   }), [isReady]);
 
   const filteredMenu = useMemo(() => category === 'Todos' ? menu : menu.filter((item) => item.category === category), [category, menu]);
@@ -141,7 +143,8 @@ function useAppState() {
       await AsyncStorage.setItem(ORDER_SETTINGS_KEY, JSON.stringify(next));
       setOrderSettings(next);
       setCustomerError('');
-    } catch {
+    } catch (error) {
+      logError('settings.save_failed', error);
       Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar a regra do cliente. Tente novamente.'));
     } finally {
       orderSettingsLock.current = false;
@@ -166,12 +169,14 @@ function useAppState() {
   }
 
   async function saveMenu(nextMenu = menu) {
+    nextMenu = standardizeMenu(nextMenu);
     try {
       if (!isValidMenu(nextMenu)) throw new Error('Confira nomes, categorias e identificadores do cardápio.');
       await AsyncStorage.setItem(MENU_KEY, JSON.stringify(nextMenu));
       menuDirty.current = false; menuRef.current = nextMenu; setMenu(nextMenu);
       Alert.alert(t('Cardápio salvo'), t('Produtos salvos. Alterações sem conexão ficam pendentes de sincronização.'));
     } catch (error) {
+      logError('menu.save_failed', error);
       Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'));
     }
   }
@@ -199,7 +204,7 @@ function useAppState() {
       if (menuDirty.current) throw Error('Unsaved edits');
       await cloud.sync();
       const remote = await cloud.get('menu');
-      if (remote && isValidMenu(remote)) { menuRef.current = remote as Product[]; setMenu(menuRef.current); }
+      if (remote && isValidMenu(remote)) { menuRef.current = standardizeMenu(remote as Product[]); setMenu(menuRef.current); }
       const connected = ['SYNCED', 'PENDING', 'CONFLICT'].includes(cloud.status().status);
       setMenuUpdateStatus(connected ? 'Cardápio atualizado com sucesso' : 'Cardápio salvo disponível');
       if (manual) Alert.alert(t('Cardápio'), t(connected ? 'Cardápio atualizado com sucesso.' : 'Não foi possível verificar atualizações agora. O cardápio salvo continua disponível.'));
@@ -217,6 +222,7 @@ function useAppState() {
       printerDirty.current = false;
       Alert.alert(t('Configuração salva'), t('As preferências da impressora foram salvas neste aparelho.'));
     } catch (error) {
+      logError('printer.settings_failed', error);
       Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'));
     }
   }
@@ -228,19 +234,25 @@ function useAppState() {
 
   async function printSavedOrder(order: SavedOrder) {
     try {
+      void diagnostics.record('print.started', printerSettings.connection.toUpperCase(), order.id);
       await printOrder(order, printerSettings, language);
+      void diagnostics.record('print.dialog_opened', 'SYSTEM', order.id);
       showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
-      showFeedback('Impressão indisponível', error instanceof Error ? error.message : 'Não foi possível iniciar a impressão.', 'error');
+      logError('print.failed', error, order.id);
+      showFeedback('Impressão indisponível', printFailureMessage(error), 'error');
     }
   }
 
   async function testPrinter() {
     try {
+      void diagnostics.record('print_test.started', printerSettings.connection.toUpperCase());
       await printPrinterTest(printerSettings, language);
+      void diagnostics.record('print_test.dialog_opened', 'SYSTEM');
       showFeedback('Teste de impressão aberto', 'Selecione a impressora e confirme o envio na janela de impressão.', 'success');
     } catch (error) {
-      showFeedback('Teste não iniciado', error instanceof Error ? error.message : 'Não foi possível iniciar o teste de impressão.', 'error');
+      logError('print_test.failed', error);
+      showFeedback('Teste não iniciado', printFailureMessage(error), 'error');
     }
   }
 
@@ -261,11 +273,12 @@ function useAppState() {
     try {
       await submitter.submit(order, history, {
         persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
-        onSaved: (next) => { setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); },
+        onSaved: (next) => { setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
         print: printSavedOrder,
         onBusy: setSending,
       });
-    } catch {
+    } catch (error) {
+      logError('order.save_failed', error, order.id);
       Alert.alert(t('Falha ao salvar'), t('Seu pedido foi mantido. Tente enviar novamente. A impressão não foi iniciada.'));
     }
   }

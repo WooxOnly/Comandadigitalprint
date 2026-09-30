@@ -15,6 +15,7 @@ export default function MenuScreen() {
                     {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
                       <Text style={styles.fieldLabel}>{t("Nome do produto")}</Text>
                       <TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} accessibilityLabel={t("Nome do produto")} placeholder={t("Ex.: pizza de calabresa")} placeholderTextColor={COLORS.placeholder} style={styles.input} />
+                      {product.description ? <Text style={styles.mutedText}>{product.description}</Text> : null}
                       <View style={styles.menuEditRow}>
                         <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t("Categoria")}</Text><TextInput value={t(product.category)} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel={t("Categoria do produto")} placeholder={t("Ex.: pizzas")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
                       </View>

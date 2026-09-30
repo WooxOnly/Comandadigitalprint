@@ -27,11 +27,15 @@ const replacement = `    // comanda-receipt-paper: preserve explicit HTML dimens
 
 function patchPrintModule(source) {
   const normalized = source.replace(/\r\n/g, '\n');
-  if (normalized.includes(replacement)) return source;
+  const callbacks = '        printDocumentToPrinter(document, options)';
+  const guarded = '        // comanda-print-error: reject instead of leaving the JS caller waiting.\n        try {\n          printDocumentToPrinter(document, options)\n        } catch (e: Exception) {\n          continuation.resumeWithException(e)\n          return\n        }';
+  const withErrors = normalized.includes('comanda-print-error') ? normalized : normalized.replace(callbacks, guarded);
+  if (normalized.includes(replacement)) return withErrors;
   if (normalized.split(original).length !== 2) {
     throw new Error('expo-print changed: review the receipt paper plugin before building Android.');
   }
-  return normalized.replace(original, replacement);
+  if (!withErrors.includes('comanda-print-error')) throw new Error('expo-print callbacks changed: review print error handling.');
+  return withErrors.replace(original, replacement);
 }
 
 function withReceiptPaper(config) {

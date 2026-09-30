@@ -135,6 +135,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   }
   return {
     load, write, sync,
+    async sendDiagnostic(entry: unknown) { if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/diagnostics', entry); },
     identity() { if (!state) throw new Error('Storage not ready'); return state.deviceId; },
     async deviceId() { await load(); return state.deviceId; },
     async cacheUser(username: string, value: unknown, revision: number) {

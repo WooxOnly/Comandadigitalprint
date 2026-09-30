@@ -13,6 +13,7 @@ async function fixture() {
   const database = new DatabaseSync(':memory:');
   database.exec(fs.readFileSync('server/cloudflare/schema.sql', 'utf8'));
   database.exec(fs.readFileSync('server/cloudflare/cloud-schema.sql', 'utf8'));
+  database.exec(fs.readFileSync('server/cloudflare/diagnostics-schema.sql', 'utf8'));
   const statement = (sql, args = []) => ({
     bind: (...values) => statement(sql, values),
     first: async () => database.prepare(sql).get(...args),
@@ -145,5 +146,21 @@ test('changes paginate without losing orders, and writes cannot mutate or overwr
     await assert.rejects(b.cloud.write({ [key]: { ...value, customer: 'changed' } }));
     const revision = f.database.prepare('SELECT revision FROM cloud_records WHERE key = ?').get(key).revision;
     assert.equal((await f.request('/change', { key, value: { ...value, customer: 'changed' }, base: revision, id: randomUUID() }, f.token)).status, 409);
+  } finally { f.database.close(); }
+});
+
+ test('diagnostic uploads are authenticated, idempotent, redacted and separate from shared order data', async () => {
+  const f = await fixture();
+  try {
+    const log = { id: randomUUID(), deviceId: randomUUID(), createdAt: new Date().toISOString(), event: 'print.failed', code: 'PRINT_TIMEOUT', password: 'must-not-be-stored' };
+    assert.equal((await f.request('/diagnostics', log)).status, 401);
+    for (let i = 0; i < 2; i++) assert.equal((await f.request('/diagnostics', log, f.token)).status, 200);
+    const rows = f.database.prepare('SELECT * FROM diagnostics').all();
+    assert.equal(rows.length, 1); assert.doesNotMatch(JSON.stringify(rows), /must-not-be-stored/);
+    assert.equal((await f.request('/diagnostics', { ...log, event: '<invalid>' }, f.token)).status, 400);
+    const changes = await (await f.request('/changes', undefined, f.token)).json();
+    assert.equal(changes.changes.some(c => c.key.startsWith('log:')), false);
+    const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
+    assert.equal((await adminResponse(new Request('https://example.com/admin/logs'), {})).status, 401);
   } finally { f.database.close(); }
 });

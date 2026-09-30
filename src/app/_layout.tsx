@@ -5,8 +5,11 @@ import { Tabs } from 'expo-router';
 import { AppProvider } from '../state/AppContext';
 import { AppShell } from '../ui/AppShell';
 import { COLORS } from '../ui/theme';
+import { useEffect } from 'react';
+import { startDiagnostics } from '../services/diagnostics';
 
 export default function RootLayout() {
+  useEffect(startDiagnostics, []);
   return <LanguageProvider><AuthProvider><AppProvider><LoginGate><Navigation /></LoginGate></AppProvider></AuthProvider></LanguageProvider>;
 }
 function Navigation() {

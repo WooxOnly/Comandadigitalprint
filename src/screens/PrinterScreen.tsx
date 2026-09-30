@@ -10,7 +10,7 @@ import { styles, COLORS, CONNECTIONS } from '../ui/theme';
 export default function PrinterScreen() {
   const { t } = useLanguage();
   const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, savingOrderSettings } = useApp();
-  return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
+  return <ScreenFrame><UserSettings /><View style={[styles.columns, isWide && styles.columnsWide]}>
                   <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
                     <LanguageSettings />
                     <Text style={styles.panelTitle}>{t("Pedidos")}</Text>
@@ -45,5 +45,5 @@ export default function PrinterScreen() {
                     <Text style={styles.helperText}>{t(menuUpdateStatus) || t("Seu cardápio fica disponível mesmo sem internet.")}</Text>
                     <Pressable disabled={updatingMenu} accessibilityState={{ disabled: updatingMenu, busy: updatingMenu }} style={[styles.secondaryWideButton, updatingMenu && styles.pressed]} onPress={() => updateMenu(true)}><Text style={styles.secondaryButtonText}>{updatingMenu ? t("Verificando…") : t("Atualizar cardápio")}</Text></Pressable>
                   </View>
-                </View><TabletSettings /><UserSettings /></ScreenFrame>;
+                </View><TabletSettings /></ScreenFrame>;
 }

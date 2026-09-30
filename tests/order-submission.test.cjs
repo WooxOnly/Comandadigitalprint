@@ -27,7 +27,7 @@ test('double tap saves and prints once, only clearing after persistence complete
   assert.deepEqual(events, ['busy', 'persist']);
   finish();
   assert.equal(await first, 'saved');
-  assert.deepEqual(events, ['busy', 'persist', 'clear', 'print', 'idle']);
+  assert.deepEqual(events, ['busy', 'persist', 'clear', 'idle', 'print']);
 });
 
 test('save failure retains the draft and unlocks retry without printing', async () => {

@@ -1,3 +1,4 @@
+import { logError } from '../services/diagnostics';
 import * as SecureStore from 'expo-secure-store';
 import { getRandomBytesAsync } from 'expo-crypto';
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
@@ -26,7 +27,7 @@ function useAuthState() {
     try {
       if (Platform.OS === 'web') throw new Error('Acesso local indisponível no navegador. Use o aplicativo Android ou iPad.');
       setExists(await service.load()); setError(''); setReady(true); void sync();
-    } catch (e) { setError((e as Error).message); }
+    } catch (e) { logError('auth.load_failed', e); setError((e as Error).message); }
   }, [service, sync]);
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
   useEffect(() => {
@@ -51,6 +52,7 @@ function useAuthState() {
       await SecureStore.setItemAsync('comandadigitalprint.cloud-session.' + name, result.token);
       await cloud.setSession({ username: name, token: result.token });
     } catch (error) {
+      logError('auth.login_failed', error);
       if (!(error instanceof CloudError) || error.code !== 'UNAVAILABLE') {
         if (error instanceof CloudError) throw new Error(error.code === 'RATE_LIMIT' ? 'Muitas tentativas. Aguarde um minuto.' : 'Usuário ou senha incorretos.');
         throw error;
