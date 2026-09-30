@@ -133,6 +133,29 @@ test('cloud access requires login; shared users authenticate after reinstall and
   } finally { f.database.close(); }
 });
 
+test('staff can sync only their own password, while menu edits reach another tablet', async () => {
+  const f = await fixture();
+  try {
+    const admin = f.tablet(), staffTablet = f.tablet();
+    await admin.cloud.setSession({ username: 'admin', token: f.token }); await admin.cloud.sync();
+    const salt = randomBytes(16).toString('hex');
+    const staff = { username: 'staff', active: true, login: { salt, hash: pbkdf2Sync('123456', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
+    await admin.cloud.write({ 'user:staff': staff }); await admin.cloud.sync();
+    const signedIn = await (await f.request('/login', { username: 'staff', password: '123456' })).json();
+    await staffTablet.cloud.setSession({ username: 'staff', token: signedIn.token }); await staffTablet.cloud.sync();
+    const editedMenu = [{ id: 'custom', name: 'Pizza da casa', category: 'Pizzas', description: 'Mussarela e tomate', price: 0 }];
+    await staffTablet.cloud.write({ menu: editedMenu }); await staffTablet.cloud.sync(); await admin.cloud.sync();
+    assert.deepEqual(await admin.cloud.get('menu'), editedMenu);
+    const newSalt = randomBytes(16).toString('hex');
+    const changed = { ...staff, login: { salt: newSalt, hash: pbkdf2Sync('654321', Buffer.from(newSalt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
+    assert.equal((await f.request('/change', { key: 'user:other', value: { ...changed, username: 'other' }, base: 0, id: randomUUID() }, signedIn.token)).status, 403);
+    assert.equal((await f.request('/change', { key: 'user:staff', value: { ...changed, active: false }, base: signedIn.revision, id: randomUUID() }, signedIn.token)).status, 403);
+    await staffTablet.cloud.write({ 'user:staff': changed }); await staffTablet.cloud.sync();
+    assert.equal((await f.request('/login', { username: 'staff', password: '123456' })).status, 401);
+    assert.equal((await f.request('/login', { username: 'staff', password: '654321' })).status, 200);
+  } finally { f.database.close(); }
+});
+
 test('changes paginate without losing orders, and writes cannot mutate or overwrite an existing order', async () => {
   const f = await fixture();
   try {

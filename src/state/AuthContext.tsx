@@ -44,6 +44,12 @@ function useAuthState() {
   async function login(username: string, password: string) {
     const name = username.trim().toLowerCase();
     try {
+      if (cloud.pending('user:' + name)) {
+        await service.load();
+        await service.verify('login', password, name);
+        const previousToken = await SecureStore.getItemAsync('comandadigitalprint.cloud-session.' + name);
+        if (previousToken) { await cloud.setSession({ username: name, token: previousToken }); await cloud.sync(); }
+      }
       const result = await cloud.authenticate(name, password);
       if (name === 'admin') await service.syncAdmin(ADMIN_CREDENTIAL_ENDPOINT, async () => ({ ok: true, json: async () => result.credential }) as Response);
       else await cloud.cacheUser(name, result.credential, result.revision);
@@ -68,8 +74,20 @@ function useAuthState() {
     await service.recoverOffline(code, password, confirmation);
     setExists(true); setCurrentUser('admin'); setSignedIn(true);
   }
+  async function changeOwnPassword(currentPassword: string, password: string, confirmation: string) {
+    await service.changeOwnPassword(currentPassword, password, confirmation);
+    await cloud.sync();
+    if (cloud.pending('user:' + currentUser)) return false;
+    try {
+      const result = await cloud.authenticate(currentUser, password);
+      await SecureStore.setItemAsync('comandadigitalprint.cloud-session.' + currentUser, result.token);
+      await cloud.setSession({ username: currentUser, token: result.token });
+      void cloud.sync();
+      return true;
+    } catch { return false; }
+  }
   function logout() { service.logout(); void cloud.setSession(null); setCurrentUser(''); setSignedIn(false); }
-  return { ready, exists, signedIn, currentUser, error, load, login, logout, service, recover, recoverOffline, recovering, recoveryError };
+  return { ready, exists, signedIn, currentUser, error, load, login, logout, service, recover, recoverOffline, changeOwnPassword, recovering, recoveryError };
 }
 export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useAuthState();

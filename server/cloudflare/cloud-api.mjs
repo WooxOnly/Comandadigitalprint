@@ -89,7 +89,12 @@ export async function cloudResponse(request, env) {
     if (request.method === 'POST' && url.pathname === '/cloud/change') {
       const input = await body(request);
       if (!input || !validCloudValue(input.key, input.value) || !/^[a-zA-Z0-9-]{16,80}$/.test(input.id || '') || !Number.isSafeInteger(input.base) || input.base < 0) fail(400, 'INVALID_DATA');
-      if (input.key.startsWith('user:') && actor.username !== 'admin') fail(403, 'ADMIN_REQUIRED');
+      if (input.key.startsWith('user:') && actor.username !== 'admin') {
+        if (input.key !== 'user:' + actor.username) fail(403, 'ADMIN_REQUIRED');
+        const existing = await env.DB.prepare('SELECT data FROM cloud_records WHERE key = ?').bind(input.key).first();
+        const previous = existing && JSON.parse(existing.data);
+        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active) fail(403, 'ADMIN_REQUIRED');
+      }
       const data = JSON.stringify(input.value);
       const prior = await env.DB.prepare('SELECT key, data, seq FROM cloud_events WHERE mutation = ?').bind(input.id).first();
       if (prior) {

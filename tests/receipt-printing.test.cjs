@@ -38,7 +38,7 @@ test('all receipt languages preserve product names and extras, including reprint
   }
 });
 
-for (const paperWidth of ['58', '80']) {
+for (const paperWidth of ['58', '80', '88']) {
   test(`printer test sends its own centered document at ${paperWidth} mm`, async () => {
     const printer = loadPrinter();
     await printer.printPrinterTest({ connection: 'system', paperWidth });

@@ -58,7 +58,8 @@ test('Cloudflare handler executes real SQLite reads and durable updates, with th
   } } };
   const request = (options = {}) => new Request('https://example.com/menu', options);
   try {
-    assert.equal((await (await worker.fetch(request(), env)).json()).length, 41);
+    const publishedMenu = JSON.parse(await readFile(new URL('../server/menu.json', import.meta.url), 'utf8'));
+    assert.deepEqual(await (await worker.fetch(request(), env)).json(), publishedMenu);
     assert.equal((await worker.fetch(request({ method: 'PUT', body: '[]' }), env)).status, 401);
     assert.equal((await worker.fetch(request({ method: 'PUT', headers, body: '{bad' }), env)).status, 400);
     assert.equal((await worker.fetch(request({ method: 'PUT', headers, body: JSON.stringify([{ ...sample[0], price: -1 }]) }), env)).status, 400);

@@ -49,6 +49,14 @@ test('old catalogs get bilingual names and ingredients without restoring exclude
   assert.equal(DEFAULT_MENU.some(p => ['Fatias', 'Salgados'].includes(p.category)), false);
 });
 
+test('later edits to photographed products keep their name and ingredients', () => {
+  const { standardizeMenu, DEFAULT_MENU } = load('menuData.ts');
+  const original = DEFAULT_MENU.find(p => p.id === 'seabra-Lanches-1');
+  const edited = { ...original, name: 'Sanduíche da casa', description: 'Pão, queijo e tomate' };
+  assert.deepEqual(standardizeMenu([edited]), [edited]);
+  assert.equal(standardizeMenu([{ ...original, name: '', description: '' }])[0].name, '');
+});
+
  test('legacy pizza categories migrate to subgroups without changing promotional restrictions or custom groups', () => {
   const { standardizeMenu, filterProducts } = load('menuData.ts');
   const products = standardizeMenu([

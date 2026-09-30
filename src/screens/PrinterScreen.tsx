@@ -28,6 +28,7 @@ export default function PrinterScreen() {
                         {option.value === printerSettings.connection && <Text style={styles.selectedConnectionText}>✓</Text>}
                       </Pressable>)}
                     </View>
+                    <Text style={styles.helperText}>{t(printerSettings.connection === 'system' ? 'Selecione o driver instalado no tablet na janela de impressão do sistema.' : 'Esta conexão direta ainda não está disponível. Escolha a impressão pelo sistema para usar o driver instalado.')}</Text>
                     <Text style={styles.fieldLabel}>{t("Nome da impressora")}</Text>
                     <TextInput value={printerSettings.name} onChangeText={(name) => updatePrinterSettings({ name })} accessibilityLabel={t("Nome da impressora")} placeholder={t("Opcional")} placeholderTextColor={COLORS.placeholder} style={styles.input} />
                     <Text style={styles.fieldLabel}>{t("Endereço ou identificador")}</Text>
@@ -35,7 +36,7 @@ export default function PrinterScreen() {
                     <Text style={styles.fieldLabel}>{t("Porta de rede")}</Text>
                     <TextInput value={printerSettings.port} onChangeText={(port) => updatePrinterSettings({ port })} accessibilityLabel={t("Porta de rede")} placeholder="9100" placeholderTextColor={COLORS.placeholder} style={styles.input} keyboardType="number-pad" />
                     <Text style={styles.fieldLabel}>{t("Largura do papel")}</Text>
-                    <View style={styles.paperOptions}>{(['58', '80'] as const).map((width) => <Pressable key={width} onPress={() => updatePrinterSettings({ paperWidth: width })} accessibilityRole="radio" accessibilityState={{ checked: width === printerSettings.paperWidth }} style={[styles.paperOption, width === printerSettings.paperWidth && styles.selectedConnection]}><Text style={[styles.connectionText, width === printerSettings.paperWidth && styles.selectedConnectionText]}>{width} mm</Text></Pressable>)}</View>
+                    <View style={styles.paperOptions}>{(['58', '80', '88'] as const).map((width) => <Pressable key={width} onPress={() => updatePrinterSettings({ paperWidth: width })} accessibilityRole="radio" accessibilityState={{ checked: width === printerSettings.paperWidth }} style={[styles.paperOption, width === printerSettings.paperWidth && styles.selectedConnection]}><Text style={[styles.connectionText, width === printerSettings.paperWidth && styles.selectedConnectionText]}>{width} mm</Text></Pressable>)}</View>
                     <Pressable style={styles.sendButton} onPress={savePrinterSettings}><Text style={styles.sendButtonText}>{t("Salvar configurações")}</Text></Pressable>
                     <Pressable style={styles.secondaryWideButton} onPress={testPrinter}><Text style={styles.secondaryButtonText}>{t("Testar impressora")}</Text></Pressable>
                   </View>

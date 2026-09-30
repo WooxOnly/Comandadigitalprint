@@ -121,6 +121,14 @@ export const translations: Record<string, readonly [string, string]> = {
     "Android system",
     "Sistema Android"
   ],
+  "Selecione o driver instalado no tablet na janela de impressão do sistema.": [
+    "Select the driver installed on this tablet in the system print dialog.",
+    "Seleccione el controlador instalado en esta tableta en el diálogo de impresión del sistema."
+  ],
+  "Esta conexão direta ainda não está disponível. Escolha a impressão pelo sistema para usar o driver instalado.": [
+    "This direct connection is not available yet. Choose system printing to use the installed driver.",
+    "Esta conexión directa aún no está disponible. Elija la impresión del sistema para usar el controlador instalado."
+  ],
   "Bluetooth": [
     "Bluetooth",
     "Bluetooth"
@@ -997,6 +1005,18 @@ Object.assign(translations, {
   'Administrador protegido. Senha semanal gerenciada pelo painel online.': ['Protected administrator. Weekly password managed in the online panel.', 'Administrador protegido. Contraseña semanal administrada en el panel online.'],
   'Nenhum usuário adicional cadastrado.': ['No additional users registered.', 'No hay usuarios adicionales registrados.'],
   'Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.': ['Could not load users. Reopen settings to try again.', 'No se pudieron cargar los usuarios. Vuelva a abrir ajustes para intentarlo de nuevo.'],
+  'Alterar minha senha': ['Change my password', 'Cambiar mi contraseña'],
+  'Você só pode alterar sua própria senha.': ['You can only change your own password.', 'Solo puede cambiar su propia contraseña.'],
+  'Senha atual': ['Current password', 'Contraseña actual'],
+  'Nova senha': ['New password', 'Nueva contraseña'],
+  'Salvar nova senha': ['Save new password', 'Guardar nueva contraseña'],
+  'Senha atual incorreta.': ['Current password is incorrect.', 'La contraseña actual es incorrecta.'],
+  'Senha alterada': ['Password changed', 'Contraseña cambiada'],
+  'Sua nova senha já está disponível nos tablets sincronizados.': ['Your new password is available on synced tablets.', 'Su nueva contraseña está disponible en las tabletas sincronizadas.'],
+  'Sua nova senha foi salva neste tablet. A sincronização está pendente.': ['Your new password was saved on this tablet. Sync is pending.', 'Su nueva contraseña se guardó en esta tableta. La sincronización está pendiente.'],
+  'A senha semanal do admin é gerenciada pelo painel online.': ['The weekly admin password is managed in the online panel.', 'La contraseña semanal del admin se administra en el panel en línea.'],
+  'Ingredientes / descrição': ['Ingredients / description', 'Ingredientes / descripción'],
+  'Ingredientes do produto': ['Product ingredients', 'Ingredientes del producto'],
   'Já existe uma impressão em andamento.': ['A print job is already in progress.', 'Ya hay una impresión en curso.'],
   'A impressão não respondeu. Confira a impressora antes de tentar novamente pelo histórico.': ['Printing did not respond. Check the printer before retrying from history.', 'La impresión no respondió. Revise la impresora antes de reintentar desde el historial.'],
   'Impressão enviada': ['Print job sent', 'Impresión enviada'],

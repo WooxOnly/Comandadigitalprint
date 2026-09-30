@@ -112,6 +112,18 @@ test('local users survive restart, require unlocked settings and support disable
   await reopened.verify('login', '654321', 'staff');
 });
 
+test('staff can change only their own password after unlocking settings', async () => {
+  const f = fixture(), admin = f.create(); await admin.load(); await admin.setup('admin', 'abc123', 'abc123');
+  await admin.verify('settings', '2066'); await admin.createUser('staff', '123456', '123456');
+  const staff = f.create(); await staff.load(); await staff.verify('login', '123456', 'staff'); await staff.verify('settings', '2066');
+  await assert.rejects(staff.createUser('other', '123456', '123456'), /protegido/);
+  await assert.rejects(staff.updateUser('staff', true, '654321', '654321'), /protegido/);
+  await assert.rejects(staff.changeOwnPassword('wrong', '654321', '654321'), /atual incorreta/);
+  await staff.changeOwnPassword('123456', '654321', '654321');
+  staff.logout(); await assert.rejects(staff.verify('login', '123456', 'staff'));
+  await staff.verify('login', '654321', 'staff');
+});
+
 test('native password wrapper preserves old and weekly hashes and releases stalled verification', async (t) => {
   const crypto = require('node:crypto');
   const code = ts.transpileModule(fs.readFileSync('src/services/passwordDigest.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

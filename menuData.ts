@@ -28,7 +28,9 @@ export function standardizeMenu(menu: Product[]): Product[] {
     const oldGroup = legacy[product.category];
     if (oldGroup) product = { ...product, category: 'Pizzas', subcategory: product.subcategory || oldGroup };
     const original = DEFAULT_MENU.find(item => item.id === product.id);
-    return original && product.id.startsWith('seabra-') ? { ...product, name: original.name, description: original.description } : product;
+    // Upgrade old photo imports with missing bilingual details, but keep later edits made in the app.
+    return original && product.id.startsWith('seabra-') && !product.description && product.name.trim() && original.name.toLowerCase().includes(product.name.trim().toLowerCase())
+      ? { ...product, name: original.name, description: original.description } : product;
   });
 }
 

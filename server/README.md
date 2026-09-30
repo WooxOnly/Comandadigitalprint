@@ -44,7 +44,7 @@ npx.cmd wrangler@4 deploy --dry-run --config server/cloudflare/wrangler.jsonc --
 
 O esquema exige IDs únicos, nomes e categorias preenchidos, valores numéricos finitos não negativos e metadados válidos. Máximo de 500 itens e corpo de 1 MiB. JSON inválido retorna 400, autenticação inválida 401, corpo grande 413 e tipo de conteúdo incorreto 415. Erros não revelam detalhes internos. O app e os dois servidores compartilham a validação em `shared/menu-validation.mjs`.
 
-O endpoint administrativo substitui o cardápio inteiro: em atualizações concorrentes, vale a última gravação concluída. Guardar uma cópia do JSON antes de substituir o catálogo. O aplicativo **não** envia automaticamente as edições locais para o servidor.
+O endpoint administrativo substitui o cardápio inteiro: em atualizações concorrentes, vale a última gravação concluída. Guardar uma cópia do JSON antes de substituir o catálogo. As edições feitas no aplicativo entram na fila de sincronização entre tablets; alterações simultâneas do mesmo cardápio exigem resolver o conflito exibido no app.
 
 ## Alternativa Node local/VPS
 

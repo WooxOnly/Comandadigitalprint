@@ -4,7 +4,7 @@ import { createPrintJob } from './src/services/printJob';
 const runPrintJob = createPrintJob();
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
-export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' };
+export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88' };
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
 export type PrintableOrder = { plate: string; customer: string; items: PrintableOrderItem[]; createdAt: string };
 
@@ -17,7 +17,7 @@ function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-export function buildOrderHtml(order: PrintableOrder, paperWidth: '58' | '80', language: Language = 'pt') {
+export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSettings['paperWidth'], language: Language = 'pt') {
   const t = (text: string) => translate(text, language);
   const itemRows = order.items.map((item) => {
     const flavors = item.flavors && item.flavors.length > 0 ? `<div class="flavors">${item.flavors.map((flavor, index) => `<div class="flavor">${t(index === 0 ? '1ª metade:' : '2ª metade:')} ${escapeHtml(flavor)}</div>`).join('')}</div>` : '';

@@ -15,7 +15,8 @@ export default function MenuScreen() {
                     {menu.map((product) => <View key={product.id} style={[styles.menuEditCard, isWide && styles.menuEditCardWide]}>
                       <Text style={styles.fieldLabel}>{t("Nome do produto")}</Text>
                       <TextInput value={product.name} onChangeText={(name) => updateMenuProduct(product.id, { name })} accessibilityLabel={t("Nome do produto")} placeholder={t("Ex.: pizza de calabresa")} placeholderTextColor={COLORS.placeholder} style={styles.input} />
-                      {product.description ? <Text style={styles.mutedText}>{product.description}</Text> : null}
+                      <Text style={styles.fieldLabel}>{t('Ingredientes / descrição')}</Text>
+                      <TextInput value={product.description || ''} onChangeText={(description) => updateMenuProduct(product.id, { description })} accessibilityLabel={t('Ingredientes / descrição')} placeholder={t('Ingredientes do produto')} placeholderTextColor={COLORS.placeholder} style={styles.input} multiline maxLength={2000} />
                       <View style={styles.menuEditRow}>
                         <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t("Grupo")}</Text><TextInput value={product.category} onChangeText={(category) => updateMenuProduct(product.id, { category })} accessibilityLabel={t("Grupo do produto")} placeholder={t("Ex.: pizzas")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
                         <View style={styles.menuEditField}><Text style={styles.fieldLabel}>{t('Subgrupo (opcional)')}</Text><TextInput value={product.subcategory || ''} onChangeText={subcategory => updateMenuProduct(product.id, { subcategory })} accessibilityLabel={t('Subgrupo do produto')} placeholder={t('Ex.: especiais')} placeholderTextColor={COLORS.placeholder} maxLength={100} style={styles.input} /></View>

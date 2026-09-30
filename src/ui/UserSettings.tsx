@@ -8,12 +8,13 @@ import { PasswordField } from './AccessGate';
 import { styles, COLORS } from './theme';
 
 export function UserSettings() {
-  const { service, currentUser } = useAuth();
+  const { service, currentUser, changeOwnPassword } = useAuth();
   const { t } = useLanguage();
   const [users, setUsers] = useState(() => service.listUsers());
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'manage' | 'create'>('manage');
@@ -31,7 +32,27 @@ export function UserSettings() {
     catch (error) { logError('users.save_failed', error); Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.')); }
     finally { setBusy(false); }
   }
-  if (currentUser !== 'admin') return <View style={styles.panel}><Text style={styles.helperText}>{t('Entre como admin para gerenciar os usuários compartilhados.')}</Text></View>;
+  async function saveOwnPassword() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const synced = await changeOwnPassword(currentPassword, password, confirmation);
+      setCurrentPassword(''); setPassword(''); setConfirmation('');
+      Alert.alert(t('Senha alterada'), t(synced ? 'Sua nova senha já está disponível nos tablets sincronizados.' : 'Sua nova senha foi salva neste tablet. A sincronização está pendente.'));
+    } catch (error) {
+      logError('users.own_password_failed', error);
+      Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'));
+    } finally { setBusy(false); }
+  }
+  if (currentUser !== 'admin') return <View style={styles.panel}>
+    <Text style={styles.panelTitle}>{t('Alterar minha senha')}</Text>
+    <Text style={styles.helperText}>{t('Você só pode alterar sua própria senha.')}</Text>
+    <PasswordField label={t('Senha atual')} value={currentPassword} onChangeText={setCurrentPassword} />
+    <PasswordField label={t('Nova senha')} value={password} onChangeText={setPassword} />
+    <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />
+    <Text style={styles.helperText}>{t('Use uma senha de 4 a 6 caracteres e confirme a mesma senha.')}</Text>
+    <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={saveOwnPassword}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar nova senha')}</Text></Pressable>
+  </View>;
   return <View style={[styles.panel, { marginBottom: 20 }]}>
     <Text style={styles.panelTitle}>{t('Gerenciar usuários')}</Text>
     <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>

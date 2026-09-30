@@ -129,6 +129,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     async createUser(username: string, password: string, confirmation: string) {
       return run(async () => {
         requireSettings();
+        if (currentUser !== 'admin') throw new Error('Acesso protegido');
         const name = username.trim().toLowerCase();
         if (!/^[a-z0-9._-]{3,24}$/.test(name) || name === 'admin') throw new Error('Use de 3 a 24 letras, números, ponto, hífen ou sublinhado. Admin é reservado.');
         if (users.some((user) => user.username === name)) throw new Error('Este usuário já existe.');
@@ -144,6 +145,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     async updateUser(username: string, active: boolean, password?: string, confirmation?: string) {
       return run(async () => {
         requireSettings();
+        if (currentUser !== 'admin') throw new Error('Acesso protegido');
         const user = users.find((u) => u.username === username);
         if (!user) throw new Error('Usuário não encontrado.');
         if (!active && username === currentUser) throw new Error('Não é possível desativar o usuário conectado.');
@@ -151,6 +153,18 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         const login = password === undefined ? user.login : await makeDigest(password);
         requireSettings();
         await saveUser({ ...user, active, login, attempts: 0, blockedUntil: 0 });
+      });
+    },
+    async changeOwnPassword(currentPassword: string, password: string, confirmation: string) {
+      return run(async () => {
+        requireSettings();
+        if (currentUser === 'admin') throw new Error('A senha semanal do admin é gerenciada pelo painel online.');
+        const user = users.find((item) => item.username === currentUser && item.active);
+        if (!user || !currentPassword || !equal(await derive(currentPassword, user.login.salt, user.login.iterations ?? ITERATIONS), user.login.hash)) throw new Error('Senha atual incorreta.');
+        if (!validPasswords(password, confirmation)) throw new Error(PASSWORD_ERROR);
+        const login = await makeDigest(password);
+        requireSettings();
+        await saveUser({ ...user, login, attempts: 0, blockedUntil: 0 });
       });
     },
     async syncAdmin(endpoint: string, fetcher: typeof fetch = fetch) {

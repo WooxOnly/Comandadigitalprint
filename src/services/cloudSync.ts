@@ -103,7 +103,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         // Upload individual immutable orders: retries cannot duplicate an order.
         for (const sent of Object.values(state.pending)) {
           if (session?.token !== token) return;
-          if (sent.conflict || (sent.key.startsWith('user:') && username !== 'admin')) continue;
+          if (sent.conflict || (sent.key.startsWith('user:') && username !== 'admin' && sent.key !== 'user:' + username)) continue;
           try {
             const ack = await request('/change', { key: sent.key, value: sent.value, base: sent.base, id: sent.id }, token);
             if (!Number.isSafeInteger(ack.revision) || ack.revision < 1) throw new CloudError('INVALID_DATA');
