@@ -1006,6 +1006,7 @@ Object.assign(translations, {
   'Nenhum usuário adicional cadastrado.': ['No additional users registered.', 'No hay usuarios adicionales registrados.'],
   'Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.': ['Could not load users. Reopen settings to try again.', 'No se pudieron cargar los usuarios. Vuelva a abrir ajustes para intentarlo de nuevo.'],
   'Alterar minha senha': ['Change my password', 'Cambiar mi contraseña'],
+  'Selecionar usuário': ['Select user', 'Seleccionar usuario'],
   'Você só pode alterar sua própria senha.': ['You can only change your own password.', 'Solo puede cambiar su propia contraseña.'],
   'Senha atual': ['Current password', 'Contraseña actual'],
   'Nova senha': ['New password', 'Nueva contraseña'],
@@ -1032,6 +1033,14 @@ Object.assign(translations, {
   'Ex.: especiais': ['E.g.: specials', 'Ej.: especiales'],
   'Organize os produtos em grupos e subgrupos.': ['Organize products into groups and subgroups.', 'Organice los productos en grupos y subgrupos.'],
   'Promocionais': ['Promotional', 'Promocionales'], 'Regulares': ['Regular', 'Regulares'], 'Especiais': ['Specials', 'Especiales'],
+  'Prévia da comanda': ['Order preview', 'Vista previa de la comanda'],
+  'Fechar prévia': ['Close preview', 'Cerrar vista previa'],
+  'Reduzir zoom': ['Zoom out', 'Reducir zoom'],
+  'Ampliar zoom': ['Zoom in', 'Ampliar zoom'],
+  'Imprimir comanda': ['Print order', 'Imprimir comanda'],
+  'Abrindo impressão…': ['Opening print dialog…', 'Abriendo impresión…'],
+  'Salvando e abrindo prévia…': ['Saving and opening preview…', 'Guardando y abriendo vista previa…'],
+  'Salvar e conferir impressão': ['Save and preview print', 'Guardar y revisar impresión'],
 });
 
 export function translate(text: string, language: Language = 'pt'): string {

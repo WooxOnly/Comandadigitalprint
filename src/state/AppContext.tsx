@@ -46,6 +46,8 @@ function useAppState() {
   const [extraPlacement, setExtraPlacement] = useState<Extra['placement']>('whole');
   const [printerSettings, setPrinterSettings] = useState<PrinterSettings>(DEFAULT_PRINTER_SETTINGS);
   const [feedback, setFeedback] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
+  const [previewOrder, setPreviewOrder] = useState<SavedOrder | null>(null);
+  const [printing, setPrinting] = useState(false);
   const { width: windowWidth, fontScale } = useWindowDimensions();
   const isWide = windowWidth >= 760 && fontScale < 1.4;
   const [isReady, setIsReady] = useState(false);
@@ -187,7 +189,9 @@ function useAppState() {
 
   function addMenuProduct() {
     menuDirty.current = true;
-    setMenu((current) => [...current, { id: `item-${randomUUID()}`, name: 'Novo produto', category: 'Lanches', price: 0 }]);
+    const id = `item-${randomUUID()}`;
+    setMenu((current) => [...current, { id, name: 'Novo produto', category: 'Lanches', price: 0 }]);
+    return id;
   }
 
   function updateMenuProduct(id: string, change: Partial<Product>) {
@@ -237,14 +241,24 @@ function useAppState() {
   }
 
   async function printSavedOrder(order: SavedOrder) {
+    setPreviewOrder(order);
+  }
+
+  async function confirmPrint() {
+    if (!previewOrder || printing) return;
+    const order = previewOrder;
+    setPrinting(true);
     try {
       void diagnostics.record('print.started', printerSettings.connection.toUpperCase(), order.id);
       await printOrder(order, printerSettings, language);
       void diagnostics.record('print.dialog_opened', 'SYSTEM', order.id);
+      setPreviewOrder(null);
       showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       logError('print.failed', error, order.id);
       showFeedback('Impressão indisponível', printFailureMessage(error), 'error');
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -288,7 +302,7 @@ function useAppState() {
   }
 
 
-  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

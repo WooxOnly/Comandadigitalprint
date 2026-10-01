@@ -125,6 +125,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     },
     lockSettings() { settingsOpen = false; },
     logout() { signedIn = false; currentUser = ''; settingsOpen = false; },
+    loginUsers() { return ['admin', ...users.filter((user) => user.active).map((user) => user.username)]; },
     listUsers() { requireSettings(); return users.map(({ username, active }) => ({ username, active })); },
     async createUser(username: string, password: string, confirmation: string) {
       return run(async () => {
@@ -190,5 +191,6 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
 }
 
 export function settingsAccessCode(date = new Date()) {
-  return String(date.getMonth() + 1 + date.getDate() + date.getFullYear() + date.getHours());
+  const hour = date.getHours() % 12 || 12;
+  return String(date.getMonth() + 1 + date.getDate() + date.getFullYear() + hour);
 }

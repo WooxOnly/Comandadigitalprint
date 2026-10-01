@@ -44,7 +44,7 @@ export function UserSettings() {
       Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'));
     } finally { setBusy(false); }
   }
-  if (currentUser !== 'admin') return <View style={styles.panel}>
+  if (currentUser !== 'admin') return <View style={[styles.panel, { width: '100%', maxWidth: 760, alignSelf: 'center' }]}>
     <Text style={styles.panelTitle}>{t('Alterar minha senha')}</Text>
     <Text style={styles.helperText}>{t('Você só pode alterar sua própria senha.')}</Text>
     <PasswordField label={t('Senha atual')} value={currentPassword} onChangeText={setCurrentPassword} />
@@ -53,7 +53,7 @@ export function UserSettings() {
     <Text style={styles.helperText}>{t('Use uma senha de 4 a 6 caracteres e confirme a mesma senha.')}</Text>
     <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={saveOwnPassword}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar nova senha')}</Text></Pressable>
   </View>;
-  return <View style={[styles.panel, { marginBottom: 20 }]}>
+  return <View style={[styles.panel, { marginBottom: 20, width: '100%', maxWidth: 760, alignSelf: 'center' }]}>
     <Text style={styles.panelTitle}>{t('Gerenciar usuários')}</Text>
     <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>
     {loadError && <Text style={styles.helperText}>{t('Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.')}</Text>}

@@ -88,6 +88,7 @@ test('local users survive restart, require unlocked settings and support disable
   await auth.createUser('Staff', '123456', '123456');
   await assert.rejects(auth.createUser('staff', '123456', '123456'));
   assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
+  assert.deepEqual(auth.loginUsers(), ['admin', 'staff']);
   f.fail = true;
   await assert.rejects(auth.updateUser('staff', false));
   await assert.rejects(auth.createUser('other', '123456', '123456'));
@@ -103,8 +104,10 @@ test('local users survive restart, require unlocked settings and support disable
   await reopened.verify('login', 'abc123', 'admin');
   await reopened.verify('settings', '2066');
   await reopened.updateUser('staff', false);
+  assert.deepEqual(reopened.loginUsers(), ['admin']);
   await assert.rejects(reopened.verify('login', '123456', 'staff'));
   await reopened.updateUser('staff', true, '654321', '654321');
+  assert.deepEqual(reopened.loginUsers(), ['admin', 'staff']);
   reopened.lockSettings();
   await assert.rejects(reopened.updateUser('staff', false));
   reopened.logout();
@@ -191,6 +194,17 @@ test('offline login persists hashed credentials, rejects wrong passwords and pro
   await reopened.verify('settings', '2067');
   reopened.logout(); await assert.rejects(reopened.verify('settings', '2067'));
   assert.equal(settingsAccessCode(new Date(2026, 8, 25, 6)), '2066');
+});
+test('settings password uses the local 12-hour clock', async () => {
+  assert.equal(settingsAccessCode(new Date(2026, 9, 1, 3)), '2040');
+  assert.equal(settingsAccessCode(new Date(2026, 9, 1, 15)), '2040');
+  assert.equal(settingsAccessCode(new Date(2026, 9, 1, 12)), '2049');
+  assert.equal(settingsAccessCode(new Date(2026, 9, 1, 0)), '2049');
+  const f = fixture(), auth = f.create();
+  await auth.load();
+  await auth.setup('admin', 'abc123', 'abc123');
+  f.time.value = new Date(2026, 9, 1, 15).getTime();
+  await auth.verify('settings', '2040');
 });
 test('failed credential writes never create access; corrupt storage fails closed', async () => {
   const f = fixture(), auth = f.create(); await auth.load(); f.fail = true;

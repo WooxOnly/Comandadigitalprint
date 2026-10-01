@@ -8,6 +8,7 @@ const { patchPrintModule } = require('../plugins/with-receipt-paper');
 
 function loadPrinter() {
   const calls = [];
+  const files = [];
   const exports = {};
   const source = fs.readFileSync(require.resolve('../printerService.ts'), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
@@ -16,11 +17,12 @@ function loadPrinter() {
     require(name) {
       if (name.endsWith('/translations')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output }); return output; }
       if (name.endsWith('/printJob')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/printJob.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, setTimeout, clearTimeout }); return output; }
+      if (name === 'react-native') return { Platform: { OS: 'android' } };
       assert.equal(name, 'expo-print');
-      return { printAsync: async (options) => { calls.push(options); } };
+      return { printToFileAsync: async (options) => { files.push(options); return { uri: 'file:///test-receipt.pdf' }; }, printAsync: async (options) => { calls.push(options); } };
     },
   });
-  return { ...exports, calls };
+  return { ...exports, calls, files };
 }
 
 test('all receipt languages preserve product names and extras, including reprints', async () => {
@@ -31,7 +33,7 @@ test('all receipt languages preserve product names and extras, including reprint
   ] };
   for (const [language, title, half, success] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente']]) {
     await printer.printOrder(order, { connection: 'system', paperWidth: '58' }, language);
-    const html = printer.calls.at(-1).html;
+    const html = printer.files.at(-1).html;
     for (const text of [title, half, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
     assert.ok(printer.buildPrinterTestHtml('80', language).includes(success));
     if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
@@ -44,11 +46,14 @@ for (const paperWidth of ['58', '80', '88']) {
     await printer.printPrinterTest({ connection: 'system', paperWidth });
     assert.equal(printer.calls.length, 1);
     const options = printer.calls[0];
-    assert.match(options.html, /Impressora configurada com sucesso/);
-    assert.match(options.html, /text-align: center/);
-    assert.ok(options.html.includes(`size: ${paperWidth}mm 200mm`));
+    const html = printer.files[0].html;
+    assert.equal(options.uri, 'file:///test-receipt.pdf');
+    assert.match(html, /Impressora configurada com sucesso/);
+    assert.match(html, /text-align: center/);
+    assert.ok(html.includes(`size: ${paperWidth}mm 200mm`));
     assert.ok(Math.abs(options.width * 25.4 / 72 - Number(paperWidth)) < 0.2);
-    assert.doesNotMatch(options.html, /Plaquinha|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
+    assert.equal(printer.files[0].width, options.width);
+    assert.doesNotMatch(html, /Plaquinha|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
   });
 
   test(`production receipt uses ${paperWidth} mm for both HTML and print dialog`, async () => {
@@ -59,15 +64,18 @@ for (const paperWidth of ['58', '80', '88']) {
     await printer.printOrder(order, { connection: 'system', paperWidth });
     assert.equal(printer.calls.length, 1);
     const options = printer.calls[0];
+    const html = printer.files[0].html;
+    assert.equal(options.uri, 'file:///test-receipt.pdf');
     assert.ok(Math.abs(options.width * 25.4 / 72 - Number(paperWidth)) < 0.2);
     assert.ok(Math.abs(options.height * 25.4 / 72 - 200) < 0.2);
-    assert.ok(options.html.includes(`size: ${paperWidth}mm 200mm`));
-    assert.match(options.html, /margin: 0 auto/);
-    assert.match(options.html, /text-align: center/);
+    assert.equal(printer.files[0].height, options.height);
+    assert.ok(html.includes(`size: ${paperWidth}mm 200mm`));
+    assert.match(html, /margin: 0 auto/);
+    assert.match(html, /text-align: center/);
     for (const value of ['Plaquinha: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', '1ª metade: Calabresa', '2ª metade: Queijo', '+ Bacon &amp; alho', '(2ª metade: Queijo)', '+ Milho', '(inteira)', 'Sem cebola\nMolho à parte']) {
-      assert.ok(options.html.includes(value));
+      assert.ok(html.includes(value));
     }
-    assert.doesNotMatch(options.html, /R\$|47[.,]83|95[.,]66|subtotal|total:/i);
+    assert.doesNotMatch(html, /R\$|47[.,]83|95[.,]66|subtotal|total:/i);
   });
 }
 
@@ -75,6 +83,7 @@ test('unsupported direct connection fails without pretending to print a test', a
   const printer = loadPrinter();
   await assert.rejects(printer.printPrinterTest({ connection: 'bluetooth', paperWidth: '58' }), /Conexão direta indisponível/);
   assert.equal(printer.calls.length, 0);
+  assert.equal(printer.files.length, 0);
 });
 
 test('native print dialog patch is compatible with installed expo-print and idempotent', () => {
@@ -83,6 +92,7 @@ test('native print dialog patch is compatible with installed expo-print and idem
   const patched = patchPrintModule(source);
   assert.ok(patched.includes('val width = options.width'));
   assert.ok(patched.includes('val height = options.height'));
+  assert.ok(patched.includes('if (width != null && height != null'));
   assert.ok(patched.includes('"Comanda " + widthMm + " mm"'));
   assert.ok(patched.includes('PrintAttributes.Margins.NO_MARGINS'));
   assert.ok(patched.includes('PrintAttributes.MediaSize.UNKNOWN_PORTRAIT'));

@@ -9,6 +9,7 @@ import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
 import { styles, COLORS, TABS, ROUTES } from './theme';
 import { CloudStatus } from './CloudStatus';
+import { ReceiptPreview } from './ReceiptPreview';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
   const path = usePathname();
@@ -81,6 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SafeAreaView>
           </KeyboardAvoidingView></SafeAreaProvider>
         </Modal>
+        <ReceiptPreview />
       </SafeAreaView>
     </SafeAreaProvider>
   );
