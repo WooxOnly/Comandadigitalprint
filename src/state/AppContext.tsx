@@ -1,4 +1,4 @@
-import { diagnostics, logError } from '../services/diagnostics';
+import { logError } from '../services/diagnostics';
 import { printFailureMessage } from '../services/printJob';
 import { useLanguage } from '../i18n/LanguageContext';
 import { appStorage as AsyncStorage, cloud } from '../services/cloudStorage';
@@ -249,9 +249,7 @@ function useAppState() {
     const order = previewOrder;
     setPrinting(true);
     try {
-      void diagnostics.record('print.started', printerSettings.connection.toUpperCase(), order.id);
       await printOrder(order, printerSettings, language);
-      void diagnostics.record('print.dialog_opened', 'SYSTEM', order.id);
       setPreviewOrder(null);
       showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
@@ -264,9 +262,7 @@ function useAppState() {
 
   async function testPrinter() {
     try {
-      void diagnostics.record('print_test.started', printerSettings.connection.toUpperCase());
       await printPrinterTest(printerSettings, language);
-      void diagnostics.record('print_test.dialog_opened', 'SYSTEM');
       showFeedback('Teste de impressão aberto', 'Selecione a impressora e confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       logError('print_test.failed', error);

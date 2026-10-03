@@ -5,11 +5,14 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 const MONDAY = Date.UTC(1970, 0, 5);
 const IDLE_MS = 60 * 60 * 1000;
 const COOKIE = '__Host-comanda_panel';
+const CSRF_COOKIE = '__Host-comanda_csrf';
 const encode = (value) => new TextEncoder().encode(value);
 const hex = (value) => Array.from(new Uint8Array(value), (byte) => byte.toString(16).padStart(2, '0')).join('');
 const unhex = (value) => Uint8Array.from(value.match(/../g) || [], (part) => parseInt(part, 16));
 const json = (value, status = 200, extra = {}) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra } });
 const cookieHeader = (value, age) => `${COOKIE}=${value}; Max-Age=${age}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+const csrfCookieHeader = (value) => `${CSRF_COOKIE}=${value}; Max-Age=3600; Path=/; HttpOnly; Secure; SameSite=Strict`;
+const readCookie = (request, name) => request.headers.get('Cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(name + '='))?.slice(name.length + 1);
 
 export async function weeklyAdmin(secret, timestamp = Date.now(), revision = 0) {
   if (typeof secret !== 'string' || secret.length < 32) throw new Error('Admin secret not configured');
@@ -39,7 +42,7 @@ async function issueSession(env, now) {
 }
 
 async function validSession(request, env, now) {
-  const cookie = request.headers.get('Cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(COOKIE + '='))?.slice(COOKIE.length + 1);
+  const cookie = readCookie(request, COOKIE);
   if (!cookie || cookie.length > 2000) return false;
   const [payload, signature, extra] = cookie.split('.');
   if (extra || !/^(?:[0-9a-f]{2})+$/.test(payload || '') || !/^[0-9a-f]{64}$/.test(signature || '')) return false;
@@ -69,6 +72,11 @@ function htmlResponse(content, nonce, status = 200, extra = {}) {
   } });
 }
 
+function loginResponse(nonce, message = '', status = 200) {
+  const csrf = crypto.randomUUID();
+  return htmlResponse(loginPage(nonce, message, csrf), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf) });
+}
+
 async function loginLimit(env, now) {
   if (!env.DB) return null;
   const state = await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
@@ -88,24 +96,28 @@ export async function adminResponse(request, env, now = Date.now()) {
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
-  const sameOrigin = request.headers.get('Origin') === url.origin;
+  const origin = request.headers.get('Origin');
+  const sameOrigin = origin === url.origin;
   const nonce = crypto.randomUUID();
 
   if (pathname === '/admin/login' && request.method === 'POST') {
-    if (!sameOrigin) return json({ error: 'Forbidden' }, 403);
     try {
-      const blockedUntil = await loginLimit(env, now);
-      if (blockedUntil) return htmlResponse(loginPage(nonce, 'Muitas tentativas. Aguarde 15 minutos.'), nonce, 429, { 'Retry-After': String(Math.ceil((blockedUntil - now) / 1000)) });
-      if (!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded') || Number(request.headers.get('Content-Length')) > 4096) return json({ error: 'Invalid form' }, 400);
+      if (!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded') || Number(request.headers.get('Content-Length')) > 4096) return loginResponse(nonce, 'Formulário inválido. Tente novamente.', 400);
       const form = await request.formData();
+      const csrf = readCookie(request, CSRF_COOKIE);
+      if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return loginResponse(nonce, 'A sessão de login expirou. Tente novamente.', 403);
+      const blockedUntil = await loginLimit(env, now);
+      if (blockedUntil) return loginResponse(nonce, 'Muitas tentativas. Aguarde 15 minutos.', 429);
       const username = String(form.get('username') || '');
       const password = String(form.get('password') || '');
       const valid = await credentialsMatch(username, password, env);
       await recordLogin(env, valid, now);
-      if (!valid) return htmlResponse(loginPage(nonce, 'Usuário ou senha incorretos.'), nonce, 401);
+      if (!valid) return loginResponse(nonce, 'Usuário ou senha incorretos.', 401);
       return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
-    } catch { return htmlResponse(loginPage(nonce, 'Login temporariamente indisponível.'), nonce, 503); }
+    } catch { return loginResponse(nonce, 'Login temporariamente indisponível.', 503); }
   }
+
+  if (pathname === '/admin/login' && request.method === 'GET') return new Response(null, { status: 303, headers: { Location: '/admin', 'Cache-Control': 'no-store' } });
 
   if (pathname === '/admin/logout' && request.method === 'POST') {
     if (!sameOrigin) return json({ error: 'Forbidden' }, 403);
@@ -115,7 +127,7 @@ export async function adminResponse(request, env, now = Date.now()) {
   if (pathname === '/admin' && request.method === 'GET') {
     if (!browserLogin) {
       const message = url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
-      return htmlResponse(loginPage(nonce, message), nonce);
+      return loginResponse(nonce, message);
     }
     return htmlResponse(panelPage(nonce), nonce, 200, { 'Set-Cookie': await issueSession(env, now) });
   }
@@ -126,9 +138,13 @@ export async function adminResponse(request, env, now = Date.now()) {
   }
 
   if (pathname === '/admin/logs' && request.method === 'GET') {
+    if (request.headers.get('Accept')?.includes('text/html')) return new Response(null, { status: 303, headers: { Location: '/admin#errors', 'Cache-Control': 'no-store' } });
     if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
     try {
-      const { results } = await env.DB.prepare('SELECT device_id, created_at, event, code, order_id FROM diagnostics ORDER BY received_at DESC LIMIT 500').all();
+      const kind = url.searchParams.get('kind');
+      if (kind !== 'errors' && kind !== 'printing') return json({ error: 'Invalid log category' }, 400);
+      const condition = kind === 'printing' ? "event IN ('print.failed', 'print_test.failed')" : "event NOT LIKE 'print.%' AND event NOT LIKE 'print_test.%' AND (event LIKE '%.failed' OR event IN ('runtime.error', 'runtime.fatal'))";
+      const { results } = await env.DB.prepare(`SELECT device_id, created_at, event, code, order_id FROM diagnostics WHERE ${condition} ORDER BY received_at DESC LIMIT 100`).all();
       return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
     } catch { return json({ error: 'Logs unavailable' }, 503); }
   }

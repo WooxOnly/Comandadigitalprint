@@ -27,6 +27,8 @@ Publicado no Cloudflare Workers + D1 em 26/09/2026: https://seabra-cardapio.woox
 3. Use **Consultar senha** para ver a senha atual do usuário `admin` e a data da próxima renovação.
 4. Use **Gerar nova senha agora** e confirme para substituir a senha imediatamente no servidor. Os tablets recebem a troca na próxima sincronização; offline continuam com a anterior. A próxima renovação automática semanal continua prevista para segunda-feira às 00:00 UTC.
 
+O menu superior reúne **Gerenciar senha**, **Logs do sistema** e **Logs de impressão**. Os logs mostram apenas falhas; eventos de início de impressão ou abertura da janela não são armazenados. Se o formulário de login expirar, o painel apresenta outro formulário para tentar novamente.
+
 O login do painel é diferente da senha semanal do aplicativo. E-mail e senha estão nos segredos ADMIN_PANEL_USER e ADMIN_VIEW_TOKEN do Cloudflare, fora do Git/APK. Cinco tentativas incorretas bloqueiam o acesso por 15 minutos. A sessão do painel expira após uma hora sem atividade; é possível sair manualmente pelo botão **Sair**. A chave antiga foi invalidada.
 
 ### Referência para novas instalações do servidor

@@ -74,6 +74,7 @@ export async function cloudResponse(request, env) {
     if (url.pathname === '/cloud/diagnostics' && request.method === 'POST') {
       const entry = await body(request);
       if (!entry || !/^[a-f0-9-]{36}$/.test(entry.id || '') || !/^[a-f0-9-]{36}$/.test(entry.deviceId || '') || typeof entry.createdAt !== 'string' || entry.createdAt.length > 40 || !Number.isFinite(Date.parse(entry.createdAt)) || !/^[a-zA-Z0-9_.-]{1,60}$/.test(entry.event || '') || !/^[a-zA-Z0-9_.-]{1,80}$/.test(entry.code || '') || (entry.orderId !== undefined && (typeof entry.orderId !== 'string' || !/^[a-zA-Z0-9-]{1,160}$/.test(entry.orderId)))) fail(400, 'INVALID_DATA');
+      if (!entry.event.endsWith('.failed') && entry.event !== 'runtime.error' && entry.event !== 'runtime.fatal') return reply({ ok: true });
       await env.DB.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code, order_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(entry.id, entry.deviceId, entry.createdAt, new Date().toISOString(), actor.username, entry.event, entry.code, entry.orderId || null).run();
       await env.DB.prepare('DELETE FROM diagnostics WHERE received_at < ?').bind(new Date(Date.now() - 30 * 86400000).toISOString()).run();
       return reply({ ok: true });

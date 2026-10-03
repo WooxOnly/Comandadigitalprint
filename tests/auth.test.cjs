@@ -6,6 +6,12 @@ const ts = require('typescript');
 const output = {};
 new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
 const { createLocalAuth, settingsAccessCode } = output;
+async function panelLogin(adminResponse, env, password, username = env.ADMIN_PANEL_USER || 'admin', now = Date.now(), origin) {
+  const start = await adminResponse(new Request('https://example.com/admin'), env, now);
+  const csrfCookie = start.headers.get('Set-Cookie').split(';')[0];
+  const csrf = csrfCookie.split('=')[1];
+  return adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded', ...(origin ? { Origin: origin } : {}) }, body: new URLSearchParams({ csrf, username, password }) }), env, now);
+}
 test('panel requires a session, ignores cached Basic auth and rejects cross-origin password changes', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'private-owner-password' };
@@ -15,8 +21,13 @@ test('panel requires a session, ignores cached Basic auth and rejects cross-orig
     assert.ok(!(await response.text()).includes('Gerar nova senha'));
   }
   const now = 10000000;
-  const login = await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env, now);
+  const login = await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN, 'admin', now);
   assert.equal(login.status, 303);
+  assert.equal((await adminResponse(new Request('https://example.com/admin/login'), env, now)).status, 303);
+  const expiredForm = await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env, now);
+  assert.equal(expiredForm.status, 403);
+  assert.ok((await expiredForm.text()).includes('Tente novamente'));
+  assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN, 'admin', now, 'null')).status, 303);
   const cookie = login.headers.get('Set-Cookie').split(';')[0];
   assert.match(login.headers.get('Set-Cookie'), /HttpOnly; Secure; SameSite=Strict/);
   const panel = await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
@@ -175,15 +186,36 @@ test('manual rotation requires authorization and replaces the cached password in
   assert.equal(await synchronize(), true);
   await assert.rejects(auth.verify('login', before.password, 'admin'));
   await auth.verify('login', rotated.password, 'admin');
-  const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: (await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env)).headers.get('Set-Cookie').split(';')[0] } }), env)).text();
+  const panelCookie = (await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).headers.get('Set-Cookie').split(';')[0];
+  const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: panelCookie } }), env)).text();
   new Function(panel.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1]);
   assert.ok(panel.includes('Gerar nova senha agora'));
+  assert.ok(panel.includes('Gerenciar senha') && panel.includes('Logs do sistema') && panel.includes('Logs de impressão'));
   env.ADMIN_PANEL_USER = 'owner@example.com';
-  const loginRequest = (password) => new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: env.ADMIN_PANEL_USER, password }) });
-  assert.equal((await adminResponse(loginRequest(env.ADMIN_VIEW_TOKEN), env)).status, 303);
-  for (let i = 0; i < 5; i++) await adminResponse(loginRequest('wrong'), env);
-  assert.equal((await adminResponse(loginRequest(env.ADMIN_VIEW_TOKEN), env)).status, 429);
+  assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).status, 303);
+  for (let i = 0; i < 5; i++) await panelLogin(adminResponse, env, 'wrong');
+  assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).status, 429);
   database.close();
+});
+test('panel shows only failures in separate system and printing logs', async () => {
+  const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
+  const { DatabaseSync } = require('node:sqlite');
+  const database = new DatabaseSync(':memory:');
+  try {
+    database.exec(fs.readFileSync('server/cloudflare/schema.sql', 'utf8'));
+    database.exec(fs.readFileSync('server/cloudflare/diagnostics-schema.sql', 'utf8'));
+    const insert = database.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?)');
+    for (const [index, event] of ['print.started', 'print.failed', 'sync.failed', 'print_test.dialog_opened', 'print_test.failed', 'runtime.fatal'].entries()) insert.run(String(index), 'tablet', '2026-10-03T12:00:00Z', '2026-10-03T12:00:00Z', 'admin', event, 'TEST');
+    const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: { prepare: (sql) => ({ first: async () => database.prepare(sql).get(), run: async () => database.prepare(sql).run(), all: async () => ({ results: database.prepare(sql).all() }), bind: (...args) => ({ run: async () => database.prepare(sql).run(...args) }) }) } };
+    const cookie = (await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).headers.get('Set-Cookie').split(';')[0];
+    const get = (path, headers = {}) => adminResponse(new Request('https://example.com' + path, { headers: { Cookie: cookie, ...headers } }), env);
+    assert.deepEqual((await (await get('/admin/logs?kind=errors')).json()).map((row) => row.event).sort(), ['runtime.fatal', 'sync.failed']);
+    assert.deepEqual((await (await get('/admin/logs?kind=printing')).json()).map((row) => row.event).sort(), ['print.failed', 'print_test.failed']);
+    assert.equal((await get('/admin/logs')).status, 400);
+    const browser = await get('/admin/logs', { Accept: 'text/html' });
+    assert.equal(browser.status, 303);
+    assert.equal(browser.headers.get('Location'), '/admin#errors');
+  } finally { database.close(); }
 });
 test('offline login persists hashed credentials, rejects wrong passwords and protects settings', async () => {
   const f = fixture(), first = f.create();

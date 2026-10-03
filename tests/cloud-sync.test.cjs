@@ -178,6 +178,7 @@ test('changes paginate without losing orders, and writes cannot mutate or overwr
     const log = { id: randomUUID(), deviceId: randomUUID(), createdAt: new Date().toISOString(), event: 'print.failed', code: 'PRINT_TIMEOUT', password: 'must-not-be-stored' };
     assert.equal((await f.request('/diagnostics', log)).status, 401);
     for (let i = 0; i < 2; i++) assert.equal((await f.request('/diagnostics', log, f.token)).status, 200);
+    assert.equal((await f.request('/diagnostics', { ...log, id: randomUUID(), event: 'print.started' }, f.token)).status, 200);
     const rows = f.database.prepare('SELECT * FROM diagnostics').all();
     assert.equal(rows.length, 1); assert.doesNotMatch(JSON.stringify(rows), /must-not-be-stored/);
     assert.equal((await f.request('/diagnostics', { ...log, event: '<invalid>' }, f.token)).status, 400);
