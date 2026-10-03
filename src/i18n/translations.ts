@@ -1,6 +1,8 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  'Detalhes do pedido': ['Order details', 'Detalles del pedido'],
+  'Pedido não encontrado.': ['Order not found.', 'Pedido no encontrado.'],
   "Carregando dados salvos…": [
     "Loading saved data…",
     "Cargando datos guardados…"

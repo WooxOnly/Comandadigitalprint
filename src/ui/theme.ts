@@ -159,7 +159,7 @@ export const styles = StyleSheet.create({
   historyInlineActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   historyIconButton: { width: 44, paddingHorizontal: 0, alignItems: 'center' },
   historyIconText: { fontSize: 21 },
-  historyDetails: { borderTopColor: COLORS.border, borderTopWidth: 1, marginTop: 10, paddingTop: 12, gap: 12 },
+  historyDetailItem: { borderTopColor: COLORS.border, borderTopWidth: 1, paddingTop: 10, gap: 4 },
   historyHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   historyHeadingText: { flexShrink: 1, minWidth: 0 },
   historyCount: { color: COLORS.green, fontSize: 14, fontWeight: '800' },

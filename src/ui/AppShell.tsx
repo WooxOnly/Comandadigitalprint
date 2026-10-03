@@ -13,7 +13,7 @@ import { ReceiptPreview } from './ReceiptPreview';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
   const path = usePathname();
-  const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path) || TABS[0];
+  const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/'))) || TABS[0];
   const screen = currentTab.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
   return (
@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Pressable>
             <View style={styles.headerTitle}>
               <Text style={styles.eyebrow}>BistroHub</Text>
-              <Text style={styles.title}>{t(currentTab.title)}</Text>
+              <Text style={styles.title}>{t(path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title)}</Text>
             </View>
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
           </View>
