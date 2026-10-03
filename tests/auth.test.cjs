@@ -105,6 +105,12 @@ test('owner panel never embeds credentials and password endpoint requires the ow
 test('panel password can be changed independently and invalidates previous sessions', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const database = storeDatabase();
+  const subtle = crypto.subtle;
+  const deriveBits = subtle.deriveBits;
+  subtle.deriveBits = function (algorithm, ...args) {
+    if (algorithm.name === 'PBKDF2' && algorithm.iterations > 100000) throw new Error('Cloudflare Workers PBKDF2 limit exceeded');
+    return deriveBits.call(this, algorithm, ...args);
+  };
   try {
     const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'initial-panel-password', ADMIN_PANEL_USER: 'owner@example.com', DB: binding(database) };
     const login = await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN);
@@ -137,7 +143,7 @@ test('panel password can be changed independently and invalidates previous sessi
     assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: freshCookie } }), env)).status, 204);
     assert.equal((await adminResponse(new Request('https://example.com/admin/change-password', { method: 'POST', headers: { Cookie: freshCookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: 'New-panel-password-123', newPassword: 'Another-panel-password-456', confirmPassword: 'Another-panel-password-456' }) }), env)).status, 200);
     assert.equal(database.prepare('SELECT revision FROM panel_password').get().revision, 2);
-  } finally { database.close(); }
+  } finally { subtle.deriveBits = deriveBits; database.close(); }
 });
 function fixture(recovery) {
   const values = new Map(); let fail = false;

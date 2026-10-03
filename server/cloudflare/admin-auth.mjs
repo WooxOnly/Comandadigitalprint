@@ -5,7 +5,7 @@ import { activeStore, DEFAULT_STORE_ID, storeId } from './stores.mjs';
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const MONDAY = Date.UTC(1970, 0, 5);
 const IDLE_MS = 60 * 60 * 1000;
-const PANEL_ITERATIONS = 210000;
+const PANEL_ITERATIONS = 100000;
 const COOKIE = '__Host-comanda_panel';
 const CSRF_COOKIE = '__Host-comanda_csrf';
 const encode = (value) => new TextEncoder().encode(value);
