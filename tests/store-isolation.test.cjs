@@ -87,7 +87,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   assert.equal((await call('/store?storeId=seabra-2')).status, 404);
 });
 
-test('panel cookie binds the selected store for logs and weekly password actions', async (t) => {
+test('one panel session selects stores inside the portal for logs and weekly password actions', async (t) => {
   const { adminResponse, weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');
   const db = database(); t.after(() => db.close());
   db.prepare('INSERT INTO stores(id, name, active) VALUES(?, ?, 1)').run('seabra-2', 'Seabra 2');
@@ -97,17 +97,28 @@ test('panel cookie binds the selected store for logs and weekly password actions
   const loginPage = await adminResponse(new Request('https://example.com/admin'), env);
   const csrfCookie = loginPage.headers.get('Set-Cookie').split(';')[0];
   const csrf = csrfCookie.split('=')[1];
-  const login = await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf, storeId: 'seabra-2', username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env);
+  const login = await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf, username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env);
   assert.equal(login.status, 303);
   const cookie = login.headers.get('Set-Cookie').split(';')[0];
   const request = (path, method = 'GET') => adminResponse(new Request('https://example.com' + path, { method, headers: { Cookie: cookie, Origin: 'https://example.com' } }), env);
-  const panel = await (await request('/admin')).text(); assert.match(panel, /Loja: Seabra 2 \(seabra-2\)/);
-  const logs = await (await request('/admin/logs?kind=errors')).json(); assert.deepEqual(logs.map((item) => item.code), ['SECOND']);
-  assert.equal((await request('/auth/admin/password?storeId=seabra-1')).status, 403);
-  const before = await (await request('/auth/admin/password')).json();
+  const panel = await (await request('/admin?storeId=seabra-2')).text(); assert.match(panel, /option value="seabra-2" selected/);
+  const logs = await (await request('/admin/logs?kind=errors&storeId=seabra-2')).json(); assert.deepEqual(logs.map((item) => item.code), ['SECOND']);
+  assert.deepEqual((await (await request('/admin/logs?kind=errors&storeId=seabra-1')).json()).map((item) => item.code), ['FIRST']);
+  assert.equal((await request('/auth/admin/password?storeId=seabra-1')).status, 200);
+  const before = await (await request('/auth/admin/password?storeId=seabra-2')).json();
   assert.equal(before.storeId, 'seabra-2');
   assert.equal(before.password, (await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-2')).password);
-  assert.equal((await request('/auth/admin/password', 'POST')).status, 200);
+  assert.equal((await request('/auth/admin/password?storeId=seabra-2', 'POST')).status, 200);
   assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-2'").get().revision, 1);
   assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 0);
+  assert.deepEqual((await (await request('/admin/stores')).json()).map((store) => store.id), ['seabra-1', 'seabra-2']);
+  assert.equal((await adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://other.example', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Seabra 3' }) }), env)).status, 403);
+  const create = (name) => adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }), env);
+  assert.equal((await create('')).status, 400);
+  assert.equal((await adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: '{' }), env)).status, 400);
+  const created = await create('Seabra 3');
+  assert.equal(created.status, 201);
+  assert.deepEqual(await created.json(), { id: 'seabra-3', name: 'Seabra 3' });
+  assert.equal((await request('/auth/admin/password?storeId=seabra-3')).status, 200);
+  assert.equal(db.prepare("SELECT count(*) AS count FROM stores WHERE active = 1").get().count, 3);
 });

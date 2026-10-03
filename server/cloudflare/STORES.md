@@ -16,13 +16,15 @@ Em um banco novo, aplique na ordem `schema.sql`, `cloud-schema.sql`, `diagnostic
 
 ## Cadastro de outra loja
 
-Um responsável pelo D1 cadastra a loja explicitamente, com um ID novo e imutável. Exemplo de SQL a executar no D1:
+O proprietário entra uma única vez em `/admin`, sem informar loja no login. No menu **Lojas**, informa o nome da nova loja; o painel gera um ID estável e a cadastra no D1. O seletor no topo permite mudar de loja sem sair. A consulta e a rotação da senha semanal e os logs usam apenas a loja selecionada. A senha de entrada no painel é global; as senhas semanais usadas pelos administradores no app são diferentes por loja. Usuários comuns são cadastrados separadamente em cada loja. Uma loja nova começa com cardápio vazio.
+
+Como alternativa operacional, um responsável pelo D1 pode cadastrar a loja explicitamente com um ID novo e imutável. Exemplo:
 
 ```sql
 INSERT INTO stores(id, name, active) VALUES ('seabra-2', 'Seabra 2', 1);
 ```
 
-Depois, `GET /cloud/store?storeId=seabra-2` confirma apenas o ID e o nome de uma loja ativa. No painel `/admin`, o proprietário informa o ID da loja ao entrar; a sessão do navegador fica vinculada a ela e os logs, a consulta e a rotação da senha semanal usam apenas essa loja. Para trocar de loja, encerre a sessão e entre com outro ID. A senha de entrada do painel é global do proprietário; as senhas semanais usadas pelos administradores no app são diferentes por loja. Usuários comuns são cadastrados separadamente em cada loja. Uma loja nova começa com cardápio vazio.
+Depois, `GET /cloud/store?storeId=seabra-2` confirma apenas o ID e o nome de uma loja ativa. O tablet ainda precisa informar esse ID para vincular seu armazenamento e sincronização à loja correta.
 
 O proprietário também pode consultar/rotacionar a senha semanal de uma loja usando o token privado `ADMIN_VIEW_TOKEN` em `/auth/admin/password?storeId=<id>`. Esse token tem acesso administrativo global e não deve ser distribuído a tablets. O token legado `MENU_ADMIN_TOKEN` só edita `seabra-1`; para outras lojas, o cardápio é editado pelo app após login naquela loja.
 

@@ -53,11 +53,11 @@ function equalHex(left, right) {
   return difference === 0;
 }
 
-async function issueSession(env, now, selectedStoreId) {
+async function issueSession(env, now) {
   const key = await sessionKey(env);
   if (!key) throw new Error('Panel secret missing');
   const state = await panelPasswordState(env);
-  const payload = hex(encode(JSON.stringify({ user: env.ADMIN_PANEL_USER || 'admin', storeId: selectedStoreId, revision: state?.revision || 0, expires: now + IDLE_MS, nonce: crypto.randomUUID() })));
+  const payload = hex(encode(JSON.stringify({ user: env.ADMIN_PANEL_USER || 'admin', revision: state?.revision || 0, expires: now + IDLE_MS, nonce: crypto.randomUUID() })));
   const signature = hex(await crypto.subtle.sign('HMAC', key, encode('panel-session:' + payload)));
   return cookieHeader(payload + '.' + signature, IDLE_MS / 1000);
 }
@@ -73,9 +73,7 @@ async function validSession(request, env, now) {
     const data = JSON.parse(new TextDecoder().decode(unhex(payload)));
     const state = await panelPasswordState(env);
     if (data.user !== (env.ADMIN_PANEL_USER || 'admin') || data.revision !== (state?.revision || 0) || !Number.isFinite(data.expires) || data.expires <= now || data.expires > now + IDLE_MS) return null;
-    const selectedStoreId = data.storeId ?? DEFAULT_STORE_ID;
-    await activeStore(env, selectedStoreId);
-    return selectedStoreId;
+    return true;
   } catch { return null; }
 }
 
@@ -123,10 +121,9 @@ async function recordLogin(env, valid, now) {
 export async function adminResponse(request, env, now = Date.now()) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/change-password';
+  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
-  const browserStoreId = await validSession(request, env, now);
-  const browserLogin = !!browserStoreId;
+  const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
   const origin = request.headers.get('Origin');
   const sameOrigin = origin === url.origin;
@@ -142,13 +139,10 @@ export async function adminResponse(request, env, now = Date.now()) {
       if (blockedUntil) return loginResponse(nonce, 'Muitas tentativas. Aguarde 15 minutos.', 429);
       const username = String(form.get('username') || '');
       const password = String(form.get('password') || '');
-      let selectedStore;
-      try { selectedStore = await activeStore(env, form.get('storeId') || DEFAULT_STORE_ID); }
-      catch { return loginResponse(nonce, 'Loja indisponível ou inválida.', 400); }
       const valid = await credentialsMatch(username, password, env);
       await recordLogin(env, valid, now);
       if (!valid) return loginResponse(nonce, 'Usuário ou senha incorretos.', 401);
-      return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': await issueSession(env, now, selectedStore.id), 'Cache-Control': 'no-store' } });
+      return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
     } catch { return loginResponse(nonce, 'Login temporariamente indisponível.', 503); }
   }
 
@@ -164,13 +158,16 @@ export async function adminResponse(request, env, now = Date.now()) {
       const message = url.searchParams.has('changed') ? 'Senha do painel alterada. Entre novamente.' : url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
       return loginResponse(nonce, message);
     }
-    const store = await activeStore(env, browserStoreId);
-    return htmlResponse(panelPage(nonce, store), nonce, 200, { 'Set-Cookie': await issueSession(env, now, browserStoreId) });
+    const { results: stores } = await env.DB.prepare('SELECT id, name FROM stores WHERE active = 1 ORDER BY name, id').all();
+    const selectedStoreId = url.searchParams.get('storeId') || DEFAULT_STORE_ID;
+    const selectedStore = stores.find((store) => store.id === selectedStoreId) || stores[0];
+    if (!selectedStore) return json({ error: 'Nenhuma loja ativa.' }, 503);
+    return htmlResponse(panelPage(nonce, stores, selectedStore.id), nonce, 200, { 'Set-Cookie': await issueSession(env, now) });
   }
 
   if (pathname === '/admin/session' && request.method === 'GET') {
     if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
-    return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now, browserStoreId), 'Cache-Control': 'no-store' } });
+    return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
   }
 
   if (pathname === '/admin/change-password' && request.method === 'POST') {
@@ -201,6 +198,36 @@ export async function adminResponse(request, env, now = Date.now()) {
     } catch { return json({ error: 'Não foi possível alterar a senha agora.' }, 503); }
   }
 
+  if (pathname === '/admin/stores' && (request.method === 'GET' || request.method === 'POST')) {
+    if (!browserLogin) return json({ error: 'Sessão expirada. Entre novamente.' }, 401);
+    if (!env.DB) return json({ error: 'Serviço temporariamente indisponível.' }, 503);
+    if (request.method === 'GET') {
+      try {
+        const { results } = await env.DB.prepare('SELECT id, name FROM stores WHERE active = 1 ORDER BY name, id').all();
+        return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+      } catch { return json({ error: 'Não foi possível consultar as lojas.' }, 503); }
+    }
+    if (!sameOrigin) return json({ error: 'Origem inválida.' }, 403);
+    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 1024) return json({ error: 'Formulário inválido.' }, 400);
+    try {
+      const raw = await request.text();
+      if (encode(raw).length > 1024) return json({ error: 'Formulário muito grande.' }, 413);
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: 'Formulário inválido.' }, 400); }
+      const name = typeof body?.name === 'string' ? body.name.trim() : '';
+      if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return json({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
+      const stem = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36).replace(/-+$/g, '') || 'loja';
+      const base = stem.length < 3 ? `loja-${stem}` : stem;
+      for (let attempt = 1; attempt <= 100; attempt++) {
+        const suffix = attempt === 1 ? '' : `-${attempt}`;
+        const id = storeId(base.slice(0, 40 - suffix.length).replace(/-+$/g, '') + suffix);
+        const result = await env.DB.prepare('INSERT OR IGNORE INTO stores(id, name, active) VALUES(?, ?, 1)').bind(id, name).run();
+        if (result.meta?.changes === 1) return json({ id, name }, 201, { 'Set-Cookie': await issueSession(env, now) });
+      }
+      return json({ error: 'Não foi possível gerar um identificador único.' }, 409);
+    } catch { return json({ error: 'Não foi possível cadastrar a loja.' }, 503); }
+  }
+
   if (pathname === '/admin/logs' && request.method === 'GET') {
     if (request.headers.get('Accept')?.includes('text/html')) return new Response(null, { status: 303, headers: { Location: '/admin#errors', 'Cache-Control': 'no-store' } });
     if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
@@ -208,9 +235,11 @@ export async function adminResponse(request, env, now = Date.now()) {
       const kind = url.searchParams.get('kind');
       if (kind !== 'errors' && kind !== 'printing') return json({ error: 'Invalid log category' }, 400);
       const condition = kind === 'printing' ? "event IN ('print.failed', 'print_test.failed')" : "event NOT LIKE 'print.%' AND event NOT LIKE 'print_test.%' AND (event LIKE '%.failed' OR event IN ('runtime.error', 'runtime.fatal'))";
-      const { results } = await env.DB.prepare(`SELECT device_id, created_at, event, code, order_id FROM store_diagnostics WHERE store_id = ? AND ${condition} ORDER BY received_at DESC LIMIT 100`).bind(browserStoreId).all();
-      return json(results, 200, { 'Set-Cookie': await issueSession(env, now, browserStoreId) });
-    } catch { return json({ error: 'Logs unavailable' }, 503); }
+      const selectedStoreId = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
+      await activeStore(env, selectedStoreId);
+      const { results } = await env.DB.prepare(`SELECT device_id, created_at, event, code, order_id FROM store_diagnostics WHERE store_id = ? AND ${condition} ORDER BY received_at DESC LIMIT 100`).bind(selectedStoreId).all();
+      return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+    } catch (error) { return json({ error: 'Logs unavailable' }, error.status || 503); }
   }
 
   if (panelRoute) return json({ error: 'Method not allowed' }, 405);
@@ -219,8 +248,7 @@ export async function adminResponse(request, env, now = Date.now()) {
   if (privateRoute && !browserLogin && !tokenLogin) return json({ error: 'Unauthorized' }, 401);
   if (privateRoute && request.method === 'POST' && browserLogin && !tokenLogin && !sameOrigin) return json({ error: 'Forbidden' }, 403);
   try {
-    const selectedStoreId = storeId(url.searchParams.get('storeId') || browserStoreId || DEFAULT_STORE_ID);
-    if (browserLogin && !tokenLogin && selectedStoreId !== browserStoreId) return json({ error: 'Forbidden' }, 403);
+    const selectedStoreId = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
     if (env.DB) await activeStore(env, selectedStoreId);
     else if (selectedStoreId !== DEFAULT_STORE_ID) throw new Error('Database unavailable');
     if (request.method === 'POST') {
@@ -231,7 +259,7 @@ export async function adminResponse(request, env, now = Date.now()) {
     const revision = state?.revision ?? 0;
     if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid rotation state');
     const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, revision, selectedStoreId);
-    const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now, browserStoreId) } : {};
+    const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now) } : {};
     return json(privateRoute ? { storeId: selectedStoreId, username: credential.username, password, nextRotation: credential.nextRotation } : credential, 200, extra);
-  } catch { return json({ error: 'Admin service unavailable' }, 503); }
+  } catch (error) { return json({ error: 'Admin service unavailable' }, error.status || 503); }
 }
