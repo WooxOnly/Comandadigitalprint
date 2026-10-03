@@ -381,6 +381,10 @@ export const translations: Record<string, readonly [string, string]> = {
     "Order number",
     "Número de pedido"
   ],
+  "Pedido nº": [
+    "Order #",
+    "Pedido n.º"
+  ],
   "Plaquinha ": [
     "Order number ",
     "Número de pedido "

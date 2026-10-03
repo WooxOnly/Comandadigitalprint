@@ -42,6 +42,28 @@ async function fixture() {
 }
 const order = (tabletId) => ({ id: tabletId + '-' + randomUUID(), tabletId, plate: '7', customer: 'Teste', serviceMode: 'takeout', createdAt: new Date().toISOString(), items: [{ id: 'pizza', name: 'Pizza de dois sabores', category: 'Pizzas', quantity: 2, note: 'Sem cebola', flavors: ['Calabresa', 'Atum'], extras: [{ name: 'Bacon', placement: 'second' }] }] });
 
+test('tablet numbers are stable, unique per store and available offline after synchronization', async () => {
+  const f = await fixture();
+  try {
+    f.database.prepare("INSERT INTO stores(id, name, active) VALUES('seabra-2', 'Seabra 2', 1)").run();
+    const { weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');
+    const secondPassword = (await weeklyAdmin('test-only-secret-not-for-deployment-1234', Date.now(), 0, 'seabra-2')).password;
+    const secondLogin = await (await f.request('/login', { storeId: 'seabra-2', username: 'admin', password: secondPassword })).json();
+    const a = f.tablet(), b = f.tablet(), otherStore = f.tablet(new Map(), {}, 'seabra-2');
+    await a.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token });
+    await b.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token });
+    await otherStore.cloud.setSession({ storeId: 'seabra-2', username: 'admin', token: secondLogin.token });
+    await a.cloud.sync(); await b.cloud.sync(); await otherStore.cloud.sync();
+    assert.equal(a.cloud.tabletNumber(), 1);
+    assert.equal(b.cloud.tabletNumber(), 2);
+    assert.equal(otherStore.cloud.tabletNumber(), 1);
+    assert.equal((await (await f.request('/tablet-number', { deviceId: a.cloud.identity() }, f.token)).json()).number, 1);
+    const restarted = f.tablet(a.saved); restarted.offline = true; await restarted.cloud.load();
+    assert.equal(restarted.cloud.tabletNumber(), 1);
+    assert.equal(f.database.prepare("SELECT count(*) AS count FROM store_tablet_numbers WHERE store_id = 'seabra-1'").get().count, 2);
+  } finally { f.database.close(); }
+});
+
 test('store migration preserves Seabra records, revisions, diagnostics and queued tablet cursors', () => {
   const database = new DatabaseSync(':memory:');
   try {

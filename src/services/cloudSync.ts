@@ -2,7 +2,7 @@ import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; storeId: string; deviceId: string; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { version: 1; storeId: string; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
 type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
@@ -140,6 +140,11 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
             } else throw error;
           }
         }
+        if (!state.tabletNumber) {
+          const assigned = await request('/tablet-number', { deviceId: state.deviceId }, token);
+          if (!Number.isSafeInteger(assigned.number) || assigned.number < 1) throw new CloudError('INVALID_DATA');
+          await serial(() => persist({ ...state, tabletNumber: assigned.number }));
+        }
         await pull(token);
         if (session?.token !== token) return;
         await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
@@ -154,6 +159,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     storeId,
     async sendDiagnostic(entry: unknown) { if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/diagnostics', entry); },
     identity() { if (!state) throw new Error('Storage not ready'); return state.deviceId; },
+    tabletNumber() { return state?.tabletNumber ?? null; },
     async deviceId() { await load(); return state.deviceId; },
     async cacheUser(username: string, value: unknown, revision: number) {
       await load();

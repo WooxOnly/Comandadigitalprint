@@ -7,6 +7,31 @@ CREATE TABLE IF NOT EXISTS stores (
 );
 INSERT OR IGNORE INTO stores(id, name, active) VALUES ('seabra-1', 'Seabra 1', 1);
 
+CREATE TABLE IF NOT EXISTS store_codes (
+  code INTEGER PRIMARY KEY AUTOINCREMENT,
+  store_id TEXT NOT NULL UNIQUE REFERENCES stores(id)
+);
+-- Assign permanent numbers to existing stores before new inserts use the trigger.
+INSERT INTO store_codes(store_id)
+  SELECT s.id FROM stores AS s WHERE NOT EXISTS (SELECT 1 FROM store_codes WHERE store_id = s.id) ORDER BY s.rowid;
+CREATE TRIGGER IF NOT EXISTS store_assign_code AFTER INSERT ON stores BEGIN
+  INSERT INTO store_codes(store_id) VALUES (NEW.id);
+END;
+CREATE TRIGGER IF NOT EXISTS store_code_immutable BEFORE UPDATE OF code, store_id ON store_codes BEGIN
+  SELECT RAISE(ABORT, 'Store code cannot be changed');
+END;
+
+CREATE TABLE IF NOT EXISTS store_tablet_numbers (
+  store_id TEXT NOT NULL REFERENCES stores(id),
+  device_id TEXT NOT NULL,
+  number INTEGER NOT NULL CHECK (number > 0),
+  PRIMARY KEY (store_id, device_id),
+  UNIQUE (store_id, number)
+);
+CREATE TRIGGER IF NOT EXISTS store_tablet_number_immutable BEFORE UPDATE OF store_id, device_id, number ON store_tablet_numbers BEGIN
+  SELECT RAISE(ABORT, 'Tablet number cannot be changed');
+END;
+
 CREATE TABLE IF NOT EXISTS store_records (
   store_id TEXT NOT NULL,
   key TEXT NOT NULL,

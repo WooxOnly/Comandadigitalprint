@@ -1,4 +1,4 @@
-import { weeklyAdmin } from './admin-auth.mjs';
+import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
 import { activeStore, DEFAULT_STORE_ID } from './stores.mjs';
 import { validCloudValue } from '../../shared/cloud-validation.mjs';
 import defaultMenu from '../menu.json' with { type: 'json' };
@@ -79,7 +79,23 @@ export async function cloudResponse(request, env) {
       return reply({ storeId: store.id, name: store.name });
     }
     if (url.pathname === '/cloud/login' && request.method === 'POST') return await login(request, env);
+    if (url.pathname === '/cloud/provision' && request.method === 'POST') {
+      const input = await body(request);
+      if (typeof input?.username !== 'string' || typeof input?.password !== 'string' || input.username.length > 120 || input.password.length > 256) fail(400, 'INVALID_DATA');
+      const result = await provisionableStores(input.username.trim(), input.password, env);
+      return reply(result.stores ? { stores: result.stores } : { error: result.error }, result.status);
+    }
     const actor = await session(request, env);
+    if (url.pathname === '/cloud/tablet-number' && request.method === 'POST') {
+      const input = await body(request);
+      if (!/^[a-f0-9-]{36}$/.test(input?.deviceId || '')) fail(400, 'INVALID_DATA');
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await env.DB.prepare('INSERT OR IGNORE INTO store_tablet_numbers(store_id, device_id, number) VALUES(?, ?, (SELECT COALESCE(MAX(number), 0) + 1 FROM store_tablet_numbers WHERE store_id = ?))').bind(actor.storeId, input.deviceId, actor.storeId).run();
+        const assigned = await env.DB.prepare('SELECT number FROM store_tablet_numbers WHERE store_id = ? AND device_id = ?').bind(actor.storeId, input.deviceId).first();
+        if (assigned) return reply({ number: assigned.number });
+      }
+      fail(503, 'UNAVAILABLE');
+    }
     if (url.pathname === '/cloud/diagnostics' && request.method === 'POST') {
       const entry = await body(request);
       if (entry?.storeId && entry.storeId !== actor.storeId) fail(403, 'STORE_FORBIDDEN');

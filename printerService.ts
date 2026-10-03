@@ -8,7 +8,7 @@ export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
 export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88' };
 export type ServiceMode = 'dine_in' | 'takeout';
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
-export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: PrintableOrderItem[]; createdAt: string };
+export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: PrintableOrderItem[]; createdAt: string; tabletLabel?: string; dailyNumber?: number };
 
 // expo-print uses points (72 per inch), not screen pixels. Long orders paginate.
 export function getReceiptPageSize(paperWidth: PrinterSettings['paperWidth']) {
@@ -21,6 +21,7 @@ function escapeHtml(value: string) {
 
 export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSettings['paperWidth'], language: Language = 'pt') {
   const t = (text: string) => translate(text, language);
+  const orderNumber = order.dailyNumber && order.tabletLabel ? `${order.tabletLabel}-${String(order.dailyNumber).padStart(3, '0')}` : null;
   const itemRows = order.items.map((item) => {
     const flavors = item.flavors && item.flavors.length > 0 ? `<div class="flavors">${item.flavors.map((flavor, index) => `<div class="flavor">${t(index === 0 ? '1ª metade:' : '2ª metade:')} ${escapeHtml(flavor)}</div>`).join('')}</div>` : '';
     const extras = (item.extras || []).map((extra) => {
@@ -44,6 +45,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSetting
     .heading { font-size: 10px; font-weight: 700; }
     .kitchen { font-size: 9px; margin-top: .5mm; }
     .identification { border: 1px solid #000; padding: 1mm; margin: 1.5mm 0 1mm; }
+    .order-number { display: block; font-size: 17px; font-weight: 900; line-height: 1.1; margin-bottom: .5mm; }
     .plate { display: block; font-size: ${paperWidth === '58' ? 19 : 20}px; font-weight: 900; line-height: 1.1; }
     .service { margin-top: .5mm; padding-top: .5mm; border-top: 1px solid #000; font-size: 13px; font-weight: 900; text-transform: uppercase; }
     .customer { margin-top: .5mm; font-size: 12px; font-weight: 700; }
@@ -61,7 +63,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSetting
 <body>
   <header>
     <div class="heading">${t('COMANDA DE PRODUÇÃO')}</div><div class="kitchen">${t('COZINHA')}</div>
-    <div class="identification"><strong class="plate">${t('Plaquinha')}: ${escapeHtml(order.plate)}</strong>${order.serviceMode ? `<div class="service">${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</div>` : ''}<div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
+    <div class="identification">${orderNumber ? `<strong class="order-number">${t('Pedido nº')}: ${escapeHtml(orderNumber)}</strong>` : ''}<strong class="plate">${t('Plaquinha')}: ${escapeHtml(order.plate)}</strong>${order.serviceMode ? `<div class="service">${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</div>` : ''}<div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
     <div class="date">${t('Data')}: ${new Date(order.createdAt).toLocaleString(LOCALES[language])}</div>
   </header>
   ${itemRows}

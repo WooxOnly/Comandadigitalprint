@@ -30,6 +30,7 @@ test('migration preserves Seabra 1 data, revisions and diagnostics without overw
     db.prepare('UPDATE admin_rotation SET revision = 4 WHERE id = 1').run();
     db.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?)').run('legacy-diagnostic', 'tablet', '2026-09-30T00:00:00Z', '2026-09-30T00:00:00Z', 'admin', 'sync.failed', 'TEST');
     db.exec(schema('store-schema.sql'));
+    assert.equal(db.prepare("SELECT code FROM store_codes WHERE store_id = 'seabra-1'").get().code, 1);
     const migrated = db.prepare("SELECT data, revision FROM store_records WHERE store_id = 'seabra-1' AND key = 'order-settings'").get();
     assert.equal(migrated.data, '{"requireCustomer":true}');
     assert.equal(migrated.revision, 14);
@@ -38,6 +39,9 @@ test('migration preserves Seabra 1 data, revisions and diagnostics without overw
     assert.equal(db.prepare("SELECT count(*) AS count FROM store_diagnostics WHERE store_id = 'seabra-1'").get().count, 1);
     db.prepare('INSERT INTO store_events(store_id, mutation, key, data, actor, created_at) VALUES(?, ?, ?, ?, ?, ?)').run('seabra-1', 'new-edit', 'order-settings', '{"requireCustomer":false}', 'admin', '2026-10-03T00:00:00Z');
     db.exec(schema('store-schema.sql'));
+    db.prepare("INSERT INTO stores(id, name, active) VALUES('seabra-2', 'Seabra 2', 1)").run();
+    assert.equal(db.prepare("SELECT code FROM store_codes WHERE store_id = 'seabra-2'").get().code, 2);
+    assert.throws(() => db.prepare("UPDATE store_codes SET code = 9 WHERE store_id = 'seabra-1'").run(), /cannot be changed/);
     assert.deepEqual(JSON.parse(db.prepare("SELECT data FROM store_records WHERE store_id = 'seabra-1' AND key = 'order-settings'").get().data), { requireCustomer: false });
     assert.equal(db.prepare("SELECT data FROM cloud_records WHERE key = 'order-settings'").get().data, '{"requireCustomer":true}');
   } finally { db.close(); }
@@ -54,6 +58,13 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   const first = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-1');
   const second = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-2');
   assert.notEqual(first.password, second.password);
+  assert.equal((await call('/provision', { username: 'admin', password: 'wrong' })).status, 401);
+  const provisioned = await call('/provision', { username: 'admin', password: env.ADMIN_VIEW_TOKEN });
+  assert.equal(provisioned.status, 200);
+  assert.deepEqual(await provisioned.json(), { stores: [
+    { id: 'seabra-1', name: 'Seabra 1', code: 1 },
+    { id: 'seabra-2', name: 'Seabra 2', code: 2 },
+  ] });
   assert.deepEqual(await (await call('/store?storeId=seabra-2')).json(), { storeId: 'seabra-2', name: 'Seabra 2' });
   assert.equal((await call('/store?storeId=missing')).status, 404);
   assert.equal((await call('/store?storeId=invalid_')).status, 400);
@@ -85,6 +96,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   db.prepare('UPDATE stores SET active = 0 WHERE id = ?').run('seabra-2');
   assert.equal((await call('/changes', undefined, b.token)).status, 401);
   assert.equal((await call('/store?storeId=seabra-2')).status, 404);
+  assert.deepEqual((await (await call('/provision', { username: 'admin', password: env.ADMIN_VIEW_TOKEN })).json()).stores.map((store) => store.id), ['seabra-1']);
 });
 
 test('one panel session selects stores inside the portal for logs and weekly password actions', async (t) => {
@@ -112,13 +124,25 @@ test('one panel session selects stores inside the portal for logs and weekly pas
   assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-2'").get().revision, 1);
   assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 0);
   assert.deepEqual((await (await request('/admin/stores')).json()).map((store) => store.id), ['seabra-1', 'seabra-2']);
+  assert.deepEqual((await (await request('/admin/stores')).json()).map((store) => store.code), [1, 2]);
   assert.equal((await adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://other.example', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Seabra 3' }) }), env)).status, 403);
+  const rename = (id, name, origin = 'https://example.com') => adminResponse(new Request('https://example.com/admin/stores', { method: 'PATCH', headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name }) }), env);
+  assert.equal((await rename('seabra-2', 'Novo nome', 'https://other.example')).status, 403);
+  assert.equal((await rename('seabra-2', '')).status, 400);
+  assert.equal((await rename('invalido_', 'Novo nome')).status, 400);
+  assert.equal((await rename('loja-inexistente', 'Novo nome')).status, 404);
+  const renamed = await rename('seabra-2', '  Seabra Central  ');
+  assert.equal(renamed.status, 200);
+  assert.deepEqual(await renamed.json(), { id: 'seabra-2', name: 'Seabra Central', code: 2 });
+  assert.equal(db.prepare("SELECT code FROM store_codes WHERE store_id = 'seabra-2'").get().code, 2);
+  assert.equal((await (await request('/auth/admin/password?storeId=seabra-2')).json()).storeId, 'seabra-2');
+  assert.match(await (await request('/admin?storeId=seabra-2')).text(), /Código 002/);
   const create = (name) => adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }), env);
   assert.equal((await create('')).status, 400);
   assert.equal((await adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: '{' }), env)).status, 400);
   const created = await create('Seabra 3');
   assert.equal(created.status, 201);
-  assert.deepEqual(await created.json(), { id: 'seabra-3', name: 'Seabra 3' });
+  assert.deepEqual(await created.json(), { id: 'seabra-3', name: 'Seabra 3', code: 3 });
   assert.equal((await request('/auth/admin/password?storeId=seabra-3')).status, 200);
   assert.equal(db.prepare("SELECT count(*) AS count FROM stores WHERE active = 1").get().count, 3);
 });

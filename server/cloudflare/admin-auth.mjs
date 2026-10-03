@@ -118,6 +118,16 @@ async function recordLogin(env, valid, now) {
   else await env.DB.prepare('UPDATE panel_login SET attempts = CASE WHEN blocked_until > 0 THEN 1 ELSE attempts + 1 END, blocked_until = CASE WHEN blocked_until = 0 AND attempts >= 4 THEN ? ELSE 0 END WHERE id = 1').bind(now + 900000).run();
 }
 
+export async function provisionableStores(username, password, env, now = Date.now()) {
+  if (!env.DB) return { error: 'UNAVAILABLE', status: 503 };
+  if (await loginLimit(env, now)) return { error: 'RATE_LIMIT', status: 429 };
+  const valid = await credentialsMatch(username, password, env);
+  await recordLogin(env, valid, now);
+  if (!valid) return { error: 'BAD_LOGIN', status: 401 };
+  const { results: stores } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
+  return { stores, status: 200 };
+}
+
 export async function adminResponse(request, env, now = Date.now()) {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -158,7 +168,7 @@ export async function adminResponse(request, env, now = Date.now()) {
       const message = url.searchParams.has('changed') ? 'Senha do painel alterada. Entre novamente.' : url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
       return loginResponse(nonce, message);
     }
-    const { results: stores } = await env.DB.prepare('SELECT id, name FROM stores WHERE active = 1 ORDER BY name, id').all();
+    const { results: stores } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
     const selectedStoreId = url.searchParams.get('storeId') || DEFAULT_STORE_ID;
     const selectedStore = stores.find((store) => store.id === selectedStoreId) || stores[0];
     if (!selectedStore) return json({ error: 'Nenhuma loja ativa.' }, 503);
@@ -198,12 +208,12 @@ export async function adminResponse(request, env, now = Date.now()) {
     } catch { return json({ error: 'Não foi possível alterar a senha agora.' }, 503); }
   }
 
-  if (pathname === '/admin/stores' && (request.method === 'GET' || request.method === 'POST')) {
+  if (pathname === '/admin/stores' && (request.method === 'GET' || request.method === 'POST' || request.method === 'PATCH')) {
     if (!browserLogin) return json({ error: 'Sessão expirada. Entre novamente.' }, 401);
     if (!env.DB) return json({ error: 'Serviço temporariamente indisponível.' }, 503);
     if (request.method === 'GET') {
       try {
-        const { results } = await env.DB.prepare('SELECT id, name FROM stores WHERE active = 1 ORDER BY name, id').all();
+        const { results } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
         return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
       } catch { return json({ error: 'Não foi possível consultar as lojas.' }, 503); }
     }
@@ -216,16 +226,27 @@ export async function adminResponse(request, env, now = Date.now()) {
       try { body = JSON.parse(raw); } catch { return json({ error: 'Formulário inválido.' }, 400); }
       const name = typeof body?.name === 'string' ? body.name.trim() : '';
       if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return json({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
+      if (request.method === 'PATCH') {
+        if (typeof body?.id !== 'string') return json({ error: 'Identificador inválido.' }, 400);
+        try { storeId(body.id); } catch { return json({ error: 'Identificador inválido.' }, 400); }
+        const result = await env.DB.prepare('UPDATE stores SET name = ? WHERE id = ? AND active = 1').bind(name, body.id).run();
+        if (result.meta?.changes !== 1) return json({ error: 'Loja não encontrada.' }, 404);
+        const updated = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.id = ?').bind(body.id).first();
+        return json(updated);
+      }
       const stem = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36).replace(/-+$/g, '') || 'loja';
       const base = stem.length < 3 ? `loja-${stem}` : stem;
       for (let attempt = 1; attempt <= 100; attempt++) {
         const suffix = attempt === 1 ? '' : `-${attempt}`;
         const id = storeId(base.slice(0, 40 - suffix.length).replace(/-+$/g, '') + suffix);
         const result = await env.DB.prepare('INSERT OR IGNORE INTO stores(id, name, active) VALUES(?, ?, 1)').bind(id, name).run();
-        if (result.meta?.changes === 1) return json({ id, name }, 201, { 'Set-Cookie': await issueSession(env, now) });
+        if (result.meta?.changes === 1) {
+          const created = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.id = ?').bind(id).first();
+          return json(created, 201, { 'Set-Cookie': await issueSession(env, now) });
+        }
       }
       return json({ error: 'Não foi possível gerar um identificador único.' }, 409);
-    } catch { return json({ error: 'Não foi possível cadastrar a loja.' }, 503); }
+    } catch { return json({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
   }
 
   if (pathname === '/admin/logs' && request.method === 'GET') {

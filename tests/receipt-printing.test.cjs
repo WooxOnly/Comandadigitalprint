@@ -27,14 +27,14 @@ function loadPrinter() {
 
 test('all receipt languages preserve product names and extras, including reprints', async () => {
   const printer = loadPrinter();
-  const order = { plate: '7', customer: '', serviceMode: 'takeout', createdAt: '2026-09-22T18:30:00Z', items: [
+  const order = { plate: '7', customer: '', serviceMode: 'takeout', tabletLabel: '1', dailyNumber: 3, createdAt: '2026-09-22T18:30:00Z', items: [
     { name: 'Pizza inteira — Rúcula com tomate seco', quantity: 1, note: 'Sem cebola', extras: [{ name: 'Requeijão cremoso', placement: 'whole' }] },
     { name: 'Pizza de dois sabores', quantity: 1, note: '', flavors: ['Frango com Catupiry', 'Calabresa com cebola'], extras: [{ name: 'Mussarela', placement: 'first' }] },
   ] };
-  for (const [language, title, half, success, service] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso', 'Tipo de pedido: Para levar'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully', 'Order type: To go'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente', 'Tipo de pedido: Para llevar']]) {
+  for (const [language, title, half, success, service, number] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso', 'Tipo de pedido: Para levar', 'Pedido nº: 1-003'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully', 'Order type: To go', 'Order #: 1-003'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente', 'Tipo de pedido: Para llevar', 'Pedido n.º: 1-003']]) {
     await printer.printOrder(order, { connection: 'system', paperWidth: '58' }, language);
     const html = printer.files.at(-1).html;
-    for (const text of [title, half, service, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
+    for (const text of [title, half, service, number, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
     assert.ok(printer.buildPrinterTestHtml('80', language).includes(success));
     if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
   }

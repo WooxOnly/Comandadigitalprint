@@ -51,12 +51,6 @@ export async function loadStoreId(): Promise<string | null> {
       activeStoreId = LEGACY_STORE_ID;
       return LEGACY_STORE_ID;
     }
-    if (configuredStoreId) {
-      await SecureStore.setItemAsync(SECURE_BINDING_KEY, configuredStoreId);
-      await AsyncStorage.setItem(BINDING_KEY, configuredStoreId);
-      activeStoreId = configuredStoreId;
-      return configuredStoreId;
-    }
     return null;
   })().catch((error) => { loading = undefined; throw error; });
   return loading;

@@ -14,9 +14,10 @@ import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
 import { getStoreId, LEGACY_STORE_ID } from '../config/store';
 import { ORDER_SETTINGS_KEY, DEFAULT_ORDER_SETTINGS, parseOrderSettings, customerValidationMessage } from '../services/orderSettings';
 import { createOrderSubmitter } from '../services/orderSubmission';
+import { localOrderDay, nextDailyOrderNumber, tabletLabelForDay } from '../services/orderNumber';
 import { persistSettings, PRINTER_SETTINGS_KEY } from '../services/settings';
 
-type SavedOrder = { id: string; plate: string; customer: string; serviceMode?: ServiceMode; items: OrderItem[]; createdAt: string; tabletId?: string };
+type SavedOrder = { id: string; plate: string; customer: string; serviceMode?: ServiceMode; items: OrderItem[]; createdAt: string; tabletId?: string; tabletLabel?: string; numberDay?: string; dailyNumber?: number };
 const STORAGE_KEY = '@comandadigitalprint/orders';
 const MENU_KEY = '@comandadigitalprint/menu';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
@@ -36,6 +37,7 @@ function useAppState() {
   const orderSettingsLock = useRef(false);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [history, setHistory] = useState<SavedOrder[]>([]);
+  const historyRef = useRef<SavedOrder[]>([]);
   const [menu, setMenu] = useState<Product[]>(() => getStoreId() === LEGACY_STORE_ID ? DEFAULT_MENU : []);
   const [updatingMenu, setUpdatingMenu] = useState(false);
   const [menuUpdateStatus, setMenuUpdateStatus] = useState('');
@@ -67,6 +69,7 @@ function useAppState() {
       if (storedOrders) {
         const saved = JSON.parse(storedOrders) as SavedOrder[];
         if (!Array.isArray(saved)) throw new Error('Histórico inválido');
+        historyRef.current = saved;
         setHistory(saved);
       }
       if (storedPrinter) setPrinterSettings({ ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(storedPrinter) as Partial<PrinterSettings> });
@@ -87,7 +90,7 @@ function useAppState() {
   useEffect(() => cloud.subscribe(() => {
     if (!isReady) return;
     void Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(([orders, storedMenu, printer, settings, logo]) => {
-      if (orders) setHistory(JSON.parse(orders));
+      if (orders) { const saved = JSON.parse(orders) as SavedOrder[]; historyRef.current = saved; setHistory(saved); }
       if (storedMenu && !menuDirty.current) { menuRef.current = standardizeMenu(JSON.parse(storedMenu)); setMenu(menuRef.current); }
       if (printer && !printerDirty.current) setPrinterSettings(JSON.parse(printer));
       if (settings) setOrderSettings(parseOrderSettings(settings));
@@ -289,11 +292,15 @@ function useAppState() {
       return;
     }
     const tabletId = cloud.identity();
-    const order: SavedOrder = { id: tabletId + '-' + randomUUID(), tabletId, plate: customPlate.trim() || plate, customer: customer.trim(), serviceMode, items, createdAt: new Date().toISOString() };
+    const now = new Date();
+    const numberDay = localOrderDay(now);
+    const dailyNumber = nextDailyOrderNumber(historyRef.current, tabletId, numberDay);
+    const tabletLabel = tabletLabelForDay(historyRef.current, tabletId, numberDay, cloud.tabletNumber());
+    const order: SavedOrder = { id: tabletId + '-' + randomUUID(), tabletId, tabletLabel, numberDay, dailyNumber, plate: customPlate.trim() || plate, customer: customer.trim(), serviceMode, items, createdAt: now.toISOString() };
     try {
-      await submitter.submit(order, history, {
+      await submitter.submit(order, historyRef.current, {
         persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
-        onSaved: (next) => { setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
+        onSaved: (next) => { historyRef.current = next; setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
         print: printSavedOrder,
         onBusy: setSending,
       });

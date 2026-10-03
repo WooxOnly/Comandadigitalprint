@@ -8,6 +8,7 @@ import { cloud } from '../services/cloudStorage';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles } from '../ui/theme';
+import { orderNumberLabel } from '../services/orderNumber';
 
 export default function HistoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +18,8 @@ export default function HistoryDetailScreen() {
   return <ScreenFrame><View style={{ width: '100%', maxWidth: 760, alignSelf: 'center', gap: 12 }}>
     <Pressable accessibilityRole="button" onPress={() => router.replace('/history')} style={styles.addButton}><Text style={styles.addButtonText}>← {t('Voltar')}</Text></Pressable>
     {!order ? <View style={styles.panel}><Text style={styles.mutedText}>{t('Pedido não encontrado.')}</Text></View> : <View style={[styles.panel, { gap: 10 }]}>
-      <Text style={styles.panelTitle}>{t('Plaquinha')} {order.plate}</Text>
+      <Text style={styles.panelTitle}>{orderNumberLabel(order) ? `${t('Pedido nº')} ${orderNumberLabel(order)}` : `${t('Plaquinha')} ${order.plate}`}</Text>
+      {orderNumberLabel(order) && <Text style={styles.cardTitle}>{t('Plaquinha')} {order.plate}</Text>}
       <Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)} · {order.items.length} {order.items.length === 1 ? t('item') : t('itens')}</Text>
       {order.serviceMode && <Text style={styles.cardTitle}>{t('Tipo de pedido')}: {t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text>}
       <Text style={styles.mutedText}>{t('Cliente')}: {order.customer || t('Cliente não informado')}</Text>
