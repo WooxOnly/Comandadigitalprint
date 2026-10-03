@@ -2,7 +2,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { ReactNode } from 'react';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { TOPPINGS } from '../../menuData';
 import { describeExtra } from '../../orderItems';
@@ -10,6 +10,8 @@ import { useApp } from '../state/AppContext';
 import { styles, COLORS, TABS, ROUTES } from './theme';
 import { CloudStatus } from './CloudStatus';
 import { ReceiptPreview } from './ReceiptPreview';
+import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
+import { getStoreId } from '../config/store';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
   const path = usePathname();
@@ -27,7 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
-              <Text style={styles.eyebrow}>BistroHub</Text>
+              <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {getStoreId()}</Text>
               <Text style={styles.title}>{t(path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title)}</Text>
             </View>
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
@@ -49,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Modal visible={selectedProduct !== null} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setSelectedProduct(null)}>
           <SafeAreaProvider><KeyboardAvoidingView style={[styles.modalBackdrop, isWide && styles.modalBackdropWide]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <SafeAreaView edges={['bottom']} style={[styles.productModal, isWide && styles.productModalWide]}>
-              <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
+              <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.modalContent}>
                 <Text style={styles.modalEyebrow}>{t("ADICIONAR AO PEDIDO")}</Text>
                 <Text style={styles.modalTitle}>{selectedProduct?.name}</Text>
                 <Text style={styles.settingsIntro}>{selectedProduct?.description || t("Como você quer este produto?")}</Text>

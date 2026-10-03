@@ -1,0 +1,122 @@
+import { itemName, translatedNote } from '../i18n/translations';
+import { useLanguage } from '../i18n/LanguageContext';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
+import { describeExtra } from '../../orderItems';
+import { useApp } from '../state/AppContext';
+import { OrderWorkspace } from '../ui/OrderWorkspace';
+import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
+
+type OrderStep = 'identity' | 'products' | 'review';
+const STEPS: { value: OrderStep; label: string }[] = [
+  { value: 'identity', label: 'Identificação' },
+  { value: 'products', label: 'Produtos' },
+  { value: 'review', label: 'Revisão' },
+];
+
+export default function OrderScreen() {
+  const { t, language } = useLanguage();
+  const [step, setStep] = useState<OrderStep>('identity');
+  const [serviceModeError, setServiceModeError] = useState(false);
+  const [plateListWidth, setPlateListWidth] = useState(0);
+  const plateWidth = plateListWidth ? (plateListWidth - 9 * 2) / 10 : undefined;
+  const { plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady, isWide } = useApp();
+  const currentPlate = customPlate.trim() || plate;
+  const itemCount = `${items.length} ${t(items.length === 1 ? 'item' : 'itens')}`;
+  const serviceLabel = serviceMode === 'dine_in' ? 'Para comer aqui' : serviceMode === 'takeout' ? 'Para levar' : null;
+
+  function finishOrder() {
+    if (!serviceMode) { setServiceModeError(true); setStep('identity'); return; }
+    if (step === 'review') void sendOrder(() => setStep('identity'));
+    else setStep('review');
+  }
+  const catalog = <>
+                  <View style={styles.column}>
+                    {step === 'identity' && <View style={styles.panel}>
+                      <Text style={styles.panelTitle}>{t("Identificação")}</Text>
+                      <Text style={styles.fieldLabel}>{t('Onde será consumido?')}</Text>
+                      <View style={layout.serviceOptions}>{(['dine_in', 'takeout'] as const).map((value) => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
+                      {serviceModeError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t('Escolha se o pedido é para comer aqui ou para levar.')}</Text>}
+                      <Text style={styles.fieldLabel}>{t("Plaquinha")}</Text>
+                      <View style={styles.plateList} onLayout={(event) => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t("Plaquinha ") + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
+                      <View style={[styles.identityFields, isWide && styles.identityFieldsWide]}>
+                        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t("Outra plaquinha (opcional)")}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t("Outra plaquinha")} placeholder={t("Outra plaquinha (opcional)")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+                        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t("Cliente")} {orderSettings.requireCustomer ? t("(obrigatório)") : t("(opcional)")}</Text><TextInput editable={!sending} value={customer} onChangeText={changeCustomer} accessibilityLabel={orderSettings.requireCustomer ? t("Nome do cliente, obrigatório") : t("Nome do cliente, opcional")} placeholder={t("Nome do cliente")} placeholderTextColor={COLORS.placeholder} style={[styles.input, !!customerError && styles.inputError]} /></View>
+                      </View>
+                      {!!customerError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(customerError)}</Text>}
+                    </View>}
+                    {step === 'products' && <>
+                    <Text style={[styles.sectionTitle, layout.firstSectionTitle]}>{t("Escolha os produtos")}</Text>
+                    <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === category }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{t(value)}</Text></Pressable>)}</ScrollView>
+                    {subcategories.length > 0 && <View><Text style={styles.fieldLabel}>{t('Subgrupos')}</Text><ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{['', ...subcategories].map(value => <Pressable key={value || 'all'} onPress={() => setSubcategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === subcategory }} style={[styles.category, value === subcategory && styles.selectedCategory]}><Text style={[styles.categoryText, value === subcategory && styles.selectedCategoryText]}>{t(value || 'Todos')}</Text></Pressable>)}</ScrollView></View>}
+                    {filteredMenu.length === 0 && <Text style={styles.emptyText}>{t("Nenhum produto nesta categoria.")}</Text>}
+                    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t("Adicionar ") + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
+                    </>}
+                    {step === 'review' && <View style={styles.panel}>
+                      <View style={layout.summaryHeader}><Text style={styles.panelTitle}>{t('Identificação')}</Text><Pressable onPress={() => setStep('identity')} accessibilityRole="button" style={layout.reviewLink}><Text style={layout.reviewLinkText}>{t('Editar')}</Text></Pressable></View>
+                      <Text style={styles.cardTitle}>{t('Tipo de pedido')}: {serviceLabel ? t(serviceLabel) : t('Não informado')}</Text>
+                      <Text style={styles.cardTitle}>{t('Plaquinha')} {currentPlate}</Text>
+                      <Text style={styles.mutedText}>{t('Cliente')}: {customer.trim() || t('Cliente não informado')}</Text>
+                    </View>}
+                  </View>
+                  </>;
+  const order = <View style={[styles.panel, styles.column]}>
+                    <View style={styles.orderHeader}><Text style={styles.panelTitle}>{t("Revisão do pedido")}</Text><Text style={styles.itemCount}>{itemCount}</Text></View>
+                    <Text style={[styles.helperText, layout.reviewHint]}>{t('Confira os dados e toque em Finalizar pedido para enviar.')}</Text>
+                    {items.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t("Vamos montar uma comanda?")}</Text><Text style={styles.emptyText}>{t("Toque em um produto do cardápio para adicioná-lo ao pedido.")}</Text></View> : items.map((item) => <View key={item.id} style={styles.orderCard}>
+                      <Text style={styles.cardTitle}>{itemName(item.name, language)}</Text>
+                      <Text style={styles.mutedText}>{item.flavors?.map((flavor, index) => `${t(index === 0 ? '1ª metade:' : '2ª metade:')} ${flavor}`).join('\n') || t(item.category)}</Text>
+                      {item.extras?.map((extra) => <Text key={extra.name + extra.placement} style={styles.mutedText}>+ {describeExtra(extra, item.flavors, language)}</Text>)}
+                      <View style={styles.orderLine}>
+                        <View style={styles.quantityControl}><Pressable onPress={() => changeQuantity(item.id, -1)} accessibilityRole="button" accessibilityLabel={t("Diminuir quantidade de ") + itemName(item.name, language)} style={styles.quantityButton}><Text style={styles.quantityText}>−</Text></Pressable><Text style={styles.quantity}>{item.quantity}</Text><Pressable onPress={() => changeQuantity(item.id, 1)} accessibilityRole="button" accessibilityLabel={t("Aumentar quantidade de ") + itemName(item.name, language)} style={styles.quantityButton}><Text style={styles.quantityText}>+</Text></Pressable></View>
+                      </View>
+                      <TextInput editable={!sending} value={translatedNote(item.note, language)} onChangeText={(note) => updateNote(item.id, note)} accessibilityLabel={t("Observação de ") + itemName(item.name, language)} placeholder={t("Observação do item")} placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} multiline />
+                      <View style={styles.quickNotes}>{QUICK_NOTES.map((note) => <Pressable key={t(note)} onPress={() => updateNote(item.id, item.note ? item.note + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{t(note)}</Text></Pressable>)}</View>
+                    </View>)}
+                  </View>
+                ;
+  const summary = <View style={styles.panel}>
+    <View style={styles.orderHeader}><Text style={styles.panelTitle}>{t('Pedido atual')}</Text><Text style={styles.itemCount}>{itemCount}</Text></View>
+    {items.length === 0 ? <Text style={styles.emptyText}>{t('Toque em um produto do cardápio para adicioná-lo ao pedido.')}</Text> : items.map((item) => <View key={item.id} style={layout.summaryItem}><Text style={styles.cardTitle}>{item.quantity} × {itemName(item.name, language)}</Text>{item.flavors && <Text style={styles.mutedText}>{item.flavors.join(' + ')}</Text>}</View>)}
+    {items.length > 0 && <Pressable onPress={() => setStep('review')} accessibilityRole="button" style={layout.reviewLink}><Text style={layout.reviewLinkText}>{t('Revisar pedido')}</Text></Pressable>}
+  </View>;
+  const disabled = sending || !isReady || items.length === 0;
+
+  return <View style={layout.root}>
+    <View style={layout.topBar}><View style={layout.topBarInner}>
+      <View style={layout.topMeta}><Text numberOfLines={2} style={layout.topMetaTitle}>{serviceLabel ? `${t(serviceLabel)} · ` : ''}{t('Plaquinha')} {currentPlate} · {itemCount}</Text>{!!customer.trim() && <Text numberOfLines={1} style={layout.topMetaDetail}>{t('Cliente')}: {customer.trim()}</Text>}</View>
+      <Pressable disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled, busy: sending }} accessibilityHint={t(step === 'review' ? 'Salvar e conferir impressão' : 'Conferir antes de enviar')} onPress={finishOrder} style={[layout.finishButton, disabled && styles.pressed]}><Text style={layout.finishButtonText}>{sending ? t('Salvando e abrindo prévia…') : t('Finalizar pedido')}</Text>{isWide && <Text style={layout.finishButtonHint}>{t(step === 'review' ? 'Salvar e conferir impressão' : 'Conferir antes de enviar')}</Text>}</Pressable>
+    </View></View>
+    <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={layout.stepBar}><View style={layout.stepBarInner}>
+      {STEPS.map(({ value, label }, index) => <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: step === value }} onPress={() => setStep(value)} style={[layout.stepButton, step === value && layout.activeStep]}><Text numberOfLines={1} style={[layout.stepText, step === value && layout.activeStepText]}>{index + 1} {t(label)}</Text></Pressable>)}
+    </View></View>
+    <OrderWorkspace key={step} catalog={catalog} order={step === 'review' ? order : isWide ? summary : undefined} />
+  </View>;
+}
+
+const layout = StyleSheet.create({
+  root: { flex: 1, backgroundColor: COLORS.background },
+  topBar: { backgroundColor: COLORS.surface, borderBottomColor: COLORS.border, borderBottomWidth: 1 },
+  topBarInner: { width: '100%', maxWidth: 1160, alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  topMeta: { flex: 1, minWidth: 0 },
+  topMetaTitle: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
+  topMetaDetail: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
+  finishButton: { minHeight: 46, minWidth: 132, maxWidth: 220, backgroundColor: COLORS.primary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center', alignItems: 'center' },
+  finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  finishButtonHint: { color: '#FFE8DE', fontSize: 11, marginTop: 2, textAlign: 'center' },
+  stepBar: { backgroundColor: COLORS.surface },
+  stepBarInner: { width: '100%', maxWidth: 1160, alignSelf: 'center', paddingHorizontal: 16, flexDirection: 'row', gap: 8 },
+  stepButton: { flex: 1, minWidth: 0, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: COLORS.border },
+  activeStep: { borderBottomColor: COLORS.primary },
+  stepText: { color: COLORS.muted, fontSize: 12, fontWeight: '600' },
+  activeStepText: { color: COLORS.ink, fontWeight: '800' },
+  firstSectionTitle: { marginTop: 4 },
+  serviceOptions: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  serviceOption: { minWidth: 0 },
+  summaryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 },
+  summaryItem: { borderTopColor: COLORS.border, borderTopWidth: 1, paddingVertical: 10 },
+  reviewLink: { alignSelf: 'flex-start', backgroundColor: COLORS.greenSoft, borderRadius: 10, minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, marginTop: 10 },
+  reviewLinkText: { color: COLORS.green, fontSize: 13, fontWeight: '700' },
+  reviewHint: { marginTop: 0, marginBottom: 14 },
+});

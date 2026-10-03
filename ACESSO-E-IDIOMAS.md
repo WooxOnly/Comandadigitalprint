@@ -7,6 +7,7 @@
 - Configurações: senha solicitada ao entrar na tela, calculada pela soma mês + dia + ano + hora local no formato de 12 horas (1 a 12). Exemplo: 9 + 25 + 2026 + 6 = 2066. Às 15h, a hora usada é 3; ao meio-dia e à meia-noite, é 12. Ao sair da tela ou colocar o app em segundo plano, bloqueia novamente. Essa regra foi expressamente escolhida pelo usuário.
 - Idioma salvo no aparelho: português, inglês ou espanhol. Rótulos, mensagens, recibos, reimpressão e teste acompanham a seleção. Produtos, sabores, extras e descrições originais permanecem conforme o cardápio. Observações livres não são traduzidas automaticamente. As janelas de impressão/permissão do Android/iOS seguem o idioma do próprio sistema operacional.
 - Pedidos, histórico, configuração e impressão não dependem do servidor de autenticação. O logout conserva o pedido em edição durante a mesma execução do app.
+- A sessão do aplicativo termina na virada do dia local. Se o aparelho estiver suspenso nesse momento, o login será exigido assim que o app voltar ao primeiro plano. A senha já recebida continua válida para entrar sem internet.
 
 ## Admin semanal no servidor
 
@@ -29,7 +30,9 @@ Publicado no Cloudflare Workers + D1 em 26/09/2026: https://seabra-cardapio.woox
 
 O menu superior reúne **Gerenciar senha**, **Logs do sistema** e **Logs de impressão**. Os logs mostram apenas falhas; eventos de início de impressão ou abertura da janela não são armazenados. Se o formulário de login expirar, o painel apresenta outro formulário para tentar novamente.
 
-O login do painel é diferente da senha semanal do aplicativo. E-mail e senha estão nos segredos ADMIN_PANEL_USER e ADMIN_VIEW_TOKEN do Cloudflare, fora do Git/APK. Cinco tentativas incorretas bloqueiam o acesso por 15 minutos. A sessão do painel expira após uma hora sem atividade; é possível sair manualmente pelo botão **Sair**. A chave antiga foi invalidada.
+Em **Gerenciar senha**, **Senha de entrada no painel** permite trocar a senha deste portal informando a senha atual e uma nova senha de pelo menos 12 caracteres. A troca encerra todas as sessões e exige novo login. Ela não altera a senha semanal dos tablets. Depois da primeira troca, o banco D1 guarda somente sal e verificador PBKDF2 da senha do painel; o segredo `ADMIN_VIEW_TOKEN` deixa de servir como senha de login e continua reservado para autenticar a API administrativa e assinar sessões. Para instalar essa função em um banco já existente, aplicar `server/cloudflare/panel-password-schema.sql` antes de publicar o Worker.
+
+O login do painel é diferente da senha semanal do aplicativo. O e-mail inicial está no segredo `ADMIN_PANEL_USER` e a senha inicial em `ADMIN_VIEW_TOKEN` do Cloudflare, fora do Git/APK. Cinco tentativas incorretas bloqueiam o acesso por 15 minutos. A sessão do painel expira após uma hora sem atividade; é possível sair manualmente pelo botão **Sair**.
 
 ### Referência para novas instalações do servidor
 

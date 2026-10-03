@@ -2,8 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { randomUUID } from 'expo-crypto';
 import { cloud } from './cloudStorage';
 import { createDiagnosticQueue } from './diagnosticQueue';
+import { getStoreId, LEGACY_STORE_ID } from '../config/store';
 
-export const diagnostics = createDiagnosticQueue(AsyncStorage, randomUUID, () => cloud.deviceId(), entry => cloud.sendDiagnostic(entry));
+const storeStorage = {
+  getItem: (key: string) => AsyncStorage.getItem(getStoreId() === LEGACY_STORE_ID ? key : key + ':' + getStoreId()),
+  setItem: (key: string, value: string) => AsyncStorage.setItem(getStoreId() === LEGACY_STORE_ID ? key : key + ':' + getStoreId(), value),
+};
+export const diagnostics = createDiagnosticQueue(storeStorage, randomUUID, () => cloud.deviceId(), entry => cloud.sendDiagnostic(entry));
 export function logError(event: string, error?: unknown, orderId?: string) {
   // Native error codes are useful without uploading messages that can contain private data.
   const candidate = (error as { code?: unknown })?.code;

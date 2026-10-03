@@ -6,16 +6,17 @@ import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, useWindowDimensions } from 'react-native';
-import { printOrder, printPrinterTest, type PrinterSettings } from '../../printerService';
+import { printOrder, printPrinterTest, type PrinterSettings, type ServiceMode } from '../../printerService';
 import { DEFAULT_MENU, standardizeMenu, filterProducts, isDemoMenu, type Product } from '../../menuData';
 import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../../orderItems';
 import { isValidMenu } from '../../shared/menu-validation.mjs';
 import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
+import { getStoreId, LEGACY_STORE_ID } from '../config/store';
 import { ORDER_SETTINGS_KEY, DEFAULT_ORDER_SETTINGS, parseOrderSettings, customerValidationMessage } from '../services/orderSettings';
 import { createOrderSubmitter } from '../services/orderSubmission';
 import { persistSettings, PRINTER_SETTINGS_KEY } from '../services/settings';
 
-type SavedOrder = { id: string; plate: string; customer: string; items: OrderItem[]; createdAt: string; tabletId?: string };
+type SavedOrder = { id: string; plate: string; customer: string; serviceMode?: ServiceMode; items: OrderItem[]; createdAt: string; tabletId?: string };
 const STORAGE_KEY = '@comandadigitalprint/orders';
 const MENU_KEY = '@comandadigitalprint/menu';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
@@ -26,6 +27,7 @@ function useAppState() {
   const [subcategory, setSubcategory] = useState('');
   function setCategory(value: string) { setCategoryState(value); setSubcategory(''); }
   const [plate, setPlate] = useState('1');
+  const [serviceMode, setServiceMode] = useState<ServiceMode | null>(null);
   const [customPlate, setCustomPlate] = useState('');
   const [customer, setCustomer] = useState('');
   const [customerError, setCustomerError] = useState('');
@@ -34,7 +36,7 @@ function useAppState() {
   const orderSettingsLock = useRef(false);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [history, setHistory] = useState<SavedOrder[]>([]);
-  const [menu, setMenu] = useState<Product[]>(DEFAULT_MENU);
+  const [menu, setMenu] = useState<Product[]>(() => getStoreId() === LEGACY_STORE_ID ? DEFAULT_MENU : []);
   const [updatingMenu, setUpdatingMenu] = useState(false);
   const [menuUpdateStatus, setMenuUpdateStatus] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
@@ -270,10 +272,14 @@ function useAppState() {
     }
   }
 
-  async function sendOrder() {
+  async function sendOrder(onOrderSaved?: () => void) {
     if (!isReady || submitter.busy || orderSettingsLock.current) return;
     if (items.length === 0) {
       Alert.alert(t('Comanda vazia'), t('Adicione pelo menos um item antes de enviar.'));
+      return;
+    }
+    if (!serviceMode) {
+      Alert.alert(t('Tipo de pedido'), t('Escolha se o pedido é para comer aqui ou para levar.'));
       return;
     }
     const validation = customerValidationMessage(customer, orderSettings.requireCustomer);
@@ -283,11 +289,11 @@ function useAppState() {
       return;
     }
     const tabletId = cloud.identity();
-    const order: SavedOrder = { id: tabletId + '-' + randomUUID(), tabletId, plate: customPlate.trim() || plate, customer: customer.trim(), items, createdAt: new Date().toISOString() };
+    const order: SavedOrder = { id: tabletId + '-' + randomUUID(), tabletId, plate: customPlate.trim() || plate, customer: customer.trim(), serviceMode, items, createdAt: new Date().toISOString() };
     try {
       await submitter.submit(order, history, {
         persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
-        onSaved: (next) => { setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
+        onSaved: (next) => { setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
         print: printSavedOrder,
         onBusy: setSending,
       });
@@ -298,7 +304,7 @@ function useAppState() {
   }
 
 
-  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

@@ -21,11 +21,17 @@ Copiar o `database_id` retornado para `server/cloudflare/wrangler.jsonc`, substi
 
 ```powershell
 npx.cmd wrangler@4 d1 execute seabra-cardapio --remote --config server/cloudflare/wrangler.jsonc --file server/cloudflare/schema.sql
+npx.cmd wrangler@4 d1 execute seabra-cardapio --remote --config server/cloudflare/wrangler.jsonc --file server/cloudflare/cloud-schema.sql
+npx.cmd wrangler@4 d1 execute seabra-cardapio --remote --config server/cloudflare/wrangler.jsonc --file server/cloudflare/diagnostics-schema.sql
+npx.cmd wrangler@4 d1 execute seabra-cardapio --remote --config server/cloudflare/wrangler.jsonc --file server/cloudflare/panel-password-schema.sql
+npx.cmd wrangler@4 d1 execute seabra-cardapio --remote --config server/cloudflare/wrangler.jsonc --file server/cloudflare/store-schema.sql
 npx.cmd wrangler@4 secret put MENU_ADMIN_TOKEN --config server/cloudflare/wrangler.jsonc
 npx.cmd wrangler@4 deploy --config server/cloudflare/wrangler.jsonc
 ```
 
 No prompt de segredo, inserir um token aleatório forte (pelo menos 32 bytes). Não salvar esse token no Git, no app ou na URL. O Worker começa com o cardápio Seabra incluído no código quando o banco está vazio. O primeiro `PUT /menu` grava no D1 e atualizações/deploys posteriores preservam esse conteúdo.
+
+Para atualizar o banco já publicado e cadastrar outras lojas, siga [STORES.md](cloudflare/STORES.md). A migração do D1 precede a publicação do Worker com isolamento por loja.
 
 Testar `https://<endereço-retornado>/health` e `/menu`. Configurar a URL completa terminada em `/menu` em `src/config/menu.ts` antes de distribuir o próximo aplicativo. O operador não informa links: usa apenas **Atualizar cardápio**. O app verifica também ao abrir, compara o conteúdo e avisa “Cardápio atualizado com sucesso” somente depois de persistir uma mudança. Sem internet, mantém o cardápio local. O endereço interno já aponta para o serviço publicado; o app instalado receberá essa configuração no próximo build.
 

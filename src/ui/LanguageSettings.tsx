@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
+import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { useLanguage } from '../i18n/LanguageContext';
 import { type Language } from '../i18n/translations';
 import { styles } from './theme';

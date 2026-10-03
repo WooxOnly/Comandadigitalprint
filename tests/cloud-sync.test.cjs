@@ -14,6 +14,7 @@ async function fixture() {
   database.exec(fs.readFileSync('server/cloudflare/schema.sql', 'utf8'));
   database.exec(fs.readFileSync('server/cloudflare/cloud-schema.sql', 'utf8'));
   database.exec(fs.readFileSync('server/cloudflare/diagnostics-schema.sql', 'utf8'));
+  database.exec(fs.readFileSync('server/cloudflare/store-schema.sql', 'utf8'));
   const statement = (sql, args = []) => ({
     bind: (...values) => statement(sql, values),
     first: async () => database.prepare(sql).get(...args),
@@ -24,7 +25,7 @@ async function fixture() {
   const request = (path, data, token) => cloudResponse(new Request('https://example.com/cloud' + path, { method: data === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), env);
   const admin = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET);
   const login = await (await request('/login', { username: 'admin', password: admin.password })).json();
-  function tablet(saved = new Map(), seed = {}) {
+  function tablet(saved = new Map(), seed = {}, selectedStore = 'seabra-1') {
     let offline = false, loseAck = false, failWrite = false, afterWrite;
     const storage = { getItem: async (key) => saved.get(key) ?? null, setItem: async (key, value) => { if (failWrite) throw Error('disk full'); saved.set(key, value); } };
     const fetcher = async (url, options) => {
@@ -34,17 +35,80 @@ async function fixture() {
       if (loseAck && url.endsWith('/change')) { loseAck = false; throw Error('response lost'); }
       return result;
     };
-    const cloud = createCloudSync(storage, 'https://example.com/cloud', randomUUID, async () => seed, fetcher);
+    const cloud = createCloudSync(storage, 'https://example.com/cloud', randomUUID, async () => seed, fetcher, selectedStore);
     return { cloud, saved, set offline(v) { offline = v; }, set loseAck(v) { loseAck = v; }, set failWrite(v) { failWrite = v; }, set afterWrite(v) { afterWrite = v; } };
   }
   return { database, request, token: login.token, tablet };
 }
-const order = (tabletId) => ({ id: tabletId + '-' + randomUUID(), tabletId, plate: '7', customer: 'Teste', createdAt: new Date().toISOString(), items: [{ id: 'pizza', name: 'Pizza de dois sabores', category: 'Pizzas', quantity: 2, note: 'Sem cebola', flavors: ['Calabresa', 'Atum'], extras: [{ name: 'Bacon', placement: 'second' }] }] });
+const order = (tabletId) => ({ id: tabletId + '-' + randomUUID(), tabletId, plate: '7', customer: 'Teste', serviceMode: 'takeout', createdAt: new Date().toISOString(), items: [{ id: 'pizza', name: 'Pizza de dois sabores', category: 'Pizzas', quantity: 2, note: 'Sem cebola', flavors: ['Calabresa', 'Atum'], extras: [{ name: 'Bacon', placement: 'second' }] }] });
+
+test('store migration preserves Seabra records, revisions, diagnostics and queued tablet cursors', () => {
+  const database = new DatabaseSync(':memory:');
+  try {
+    for (const file of ['schema.sql', 'cloud-schema.sql', 'diagnostics-schema.sql']) database.exec(fs.readFileSync('server/cloudflare/' + file, 'utf8'));
+    const oldOrder = order(randomUUID());
+    database.prepare('INSERT INTO cloud_events(seq, mutation, key, data, actor, created_at) VALUES(?, ?, ?, ?, ?, ?)').run(17, randomUUID(), 'order:' + oldOrder.id, JSON.stringify(oldOrder), 'admin', oldOrder.createdAt);
+    database.prepare('UPDATE admin_rotation SET revision = 3 WHERE id = 1').run();
+    database.prepare('INSERT INTO cloud_login_limits(key, attempts, reset_at) VALUES(?, ?, ?)').run('admin:tablet', 2, 12345);
+    const logId = randomUUID();
+    database.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?)').run(logId, oldOrder.tabletId, oldOrder.createdAt, oldOrder.createdAt, 'admin', 'print.failed', 'TIMEOUT');
+    const migration = fs.readFileSync('server/cloudflare/store-schema.sql', 'utf8');
+    database.exec(migration);
+    database.exec(migration);
+    const copied = database.prepare("SELECT data, revision FROM store_records WHERE store_id = 'seabra-1' AND key = ?").get('order:' + oldOrder.id);
+    assert.equal(copied.data, JSON.stringify(oldOrder));
+    assert.equal(copied.revision, 17);
+    assert.equal(database.prepare("SELECT seq FROM store_events WHERE store_id = 'seabra-1' AND key = ?").get('order:' + oldOrder.id).seq, 17);
+    assert.equal(database.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 3);
+    assert.equal(database.prepare("SELECT attempts FROM store_login_limits WHERE store_id = 'seabra-1' AND key = 'admin:tablet'").get().attempts, 2);
+    assert.equal(database.prepare("SELECT id FROM store_diagnostics WHERE store_id = 'seabra-1' AND id = ?").get(logId).id, logId);
+    assert.equal(database.prepare('SELECT count(*) AS n FROM cloud_events').get().n, 1);
+  } finally { database.close(); }
+});
+
+test('stores keep their menus, users, orders and diagnostics separate under signed sessions', async () => {
+  const f = await fixture();
+  try {
+    f.database.prepare("INSERT INTO stores(id, name, active) VALUES('seabra-2', 'Seabra 2', 1)").run();
+    const { weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');
+    const secondPassword = (await weeklyAdmin('test-only-secret-not-for-deployment-1234', Date.now(), 0, 'seabra-2')).password;
+    assert.equal((await f.request('/store?storeId=seabra-2')).status, 200);
+    const secondLogin = await (await f.request('/login', { storeId: 'seabra-2', username: 'admin', password: secondPassword })).json();
+    assert.equal(secondLogin.storeId, 'seabra-2');
+    const first = f.tablet(), second = f.tablet(new Map(), {}, 'seabra-2');
+    await first.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token });
+    await second.cloud.setSession({ storeId: 'seabra-2', username: 'admin', token: secondLogin.token });
+    await first.cloud.sync(); await second.cloud.sync();
+    assert.deepEqual(await second.cloud.get('menu'), []);
+    const sharedOrderId = randomUUID();
+    const firstOrder = { ...order(first.cloud.identity()), id: sharedOrderId, customer: 'Primeira loja' };
+    const secondOrder = { ...order(second.cloud.identity()), id: sharedOrderId, customer: 'Segunda loja' };
+    const firstMenu = [{ id: 'one', name: 'Produto um', category: 'Lanches', price: 0 }];
+    const secondMenu = [{ id: 'two', name: 'Produto dois', category: 'Lanches', price: 0 }];
+    const staff = { username: 'staff', active: true, login: { salt: randomBytes(16).toString('hex'), hash: randomBytes(32).toString('hex'), iterations: 100000 } };
+    await first.cloud.write({ menu: firstMenu, ['order:' + sharedOrderId]: firstOrder, 'user:staff': staff });
+    await second.cloud.write({ menu: secondMenu, ['order:' + sharedOrderId]: secondOrder });
+    await first.cloud.sync(); await second.cloud.sync();
+    assert.deepEqual(await first.cloud.get('menu'), firstMenu);
+    assert.deepEqual(await second.cloud.get('menu'), secondMenu);
+    assert.equal((await second.cloud.list('user:')).length, 0);
+    assert.equal((await first.cloud.list('user:')).length, 1);
+    assert.equal(f.database.prepare("SELECT count(*) AS n FROM store_records WHERE key = ?").get('order:' + sharedOrderId).n, 2);
+    assert.equal((await f.request('/changes?after=0&storeId=seabra-1', undefined, secondLogin.token)).status, 403);
+    assert.equal((await f.request('/change', { storeId: 'seabra-1', key: 'menu', value: [], base: 0, id: randomUUID() }, secondLogin.token)).status, 403);
+    const log = { id: randomUUID(), deviceId: second.cloud.identity(), createdAt: new Date().toISOString(), event: 'print.failed', code: 'PRINT_TIMEOUT' };
+    assert.equal((await f.request('/diagnostics', log, secondLogin.token)).status, 200);
+    assert.equal(f.database.prepare('SELECT store_id FROM store_diagnostics WHERE id = ?').get(log.id).store_id, 'seabra-2');
+    await assert.rejects(second.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }), (error) => error.code === 'STORE_MISMATCH');
+    f.database.prepare("UPDATE stores SET active = 0 WHERE id = 'seabra-2'").run();
+    assert.equal((await f.request('/changes', undefined, secondLogin.token)).status, 401);
+  } finally { f.database.close(); }
+});
 
 test('an acknowledgement for an older edit cannot remove a newer queued edit', async () => {
   const f = await fixture();
   try {
-    const a = f.tablet(); await a.cloud.setSession({ username: 'admin', token: f.token }); await a.cloud.sync();
+    const a = f.tablet(); await a.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await a.cloud.sync();
     let arrived, release;
     const waiting = new Promise((resolve) => { arrived = resolve; });
     const hold = new Promise((resolve) => { release = resolve; });
@@ -57,7 +121,7 @@ test('an acknowledgement for an older edit cannot remove a newer queued edit', a
     assert.deepEqual(await a.cloud.get('order-settings'), { requireCustomer: false });
     await a.cloud.sync();
     assert.equal(a.cloud.pending('order-settings'), false);
-    assert.deepEqual(JSON.parse(f.database.prepare("SELECT data FROM cloud_records WHERE key = 'order-settings'").get().data), { requireCustomer: false });
+    assert.deepEqual(JSON.parse(f.database.prepare("SELECT data FROM store_records WHERE store_id = 'seabra-1' AND key = 'order-settings'").get().data), { requireCustomer: false });
   } finally { f.database.close(); }
 });
 
@@ -65,7 +129,7 @@ test('two tablets queue offline orders, survive restart, retry lost acknowledgem
   const f = await fixture();
   try {
     const a = f.tablet(), b = f.tablet();
-    for (const t of [a, b]) { await t.cloud.setSession({ username: 'admin', token: f.token }); await t.cloud.sync(); t.offline = true; }
+    for (const t of [a, b]) { await t.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await t.cloud.sync(); t.offline = true; }
     const aId = a.cloud.identity(), bId = b.cloud.identity(); assert.notEqual(aId, bId);
     const first = order(aId), second = order(bId);
     await a.cloud.write({ ['order:' + first.id]: first }); await a.cloud.sync();
@@ -73,7 +137,7 @@ test('two tablets queue offline orders, survive restart, retry lost acknowledgem
     assert.equal(a.cloud.pending('order:' + first.id), true);
     assert.equal(b.cloud.pending('order:' + second.id), true);
     const restarted = f.tablet(a.saved); await restarted.cloud.load(); assert.equal(restarted.cloud.identity(), aId);
-    await restarted.cloud.setSession({ username: 'admin', token: f.token });
+    await restarted.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token });
     restarted.loseAck = true; await restarted.cloud.sync();
     assert.equal(restarted.cloud.pending('order:' + first.id), true);
     await restarted.cloud.sync();
@@ -81,8 +145,8 @@ test('two tablets queue offline orders, survive restart, retry lost acknowledgem
     b.offline = false; await b.cloud.sync(); await restarted.cloud.sync();
     assert.equal((await b.cloud.list('order:')).length, 2);
     assert.equal((await restarted.cloud.list('order:')).length, 2);
-    assert.equal(f.database.prepare("SELECT count(*) AS n FROM cloud_events WHERE key LIKE 'order:%'").get().n, 2);
-    const clean = f.tablet(); await clean.cloud.setSession({ username: 'admin', token: f.token }); await clean.cloud.sync();
+    assert.equal(f.database.prepare("SELECT count(*) AS n FROM store_events WHERE store_id = 'seabra-1' AND key LIKE 'order:%'").get().n, 2);
+    const clean = f.tablet(); await clean.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await clean.cloud.sync();
     assert.notEqual(clean.cloud.identity(), aId);
     assert.deepEqual((await clean.cloud.list('order:')).map((o) => o.id).sort(), [first.id, second.id].sort());
     clean.failWrite = true;
@@ -96,7 +160,7 @@ test('concurrent menu edits are preserved as a conflict and printer settings rem
   const f = await fixture();
   try {
     const a = f.tablet(), b = f.tablet();
-    for (const t of [a, b]) { await t.cloud.setSession({ username: 'admin', token: f.token }); await t.cloud.sync(); t.offline = true; }
+    for (const t of [a, b]) { await t.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await t.cloud.sync(); t.offline = true; }
     const menuA = [{ id: 'pizza', name: 'Pizza A', category: 'Pizzas', price: 0 }], menuB = [{ ...menuA[0], name: 'Pizza B' }];
     await a.cloud.write({ menu: menuA }); await a.cloud.sync();
     await b.cloud.write({ menu: menuB }); await b.cloud.sync();
@@ -120,7 +184,7 @@ test('cloud access requires login; shared users authenticate after reinstall and
     assert.equal((await f.request('/login', { username: 'admin', password: 'wrong' })).status, 401);
     const salt = randomBytes(16).toString('hex');
     const staff = { username: 'staff', active: true, login: { salt, hash: pbkdf2Sync('123456', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
-    const admin = f.tablet(); await admin.cloud.setSession({ username: 'admin', token: f.token }); await admin.cloud.sync();
+    const admin = f.tablet(); await admin.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await admin.cloud.sync();
     await admin.cloud.write({ 'user:staff': staff, 'user:other': { ...staff, username: 'other' } }); await admin.cloud.sync();
     const response = await f.request('/login', { username: 'staff', password: '123456' }); assert.equal(response.status, 200);
     const login = await response.json(); assert.equal(login.credential.username, 'staff');
@@ -137,12 +201,12 @@ test('staff can sync only their own password, while menu edits reach another tab
   const f = await fixture();
   try {
     const admin = f.tablet(), staffTablet = f.tablet();
-    await admin.cloud.setSession({ username: 'admin', token: f.token }); await admin.cloud.sync();
+    await admin.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await admin.cloud.sync();
     const salt = randomBytes(16).toString('hex');
     const staff = { username: 'staff', active: true, login: { salt, hash: pbkdf2Sync('123456', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
     await admin.cloud.write({ 'user:staff': staff }); await admin.cloud.sync();
     const signedIn = await (await f.request('/login', { username: 'staff', password: '123456' })).json();
-    await staffTablet.cloud.setSession({ username: 'staff', token: signedIn.token }); await staffTablet.cloud.sync();
+    await staffTablet.cloud.setSession({ storeId: 'seabra-1', username: 'staff', token: signedIn.token }); await staffTablet.cloud.sync();
     const editedMenu = [{ id: 'custom', name: 'Pizza da casa', category: 'Pizzas', description: 'Mussarela e tomate', price: 0 }];
     await staffTablet.cloud.write({ menu: editedMenu }); await staffTablet.cloud.sync(); await admin.cloud.sync();
     assert.deepEqual(await admin.cloud.get('menu'), editedMenu);
@@ -159,15 +223,16 @@ test('staff can sync only their own password, while menu edits reach another tab
 test('changes paginate without losing orders, and writes cannot mutate or overwrite an existing order', async () => {
   const f = await fixture();
   try {
-    const a = f.tablet(); await a.cloud.setSession({ username: 'admin', token: f.token }); await a.cloud.sync();
+    const a = f.tablet(); await a.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await a.cloud.sync();
     a.offline = true; const entries = {};
     for (let i = 0; i < 55; i++) { const value = order(a.cloud.identity()); entries['order:' + value.id] = value; }
     await a.cloud.write(entries); await a.cloud.sync(); a.offline = false; await a.cloud.sync();
-    const b = f.tablet(); await b.cloud.setSession({ username: 'admin', token: f.token }); await b.cloud.sync();
+    const b = f.tablet(); await b.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await b.cloud.sync();
     assert.equal((await b.cloud.list('order:')).length, 55);
     const [key, value] = Object.entries(entries)[0];
+    assert.equal((await f.request('/change', { key, value: { ...value, serviceMode: 'delivery' }, base: 0, id: randomUUID() }, f.token)).status, 400);
     await assert.rejects(b.cloud.write({ [key]: { ...value, customer: 'changed' } }));
-    const revision = f.database.prepare('SELECT revision FROM cloud_records WHERE key = ?').get(key).revision;
+    const revision = f.database.prepare("SELECT revision FROM store_records WHERE store_id = 'seabra-1' AND key = ?").get(key).revision;
     assert.equal((await f.request('/change', { key, value: { ...value, customer: 'changed' }, base: revision, id: randomUUID() }, f.token)).status, 409);
   } finally { f.database.close(); }
 });
@@ -179,7 +244,7 @@ test('changes paginate without losing orders, and writes cannot mutate or overwr
     assert.equal((await f.request('/diagnostics', log)).status, 401);
     for (let i = 0; i < 2; i++) assert.equal((await f.request('/diagnostics', log, f.token)).status, 200);
     assert.equal((await f.request('/diagnostics', { ...log, id: randomUUID(), event: 'print.started' }, f.token)).status, 200);
-    const rows = f.database.prepare('SELECT * FROM diagnostics').all();
+    const rows = f.database.prepare('SELECT * FROM store_diagnostics').all();
     assert.equal(rows.length, 1); assert.doesNotMatch(JSON.stringify(rows), /must-not-be-stored/);
     assert.equal((await f.request('/diagnostics', { ...log, event: '<invalid>' }, f.token)).status, 400);
     const changes = await (await f.request('/changes', undefined, f.token)).json();

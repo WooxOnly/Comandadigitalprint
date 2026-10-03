@@ -24,13 +24,23 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
   let loaded = false;
   let busy = false;
   let signedIn = false;
+  let signedInDay = '';
   let currentUser = '';
   let settingsOpen = false;
+  const localDay = () => {
+    const date = new Date(now());
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  };
+  const clearSession = () => { signedIn = false; signedInDay = ''; currentUser = ''; settingsOpen = false; };
+  const isSessionActive = () => {
+    if (signedIn && signedInDay !== localDay()) clearSession();
+    return signedIn;
+  };
   const USER_INDEX = 'comandadigitalprint.users.v1';
   type User = { username: string; active: boolean; login: Digest; attempts: number; blockedUntil: number };
   let users: User[] = [];
   const userKey = (username: string) => `comandadigitalprint.user.${username}`;
-  const requireSettings = () => { if (!signedIn || !settingsOpen) throw new Error('Acesso protegido'); };
+  const requireSettings = () => { if (!isSessionActive() || !settingsOpen) throw new Error('Acesso protegido'); };
   async function saveUser(next: User) {
     await storage.setItemAsync(userKey(next.username), JSON.stringify(next));
     users = users.map((user) => user.username === next.username ? next : user);
@@ -75,7 +85,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         if (username.trim() !== 'admin') throw new Error('Informe um usuário.');
         if (!validPasswords(password, confirmation)) throw new Error(PASSWORD_ERROR);
         await save({ version: 1, username: username.trim(), login: await makeDigest(password), attempts: 0, blockedUntil: 0 });
-        signedIn = true;
+        signedIn = true; signedInDay = localDay();
         currentUser = username.trim();
       });
     },
@@ -101,12 +111,12 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         const login = await makeDigest(password);
         await storage.setItemAsync(attemptKey, '{"count":0,"blockedUntil":0}');
         await save({ version: 1, username: 'admin', login, attempts: 0, blockedUntil: 0 });
-        signedIn = true; currentUser = 'admin'; settingsOpen = false;
+        signedIn = true; signedInDay = localDay(); currentUser = 'admin'; settingsOpen = false;
       });
     },
     async verify(kind: 'login' | 'settings', password: string, username = '') {
       return run(async () => {
-        if (!loaded || (kind === 'settings' && !signedIn)) throw new Error(AUTH_STORAGE_ERROR);
+        if (!loaded || (kind === 'settings' && !isSessionActive())) throw new Error(AUTH_STORAGE_ERROR);
         const name = kind === 'settings' ? currentUser : username.trim().toLowerCase();
         const account = name === 'admin' ? record : users.find((user) => user.username === name && user.active);
         if (!account) throw new Error(name === 'admin' && !record ? 'Recupere o acesso do admin antes de entrar.' : 'Usuário ou senha incorretos.');
@@ -119,12 +129,13 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
           throw new Error(kind === 'login' ? 'Usuário ou senha incorretos.' : 'Senha incorreta.');
         }
         await persist(0, 0);
-        if (kind === 'login') { signedIn = true; currentUser = name; settingsOpen = false; }
+        if (kind === 'login') { signedIn = true; signedInDay = localDay(); currentUser = name; settingsOpen = false; }
         else settingsOpen = true;
       });
     },
     lockSettings() { settingsOpen = false; },
-    logout() { signedIn = false; currentUser = ''; settingsOpen = false; },
+    isSessionActive,
+    logout: clearSession,
     loginUsers() { return ['admin', ...users.filter((user) => user.active).map((user) => user.username)]; },
     listUsers() { requireSettings(); return users.map(({ username, active }) => ({ username, active })); },
     async createUser(username: string, password: string, confirmation: string) {
@@ -177,6 +188,8 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         const response = await fetcher(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
         if (!response.ok) throw new Error('Admin sync unavailable');
         const next = await response.json();
+        const expectedStore = new URL(endpoint).searchParams.get('storeId');
+        if (expectedStore && next.storeId !== expectedStore) throw new Error('Invalid admin store');
         const revision = next.revision ?? 0;
         if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid admin revision');
         if (next.username !== 'admin' || next.iterations !== 100000 || !Number.isInteger(next.week) || next.week < 0 || !/^[a-f0-9]{32}$/.test(next.salt) || !/^[a-f0-9]{64}$/.test(next.hash)) throw new Error('Invalid admin credential');

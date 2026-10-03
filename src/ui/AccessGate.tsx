@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { styles } from './theme';
+import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
+import { getStoreId } from '../config/store';
 
 export function PasswordField({ label, value, onChangeText }: { label: string; value: string; onChangeText: (value: string) => void }) {
   return <><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={128} style={styles.input} /></>;
@@ -36,10 +38,11 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
     finally { lock.current = false; if (active.current) setBusy(false); }
   }
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+    <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
       <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
+        {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {getStoreId()}</Text>}
         <Text style={styles.panelTitle}>{t(settings ? 'Acesso protegido' : 'Entrar')}</Text>
         {!auth.ready ? <><Text style={styles.errorText}>{t(auth.error || 'Carregando dados salvos…')}</Text>{auth.error && <Pressable style={styles.secondaryWideButton} onPress={auth.load}><Text style={styles.secondaryButtonText}>{t('Tente novamente')}</Text></Pressable>}</> : <>
           {settings ? <Text style={styles.settingsIntro}>{t('Digite a senha de Configurações para continuar.')}</Text> : <>
@@ -48,7 +51,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
               <TextInput style={[styles.input, styles.userInput]} accessibilityLabel={t('Usuário')} value={username} onChangeText={(value) => { setUsername(value); setShowUsers(false); }} editable={!offline} autoCapitalize="none" autoCorrect={false} maxLength={24} />
               {!offline && loginUsers.length > 1 && <Pressable style={styles.userPickerButton} accessibilityRole="button" accessibilityLabel={t('Selecionar usuário')} accessibilityState={{ expanded: showUsers }} onPress={() => { Keyboard.dismiss(); setShowUsers((open) => !open); }}><Text style={styles.userPickerArrow}>{showUsers ? '▴' : '▾'}</Text></Pressable>}
             </View>
-            {showUsers && !offline && <ScrollView style={styles.userPickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {showUsers && !offline && <ScrollView style={styles.userPickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
               {loginUsers.map((name) => <Pressable key={name} style={styles.userPickerItem} accessibilityRole="button" accessibilityLabel={name} onPress={() => { setUsername(name); setPassword(''); setError(''); setShowUsers(false); }}><Text style={styles.connectionText}>{name}</Text></Pressable>)}
             </ScrollView>}
           </>}

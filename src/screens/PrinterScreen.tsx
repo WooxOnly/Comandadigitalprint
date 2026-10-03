@@ -2,7 +2,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { LanguageSettings } from '../ui/LanguageSettings';
 import { UserSettings } from '../ui/UserSettings';
 import { TabletSettings } from '../ui/TabletSettings';
-import { Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { Keyboard, Switch, Text, View } from 'react-native';
+import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles, COLORS, CONNECTIONS } from '../ui/theme';
@@ -26,7 +27,7 @@ export default function PrinterScreen() {
                     <Text style={styles.panelTitle}>{t("Pedidos")}</Text>
                     <View style={styles.orderLine}>
                       <Text style={[styles.cardTitle, styles.productInfo]}>{t("Obrigar informar cliente")}</Text>
-                      <Switch value={orderSettings.requireCustomer} onValueChange={setRequireCustomer} disabled={savingOrderSettings} accessibilityLabel={t("Obrigar informar cliente")} trackColor={{ false: COLORS.border, true: COLORS.green }} />
+                      <Switch value={orderSettings.requireCustomer} onValueChange={(value) => { Keyboard.dismiss(); setRequireCustomer(value); }} disabled={savingOrderSettings} accessibilityLabel={t("Obrigar informar cliente")} trackColor={{ false: COLORS.border, true: COLORS.green }} />
                     </View>
                     <Text style={styles.helperText}>{savingOrderSettings ? t("Salvando…") : t("Salvo automaticamente. Quando ativado, exige o nome do cliente antes de enviar a comanda.")}</Text>
                     <Text style={styles.sectionTitle}>{t("Impressora")}</Text>

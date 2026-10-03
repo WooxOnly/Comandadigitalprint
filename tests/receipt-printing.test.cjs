@@ -27,17 +27,18 @@ function loadPrinter() {
 
 test('all receipt languages preserve product names and extras, including reprints', async () => {
   const printer = loadPrinter();
-  const order = { plate: '7', customer: '', createdAt: '2026-09-22T18:30:00Z', items: [
+  const order = { plate: '7', customer: '', serviceMode: 'takeout', createdAt: '2026-09-22T18:30:00Z', items: [
     { name: 'Pizza inteira — Rúcula com tomate seco', quantity: 1, note: 'Sem cebola', extras: [{ name: 'Requeijão cremoso', placement: 'whole' }] },
     { name: 'Pizza de dois sabores', quantity: 1, note: '', flavors: ['Frango com Catupiry', 'Calabresa com cebola'], extras: [{ name: 'Mussarela', placement: 'first' }] },
   ] };
-  for (const [language, title, half, success] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente']]) {
+  for (const [language, title, half, success, service] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso', 'Tipo de pedido: Para levar'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully', 'Order type: To go'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente', 'Tipo de pedido: Para llevar']]) {
     await printer.printOrder(order, { connection: 'system', paperWidth: '58' }, language);
     const html = printer.files.at(-1).html;
-    for (const text of [title, half, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
+    for (const text of [title, half, service, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
     assert.ok(printer.buildPrinterTestHtml('80', language).includes(success));
     if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
   }
+  assert.match(printer.buildOrderHtml({ ...order, serviceMode: 'dine_in' }, '58', 'en'), /Order type: For here/);
 });
 
 for (const paperWidth of ['58', '80', '88']) {
@@ -51,6 +52,7 @@ for (const paperWidth of ['58', '80', '88']) {
     assert.match(html, /Impressora configurada com sucesso/);
     assert.match(html, /text-align: center/);
     assert.ok(html.includes(`size: ${paperWidth}mm 200mm`));
+    assert.doesNotMatch(html, /Tipo de pedido|Order type/);
     assert.ok(Math.abs(options.width * 25.4 / 72 - Number(paperWidth)) < 0.2);
     assert.equal(printer.files[0].width, options.width);
     assert.doesNotMatch(html, /Plaquinha|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
@@ -72,6 +74,7 @@ for (const paperWidth of ['58', '80', '88']) {
     assert.ok(html.includes(`size: ${paperWidth}mm 200mm`));
     assert.match(html, /margin: 0 auto/);
     assert.match(html, /text-align: center/);
+    assert.doesNotMatch(html, /Tipo de pedido:/);
     for (const value of ['Plaquinha: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', '1ª metade: Calabresa', '2ª metade: Queijo', '+ Bacon &amp; alho', '(2ª metade: Queijo)', '+ Milho', '(inteira)', 'Sem cebola\nMolho à parte']) {
       assert.ok(html.includes(value));
     }

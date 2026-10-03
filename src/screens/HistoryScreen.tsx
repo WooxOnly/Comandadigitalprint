@@ -1,6 +1,7 @@
 import { useLanguage } from '../i18n/LanguageContext';
 import { router } from 'expo-router';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
+import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles } from '../ui/theme';

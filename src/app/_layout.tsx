@@ -6,10 +6,16 @@ import { AppProvider } from '../state/AppContext';
 import { AppShell } from '../ui/AppShell';
 import { COLORS } from '../ui/theme';
 import { useEffect } from 'react';
-import { startDiagnostics } from '../services/diagnostics';
+import { logError, startDiagnostics } from '../services/diagnostics';
+import { startLocalBackupScheduler } from '../services/cloudStorage';
+import { StoreGate } from '../ui/StoreGate';
 
 export default function RootLayout() {
+  return <StoreGate><ReadyApp /></StoreGate>;
+}
+function ReadyApp() {
   useEffect(startDiagnostics, []);
+  useEffect(() => startLocalBackupScheduler((error) => logError('backup.failed', error)), []);
   return <LanguageProvider><AuthProvider><AppProvider><LoginGate><Navigation /></LoginGate></AppProvider></AuthProvider></LanguageProvider>;
 }
 function Navigation() {

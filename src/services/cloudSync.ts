@@ -2,14 +2,16 @@ import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; deviceId: string; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { version: 1; storeId: string; deviceId: string; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
-type Session = { token: string; username: string };
+type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
+const LEGACY_STORE_ID = 'seabra-1';
+const stateKey = (storeId: string) => storeId === LEGACY_STORE_ID ? STATE_KEY : STATE_KEY + ':' + storeId;
 export class CloudError extends Error {
   constructor(public code: string, public status = 0, public current?: CloudRecord) { super(code); }
 }
-export function createCloudSync(storage: Store, endpoint: string, uuid: () => string, seed: () => Promise<Record<string, unknown>>, fetcher: typeof fetch = fetch) {
+export function createCloudSync(storage: Store, endpoint: string, uuid: () => string, seed: (storeId: string) => Promise<Record<string, unknown>>, fetcher: typeof fetch = fetch, selectedStore: string | (() => string) = LEGACY_STORE_ID) {
   let state: State;
   let loading: Promise<void> | undefined;
   let lock: Promise<unknown> = Promise.resolve();
@@ -21,30 +23,43 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   const serial = <T,>(action: () => Promise<T>) => {
     const next = lock.then(action); lock = next.catch(() => {}); return next;
   };
-  async function persist(next: State) { await storage.setItem(STATE_KEY, JSON.stringify(next)); state = next; emit(); }
+  function storeId() {
+    const id = typeof selectedStore === 'function' ? selectedStore() : selectedStore;
+    if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(id) || (state && state.storeId !== id)) throw new CloudError('STORE_MISMATCH');
+    return id;
+  }
+  async function persist(next: State) {
+    if (next.storeId !== storeId()) throw new CloudError('STORE_MISMATCH');
+    await storage.setItem(stateKey(next.storeId), JSON.stringify(next)); state = next; emit();
+  }
   async function load() {
     if (!loading) loading = serial(async () => {
-      const saved = await storage.getItem(STATE_KEY);
+      const id = storeId();
+      const saved = await storage.getItem(stateKey(id));
       if (saved) {
-        const parsed = JSON.parse(saved) as State;
+        const parsed = JSON.parse(saved) as State & { storeId?: string };
         if (parsed.version !== 1 || !parsed.values || !parsed.pending || !Number.isSafeInteger(parsed.cursor)) throw Error('Invalid cloud cache');
         if (typeof parsed.deviceId !== 'string') throw Error('Invalid tablet identity');
-        state = parsed;
+        if (parsed.storeId !== id && !(id === LEGACY_STORE_ID && parsed.storeId === undefined)) throw new CloudError('STORE_MISMATCH');
+        state = { ...parsed, storeId: id };
+        if (parsed.storeId === undefined) await persist(state);
       } else {
         const deviceId = uuid(), values: State['values'] = {}, pending: State['pending'] = {};
-        const initial = await seed();
+        const initial = await seed(id);
         initial['device:' + deviceId] = { id: deviceId, name: 'Tablet ' + deviceId.slice(0, 8) };
         for (const [originalKey, value] of Object.entries(initial)) {
           const key = ['printer', 'language'].includes(originalKey) ? originalKey + ':' + deviceId : originalKey;
           if (!validCloudValue(key, value)) throw Error('Invalid local data: ' + key);
           values[key] = { key, value, revision: 0 }; pending[key] = { key, value, base: 0, id: uuid() };
         }
-        await persist({ version: 1, deviceId, values, pending, cursor: 0, lastSync: null });
+        await persist({ version: 1, storeId: id, deviceId, values, pending, cursor: 0, lastSync: null });
       }
     }).catch((error) => { loading = undefined; throw error; });
     await loading;
   }
   async function request(path: string, data?: unknown, authorization = session?.token) {
+    const id = storeId();
+    if (authorization && session?.token === authorization && session.storeId !== id) throw new CloudError('STORE_MISMATCH');
     if (!endpoint.startsWith('https://')) throw new CloudError('UNAVAILABLE');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
@@ -97,6 +112,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     running = (async () => {
       await load();
       if (!session) { status = 'LOGIN_REQUIRED'; emit(); return; }
+      if (session.storeId !== storeId()) throw new CloudError('STORE_MISMATCH');
       const token = session.token, username = session.username;
       status = 'SYNCING'; emit();
       try {
@@ -135,6 +151,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   }
   return {
     load, write, sync,
+    storeId,
     async sendDiagnostic(entry: unknown) { if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/diagnostics', entry); },
     identity() { if (!state) throw new Error('Storage not ready'); return state.deviceId; },
     async deviceId() { await load(); return state.deviceId; },
@@ -152,8 +169,15 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     async get(key: string) { await load(); await lock; return state.values[key]?.value; },
     async list(prefix: string) { await load(); await lock; return Object.values(state.values).filter((r) => r.key.startsWith(prefix)).map((r) => r.value); },
     pending(key: string) { return !!state?.pending[key]; },
-    async authenticate(username: string, password: string) { return request('/login', { username, password }, undefined); },
+    async authenticate(username: string, password: string) {
+      await load();
+      const id = storeId();
+      const result = await request('/login', { storeId: id, username, password }, undefined);
+      if (result.storeId !== id) throw new CloudError('STORE_MISMATCH');
+      return result;
+    },
     async setSession(next: Session | null) {
+      if (next && next.storeId !== storeId()) throw new CloudError('STORE_MISMATCH');
       await load();
       const changed = state.reader !== next?.username;
       session = next;

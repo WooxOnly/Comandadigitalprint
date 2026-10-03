@@ -9,7 +9,7 @@ export function OrderWorkspace({ catalog, order }: { catalog: ReactNode; order: 
   if (!isWide) return <ScreenFrame><View style={styles.columns}>{catalog}{order}</View></ScreenFrame>;
   // Separate scroll areas keep the order reachable while browsing a long menu.
   return <View pointerEvents={!isReady || sending ? 'none' : 'auto'} style={{ flex: 1, width: '100%', maxWidth: 1160, alignSelf: 'center', flexDirection: 'row', paddingHorizontal: 20, gap: 20 }}>
-    <ScrollView style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ paddingTop: 8, paddingBottom: 28 }} keyboardShouldPersistTaps="handled" removeClippedSubviews={false}>{catalog}</ScrollView>
-    <ScrollView style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ paddingTop: 8, paddingBottom: 28 }} keyboardShouldPersistTaps="handled" removeClippedSubviews={false}>{order}</ScrollView>
+    <ScrollView style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ paddingTop: 8, paddingBottom: 28 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" removeClippedSubviews={false}>{catalog}</ScrollView>
+    <ScrollView style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ paddingTop: 8, paddingBottom: 28 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" removeClippedSubviews={false}>{order}</ScrollView>
   </View>;
 }

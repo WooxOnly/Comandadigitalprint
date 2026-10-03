@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Text, useWindowDimensions, View } from 'react-native';
+import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { buildOrderHtml, type PrintableOrder } from '../../printerService';

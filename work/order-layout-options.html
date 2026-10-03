@@ -1,0 +1,155 @@
+<style>
+#order-options { color-scheme: light dark; --bh-bg: light-dark(#f5f3ef,#18221f); --bh-paper: light-dark(#fff,#24312c); --bh-ink: light-dark(#223b35,#f3f7f4); --bh-muted: light-dark(#66786f,#aabdb3); --bh-line: light-dark(#dbe4dc,#42554b); --bh-green: light-dark(#214b40,#2f6857); --bh-pale: light-dark(#e8f1ec,#304a3e); --bh-red: light-dark(#ae4328,#b94d31); --bh-red-text: #fff; color:var(--bh-ink); font-family:system-ui,-apple-system,sans-serif; }
+#order-options * { box-sizing:border-box; }
+#order-options .bh-stage { display:grid; grid-template-columns:280px minmax(0,1fr); align-items:start; gap:20px; min-height:610px; padding:6px 4px 70px; }
+#order-options .bh-caption { color:var(--bh-muted); font-size:12px; font-weight:650; margin:0 0 8px 4px; }
+#order-options .bh-device { background:var(--bh-bg); border:1px solid var(--bh-line); border-radius:23px; overflow:hidden; color:var(--bh-ink); display:flex; flex-direction:column; box-shadow:0 12px 30px light-dark(#24423614,#0003); }
+#order-options .bh-phone { height:540px; }
+#order-options .bh-tablet { height:420px; }
+#order-options .bh-fixed { background:var(--bh-paper); border-bottom:1px solid var(--bh-line); padding:11px 12px; flex:none; }
+#order-options .bh-brand { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+#order-options .bh-logo { display:grid; place-items:center; width:27px; height:27px; border-radius:8px; background:var(--bh-green); color:#fff; font-size:16px; font-weight:800; }
+#order-options .bh-app { font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--bh-muted); }
+#order-options .bh-title { font-size:16px; font-weight:800; line-height:1.1; }
+#order-options .bh-toprow { display:flex; align-items:center; gap:8px; }
+#order-options .bh-topmeta { min-width:0; flex:1; font-size:11px; line-height:1.25; color:var(--bh-muted); }
+#order-options .bh-topmeta strong { display:block; color:var(--bh-ink); font-size:13px; }
+#order-options .bh-cta { border:0; border-radius:10px; background:var(--bh-red); color:var(--bh-red-text); font:inherit; font-size:12px; font-weight:750; padding:11px 12px; white-space:nowrap; min-height:40px; }
+#order-options .bh-cta:focus-visible { outline:3px solid var(--bh-ink); outline-offset:2px; }
+#order-options .bh-content { flex:1; overflow:hidden; padding:12px; }
+#order-options .bh-bottom { flex:none; display:flex; justify-content:space-around; gap:2px; border-top:1px solid var(--bh-line); background:var(--bh-paper); padding:6px; color:var(--bh-muted); font-size:10px; font-weight:650; }
+#order-options .bh-bottom span { padding:6px 5px; border-radius:7px; }
+#order-options .bh-bottom .bh-active { background:var(--bh-pale); color:var(--bh-green); }
+#order-options .bh-heading { font-size:12px; font-weight:800; margin:0 0 8px; }
+#order-options .bh-muted { color:var(--bh-muted); }
+#order-options .bh-surface { background:var(--bh-paper); border:1px solid var(--bh-line); border-radius:12px; padding:10px; }
+#order-options .bh-section { margin-bottom:12px; }
+#order-options .bh-idline { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; }
+#order-options .bh-idline strong { font-size:12px; }
+#order-options .bh-mini { background:var(--bh-pale); color:var(--bh-green); border-radius:7px; padding:5px 7px; font-size:10px; font-weight:750; }
+#order-options .bh-tabs { display:flex; gap:6px; margin:9px 0; flex-wrap:wrap; }
+#order-options .bh-chip { border:1px solid var(--bh-line); border-radius:100px; padding:6px 9px; background:var(--bh-paper); color:var(--bh-muted); font-size:10px; font-weight:650; white-space:nowrap; }
+#order-options .bh-chip.bh-selected { background:var(--bh-green); border-color:var(--bh-green); color:#fff; }
+#order-options .bh-row { display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--bh-line); padding:9px 0; font-size:11px; }
+#order-options .bh-row:last-child { border-bottom:0; }
+#order-options .bh-row strong { display:block; font-size:11px; line-height:1.25; }
+#order-options .bh-row small { display:block; font-size:10px; color:var(--bh-muted); margin-top:2px; }
+#order-options .bh-add { flex:none; background:var(--bh-pale); color:var(--bh-green); border-radius:8px; padding:3px 9px; font-size:17px; font-weight:750; }
+#order-options .bh-qty { color:var(--bh-green); font-weight:750; flex:none; }
+#order-options .bh-two { display:grid; grid-template-columns:1.1fr .9fr; gap:12px; height:100%; }
+#order-options .bh-three { display:grid; grid-template-columns:100px minmax(0,1fr) 190px; gap:10px; height:100%; }
+#order-options .bh-order { height:100%; }
+#order-options .bh-order .bh-row { align-items:flex-start; }
+#order-options .bh-rail { background:var(--bh-paper); border:1px solid var(--bh-line); border-radius:12px; padding:6px; }
+#order-options .bh-rail div { font-size:10px; padding:9px 7px; border-radius:8px; color:var(--bh-muted); }
+#order-options .bh-rail .bh-selected { color:#fff; background:var(--bh-green); font-weight:750; }
+#order-options .bh-tray { background:var(--bh-green); color:#fff; border-radius:10px; padding:10px; margin-bottom:11px; }
+#order-options .bh-tray strong { display:block; font-size:12px; }
+#order-options .bh-tray small { font-size:10px; opacity:.85; }
+#order-options .bh-stepper { display:flex; gap:5px; margin-bottom:12px; }
+#order-options .bh-step { flex:1; min-width:0; text-align:center; border-bottom:3px solid var(--bh-line); padding:3px 1px 7px; font-size:10px; color:var(--bh-muted); white-space:nowrap; }
+#order-options .bh-step.bh-selected { border-color:var(--bh-red); color:var(--bh-ink); font-weight:800; }
+#order-options .bh-stage-title { font-size:13px; font-weight:800; margin-bottom:8px; }
+#order-options .bh-note { font-size:10px; color:var(--bh-muted); margin:8px 0 0; }
+#order-options .bh-phone .bh-content { padding:11px; }
+#order-options .bh-phone .bh-row strong { font-size:11px; }
+#order-options .bh-phone .bh-two { display:block; }
+#order-options .bh-phone .bh-surface { margin-bottom:10px; }
+#order-options .bh-phone .bh-rail { display:none; }
+#order-options .bh-phone .bh-three { display:block; }
+#order-options .bh-tablet .bh-fixed { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#order-options .bh-tablet .bh-brand { margin-bottom:0; }
+#order-options .bh-tablet .bh-toprow { min-width:260px; }
+#order-options .bh-tablet .bh-content { padding:12px; }
+#order-options .bh-tablet .bh-bottom { padding:4px; }
+#order-options .bh-tablet .bh-bottom span { padding:4px; }
+@media(max-width:720px) {
+  #order-options .bh-stage { grid-template-columns:1fr; min-height:1050px; gap:18px; }
+  #order-options .bh-phone { width:min(100%,290px); margin:auto; }
+  #order-options .bh-tablet { width:100%; height:410px; }
+  #order-options .bh-three { grid-template-columns:80px minmax(0,1fr) 120px; gap:6px; }
+  #order-options .bh-tablet .bh-toprow { min-width:0; }
+  #order-options .bh-tablet .bh-topmeta { font-size:10px; }
+  #order-options .bh-tablet .bh-cta { font-size:10px; padding:8px; }
+  #order-options .bh-tablet .bh-rail div { font-size:9px; }
+}
+@media(max-width:390px) {
+  #order-options .bh-tablet .bh-content { padding:8px; }
+  #order-options .bh-three { grid-template-columns:65px minmax(0,1fr) 105px; gap:5px; }
+  #order-options .bh-tablet .bh-brand { gap:4px; }
+  #order-options .bh-tablet .bh-logo { width:22px; height:22px; }
+  #order-options .bh-tablet .bh-app { font-size:8px; }
+  #order-options .bh-tablet .bh-title { font-size:12px; }
+  #order-options .bh-tablet .bh-topmeta strong { font-size:10px; }
+  #order-options .bh-tablet .bh-topmeta { display:none; }
+}
+</style>
+
+<div id="order-options" class="viz-carousel viz-dotted-background" aria-label="Três opções para a tela de pedido" data-previous-label="Anterior" data-next-label="Próxima">
+  <section data-variant="Visão completa" aria-label="Visão completa no celular e no tablet">
+    <div class="bh-stage">
+      <div>
+        <div class="bh-caption">Celular · vertical</div>
+        <div class="bh-device bh-phone">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content">
+            <div class="bh-section bh-surface bh-idline"><div><strong>Identificação</strong><br><span class="bh-muted">Plaquinha 3 · Will</span></div><span class="bh-mini">Editar</span></div>
+            <div class="bh-section bh-surface"><div class="bh-heading">Pedido atual</div><div class="bh-row"><span>1 × Mandioca frita</span><span class="bh-qty">− 1 +</span></div><div class="bh-row"><span>1 × Pizza de dois sabores</span><span class="bh-qty">− 1 +</span></div></div>
+            <div class="bh-heading">Escolha os produtos</div><div class="bh-tabs"><span class="bh-chip bh-selected">Todos</span><span class="bh-chip">Pizzas</span><span class="bh-chip">Lanches</span></div>
+            <div class="bh-surface"><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Calabresa acebolada</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div></div>
+          </div><div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="bh-caption">Tablet · horizontal</div>
+        <div class="bh-device bh-tablet">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content bh-two"><div><div class="bh-surface bh-idline"><div><strong>Identificação</strong><br><span class="bh-muted">Plaquinha 3 · Will</span></div><span class="bh-mini">Editar</span></div><div class="bh-tabs"><span class="bh-chip bh-selected">Todos</span><span class="bh-chip">Pizzas</span><span class="bh-chip">Lanches</span></div><div class="bh-surface"><div class="bh-heading">Produtos</div><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Calabresa acebolada</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div></div></div><div class="bh-surface bh-order"><div class="bh-heading">Pedido atual · 2 itens</div><div class="bh-row"><span><strong>1 × Mandioca frita</strong><small>Obs.: bem passada</small></span><span class="bh-qty">− 1 +</span></div><div class="bh-row"><span><strong>1 × Pizza de dois sabores</strong><small>Calabresa + Atum</small></span><span class="bh-qty">− 1 +</span></div></div></div>
+          <div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-variant="Catálogo amplo" aria-label="Catálogo amplo no celular e no tablet" hidden>
+    <div class="bh-stage">
+      <div>
+        <div class="bh-caption">Celular · vertical</div>
+        <div class="bh-device bh-phone">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content"><div class="bh-tray"><strong>Pedido atual · 2 itens ▾</strong><small>Mandioca frita · Pizza de dois sabores</small></div><div class="bh-surface bh-idline"><div><strong>Plaquinha 3</strong><br><span class="bh-muted">Will</span></div><span class="bh-mini">Editar</span></div><div class="bh-tabs"><span class="bh-chip bh-selected">Todos</span><span class="bh-chip">Pizzas</span><span class="bh-chip">Lanches</span></div><div class="bh-surface"><div class="bh-heading">Produtos</div><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Calabresa acebolada</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Pizza calabresa com cebola</strong><small>Pizza regular</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Pizza portuguesa</strong><small>Pizza regular</small></span><span class="bh-add">+</span></div></div></div>
+          <div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="bh-caption">Tablet · horizontal</div>
+        <div class="bh-device bh-tablet">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content bh-three"><div class="bh-rail"><div class="bh-selected">Todos</div><div>Pizzas</div><div>Aperitivos</div><div>Lanches</div><div>Hambúrgueres</div></div><div class="bh-surface"><div class="bh-heading">Produtos</div><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Calabresa acebolada</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Pizza calabresa</strong><small>Regular</small></span><span class="bh-add">+</span></div></div><div class="bh-surface bh-order"><div class="bh-heading">Pedido atual</div><div class="bh-row"><span><strong>1 × Mandioca frita</strong><small>Bem passada</small></span></div><div class="bh-row"><span><strong>1 × Pizza de dois sabores</strong><small>Calabresa + Atum</small></span></div><span class="bh-mini">Editar pedido</span></div></div>
+          <div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-variant="Fluxo guiado" aria-label="Fluxo guiado no celular e no tablet" hidden>
+    <div class="bh-stage">
+      <div>
+        <div class="bh-caption">Celular · vertical</div>
+        <div class="bh-device bh-phone">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content"><div class="bh-stepper"><span class="bh-step">1 Identificação</span><span class="bh-step bh-selected">2 Produtos</span><span class="bh-step">3 Revisão</span></div><div class="bh-stage-title">Adicione os produtos</div><div class="bh-tabs"><span class="bh-chip bh-selected">Todos</span><span class="bh-chip">Pizzas</span><span class="bh-chip">Lanches</span></div><div class="bh-surface"><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Calabresa acebolada</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Pizza portuguesa</strong><small>Pizza regular</small></span><span class="bh-add">+</span></div></div><div class="bh-tray" style="margin-top:11px"><strong>2 itens adicionados · Revisar ▸</strong><small>Antes de finalizar, confira sabores e observações</small></div></div>
+          <div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="bh-caption">Tablet · horizontal</div>
+        <div class="bh-device bh-tablet">
+          <div class="bh-fixed"><div class="bh-brand"><span class="bh-logo">B</span><div><div class="bh-app">BistroHub</div><div class="bh-title">Novo pedido</div></div></div><div class="bh-toprow"><div class="bh-topmeta"><strong>Plaquinha 3 · 2 itens</strong>Cliente Will</div><button class="bh-cta" type="button">Finalizar pedido</button></div></div>
+          <div class="bh-content"><div class="bh-stepper"><span class="bh-step">1 Identificação</span><span class="bh-step bh-selected">2 Produtos</span><span class="bh-step">3 Revisão</span></div><div class="bh-two"><div><div class="bh-stage-title">Adicione os produtos</div><div class="bh-tabs"><span class="bh-chip bh-selected">Todos</span><span class="bh-chip">Pizzas</span><span class="bh-chip">Lanches</span></div><div class="bh-surface"><div class="bh-row"><span><strong>Camarão frito ao alho</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Mandioca frita</strong><small>Aperitivos</small></span><span class="bh-add">+</span></div><div class="bh-row"><span><strong>Pizza portuguesa</strong><small>Pizza regular</small></span><span class="bh-add">+</span></div></div></div><div class="bh-surface bh-order"><div class="bh-heading">Resumo para revisão</div><div class="bh-row"><span><strong>Plaquinha 3 · Will</strong><small>Identificação confirmada</small></span></div><div class="bh-row"><span><strong>2 itens adicionados</strong><small>Mandioca frita · Pizza de dois sabores</small></span></div><p class="bh-note">Sabores, extras e observações aparecem na etapa Revisão.</p></div></div></div>
+          <div class="bh-bottom"><span>Início</span><span class="bh-active">Pedido</span><span>Cardápio</span><span>Histórico</span><span>Ajustes</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

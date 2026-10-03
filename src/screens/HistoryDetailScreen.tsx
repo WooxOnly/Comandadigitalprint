@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { describeExtra } from '../../orderItems';
 import { useLanguage } from '../i18n/LanguageContext';
 import { itemName, translatedNote } from '../i18n/translations';
@@ -18,6 +19,7 @@ export default function HistoryDetailScreen() {
     {!order ? <View style={styles.panel}><Text style={styles.mutedText}>{t('Pedido não encontrado.')}</Text></View> : <View style={[styles.panel, { gap: 10 }]}>
       <Text style={styles.panelTitle}>{t('Plaquinha')} {order.plate}</Text>
       <Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)} · {order.items.length} {order.items.length === 1 ? t('item') : t('itens')}</Text>
+      {order.serviceMode && <Text style={styles.cardTitle}>{t('Tipo de pedido')}: {t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text>}
       <Text style={styles.mutedText}>{t('Cliente')}: {order.customer || t('Cliente não informado')}</Text>
       <View style={styles.historyMeta}><Text style={styles.helperText}>{t(cloud.pending('order:' + order.id) ? 'Pendente de sincronização' : 'Salvo no servidor')}</Text>{order.tabletId && <Text style={styles.helperText}>{t('Tablet')}: {order.tabletId.slice(0, 8)}</Text>}</View>
       {order.items.map((item, index) => <View key={`${item.id}-${index}`} style={styles.historyDetailItem}>

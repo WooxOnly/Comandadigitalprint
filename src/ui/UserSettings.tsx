@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { logError } from '../services/diagnostics';
 import { cloud } from '../services/cloudStorage';
-import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Switch, Text, View } from 'react-native';
+import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { PasswordField } from './AccessGate';
@@ -62,7 +63,7 @@ export function UserSettings() {
     <View style={styles.orderCard}><Text style={styles.cardTitle}>admin</Text><Text style={styles.helperText}>{t('Administrador protegido. Senha semanal gerenciada pelo painel online.')}</Text></View>
     {users.length === 0 && <Text style={styles.helperText}>{t('Nenhum usuário adicional cadastrado.')}</Text>}
     {users.map((user) => <View key={user.username} style={styles.orderCard}>
-      <View style={styles.orderLine}><Text style={styles.cardTitle}>{user.username}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => change(() => service.updateUser(user.username, active))} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
+      <View style={styles.orderLine}><Text style={styles.cardTitle}>{user.username}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
       <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Redefinir senha')}</Text></Pressable>
     </View>)}
     </View>}

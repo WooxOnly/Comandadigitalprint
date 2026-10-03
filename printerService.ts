@@ -6,8 +6,9 @@ const runPrintJob = createPrintJob();
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
 export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88' };
+export type ServiceMode = 'dine_in' | 'takeout';
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
-export type PrintableOrder = { plate: string; customer: string; items: PrintableOrderItem[]; createdAt: string };
+export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: PrintableOrderItem[]; createdAt: string };
 
 // expo-print uses points (72 per inch), not screen pixels. Long orders paginate.
 export function getReceiptPageSize(paperWidth: PrinterSettings['paperWidth']) {
@@ -44,6 +45,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSetting
     .kitchen { font-size: 9px; margin-top: .5mm; }
     .identification { border: 1px solid #000; padding: 1mm; margin: 1.5mm 0 1mm; }
     .plate { display: block; font-size: ${paperWidth === '58' ? 19 : 20}px; font-weight: 900; line-height: 1.1; }
+    .service { margin-top: .5mm; padding-top: .5mm; border-top: 1px solid #000; font-size: 13px; font-weight: 900; text-transform: uppercase; }
     .customer { margin-top: .5mm; font-size: 12px; font-weight: 700; }
     .date { font-size: 9px; margin: 1mm 0; }
     .item { border-top: 1px dashed #000; padding: 1.5mm 0; break-inside: avoid; page-break-inside: avoid; }
@@ -59,7 +61,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSetting
 <body>
   <header>
     <div class="heading">${t('COMANDA DE PRODUÇÃO')}</div><div class="kitchen">${t('COZINHA')}</div>
-    <div class="identification"><strong class="plate">${t('Plaquinha')}: ${escapeHtml(order.plate)}</strong><div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
+    <div class="identification"><strong class="plate">${t('Plaquinha')}: ${escapeHtml(order.plate)}</strong>${order.serviceMode ? `<div class="service">${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</div>` : ''}<div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
     <div class="date">${t('Data')}: ${new Date(order.createdAt).toLocaleString(LOCALES[language])}</div>
   </header>
   ${itemRows}

@@ -1,6 +1,12 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  'Loja': ['Store', 'Tienda'],
+  'Tipo de pedido': ['Order type', 'Tipo de pedido'],
+  'Onde será consumido?': ['For here or to go?', '¿Para comer aquí o para llevar?'],
+  'Para comer aqui': ['For here', 'Para comer aquí'],
+  'Para levar': ['To go', 'Para llevar'],
+  'Escolha se o pedido é para comer aqui ou para levar.': ['Choose whether this order is for here or to go.', 'Elija si el pedido es para comer aquí o para llevar.'],
   'Detalhes do pedido': ['Order details', 'Detalles del pedido'],
   'Pedido não encontrado.': ['Order not found.', 'Pedido no encontrado.'],
   "Carregando dados salvos…": [
@@ -490,6 +496,46 @@ export const translations: Record<string, readonly [string, string]> = {
   "Identificação": [
     "Order details",
     "Identificación"
+  ],
+  "Produtos": [
+    "Products",
+    "Productos"
+  ],
+  "Revisão": [
+    "Review",
+    "Revisión"
+  ],
+  "Revisão do pedido": [
+    "Order review",
+    "Revisión del pedido"
+  ],
+  "Finalizar pedido": [
+    "Finish order",
+    "Finalizar pedido"
+  ],
+  "Revisar pedido": [
+    "Review order",
+    "Revisar pedido"
+  ],
+  "Conferir antes de enviar": [
+    "Review before sending",
+    "Revisar antes de enviar"
+  ],
+  "Confira os dados e toque em Finalizar pedido para enviar.": [
+    "Check the details and tap Finish order to send.",
+    "Revise los datos y toque Finalizar pedido para enviar."
+  ],
+  "Editar": [
+    "Edit",
+    "Editar"
+  ],
+  "Salvando e abrindo prévia…": [
+    "Saving and opening preview…",
+    "Guardando y abriendo vista previa…"
+  ],
+  "Salvar e conferir impressão": [
+    "Save and check printout",
+    "Guardar y revisar impresión"
   ],
   "Outra plaquinha": [
     "Other order number",

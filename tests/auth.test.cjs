@@ -2,19 +2,60 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { randomBytes } = require('node:crypto');
 const fs = require('node:fs');
+const { DatabaseSync } = require('node:sqlite');
 const ts = require('typescript');
 const output = {};
 new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
 const { createLocalAuth, settingsAccessCode } = output;
-async function panelLogin(adminResponse, env, password, username = env.ADMIN_PANEL_USER || 'admin', now = Date.now(), origin) {
+function storeDatabase() {
+  const database = new DatabaseSync(':memory:');
+  for (const file of ['schema.sql', 'cloud-schema.sql', 'diagnostics-schema.sql', 'store-schema.sql']) database.exec(fs.readFileSync('server/cloudflare/' + file, 'utf8'));
+  return database;
+}
+function binding(database) {
+  return { prepare(sql) {
+    const statement = (args = []) => ({ bind: (...values) => statement(values), first: async () => database.prepare(sql).get(...args), all: async () => ({ results: database.prepare(sql).all(...args) }), run: async () => {
+      const result = database.prepare(sql).run(...args); return { meta: { changes: result.changes } };
+    } });
+    return statement();
+  } };
+}
+async function panelLogin(adminResponse, env, password, username = env.ADMIN_PANEL_USER || 'admin', now = Date.now(), origin, selectedStore = 'seabra-1') {
   const start = await adminResponse(new Request('https://example.com/admin'), env, now);
   const csrfCookie = start.headers.get('Set-Cookie').split(';')[0];
   const csrf = csrfCookie.split('=')[1];
-  return adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded', ...(origin ? { Origin: origin } : {}) }, body: new URLSearchParams({ csrf, username, password }) }), env, now);
+  return adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded', ...(origin ? { Origin: origin } : {}) }, body: new URLSearchParams({ csrf, username, password, storeId: selectedStore }) }), env, now);
 }
-test('panel requires a session, ignores cached Basic auth and rejects cross-origin password changes', async () => {
+
+test('the owner panel keeps weekly passwords and logs in the selected store', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
-  const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'private-owner-password' };
+  const database = storeDatabase();
+  try {
+    database.prepare("INSERT INTO stores(id, name, active) VALUES('seabra-2', 'Seabra 2', 1)").run();
+    const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'panel-test-password', DB: binding(database) };
+    const now = Date.now();
+    const login = await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN, 'admin', now, undefined, 'seabra-2');
+    assert.equal(login.status, 303);
+    const cookie = login.headers.get('Set-Cookie').split(';')[0];
+    const scoped = await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Cookie: cookie } }), env, now)).json();
+    const first = await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json();
+    assert.equal(scoped.storeId, 'seabra-2');
+    assert.notEqual(scoped.password, first.password);
+    assert.equal((await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).status, 403);
+    const rotated = await (await adminResponse(new Request('https://example.com/auth/admin/password', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com' } }), env, now)).json();
+    assert.notEqual(rotated.password, scoped.password);
+    assert.equal((await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json()).password, first.password);
+    database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-1', 'first', 'tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
+    database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-2', 'second', 'second-tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
+    const logs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors', { headers: { Cookie: cookie } }), env, now)).json();
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0].device_id, 'second-tablet');
+  } finally { database.close(); }
+});
+test('panel requires a session, ignores cached Basic auth and rejects cross-origin password changes', async (t) => {
+  const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
+  const database = storeDatabase(); t.after(() => database.close());
+  const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'private-owner-password', DB: binding(database) };
   for (const value of ['', 'Basic invalid', 'Basic ' + btoa('admin:wrong'), 'Basic ' + btoa('other:' + env.ADMIN_VIEW_TOKEN)]) {
     const response = await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: value } }), env);
     assert.equal(response.status, 200);
@@ -55,6 +96,44 @@ test('owner panel never embeds credentials and password endpoint requires the ow
   const allowed = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env);
   assert.equal(allowed.status, 200); assert.match((await allowed.json()).password, /^[A-HJ-NP-Z2-9]{6}$/);
   assert.equal(allowed.headers.get('Cache-Control'), 'no-store');
+});
+
+test('panel password can be changed independently and invalidates previous sessions', async () => {
+  const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
+  const database = storeDatabase();
+  try {
+    const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'initial-panel-password', ADMIN_PANEL_USER: 'owner@example.com', DB: binding(database) };
+    const login = await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN);
+    assert.equal(login.status, 303);
+    const cookie = login.headers.get('Set-Cookie').split(';')[0];
+    const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: cookie } }), env)).text();
+    assert.ok(panel.includes('Senha de entrada no painel'));
+    assert.ok(panel.includes('Senha semanal do aplicativo'));
+    new Function(panel.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1]);
+    const change = (currentPassword, newPassword, confirmPassword = newPassword, origin = 'https://example.com') => adminResponse(new Request('https://example.com/admin/change-password', {
+      method: 'POST', headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    }), env);
+    assert.equal((await change(env.ADMIN_VIEW_TOKEN, 'New-panel-password-123', undefined, 'https://other.example')).status, 403);
+    assert.equal((await change('wrong', 'New-panel-password-123')).status, 403);
+    assert.equal((await change(env.ADMIN_VIEW_TOKEN, 'short')).status, 400);
+    assert.equal((await change(env.ADMIN_VIEW_TOKEN, 'New-panel-password-123', 'mismatch')).status, 400);
+    const changed = await change(env.ADMIN_VIEW_TOKEN, 'New-panel-password-123');
+    assert.equal(changed.status, 200);
+    assert.match(changed.headers.get('Set-Cookie'), /Max-Age=0/);
+    assert.equal((await changed.json()).ok, true);
+    const saved = database.prepare('SELECT * FROM panel_password').get();
+    assert.equal(saved.revision, 1);
+    assert.ok(!JSON.stringify(saved).includes('New-panel-password-123'));
+    assert.equal(database.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 0);
+    assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: cookie } }), env)).status, 401);
+    assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).status, 401);
+    const fresh = await panelLogin(adminResponse, env, 'New-panel-password-123');
+    assert.equal(fresh.status, 303);
+    const freshCookie = fresh.headers.get('Set-Cookie').split(';')[0];
+    assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: freshCookie } }), env)).status, 204);
+    assert.equal((await adminResponse(new Request('https://example.com/admin/change-password', { method: 'POST', headers: { Cookie: freshCookie, Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: 'New-panel-password-123', newPassword: 'Another-panel-password-456', confirmPassword: 'Another-panel-password-456' }) }), env)).status, 200);
+    assert.equal(database.prepare('SELECT revision FROM panel_password').get().revision, 2);
+  } finally { database.close(); }
 });
 function fixture(recovery) {
   const values = new Map(); let fail = false;
@@ -169,17 +248,15 @@ test('native password wrapper preserves old and weekly hashes and releases stall
 });
 test('manual rotation requires authorization and replaces the cached password in the same week', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
-  const { DatabaseSync } = require('node:sqlite');
-  const database = new DatabaseSync(':memory:');
-  database.exec(fs.readFileSync('server/cloudflare/schema.sql', 'utf8'));
-  const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: { prepare: (sql) => ({ first: async () => database.prepare(sql).get(), run: async () => database.prepare(sql).run(), bind: (...args) => ({ run: async () => database.prepare(sql).run(...args) }) }) } };
+  const database = storeDatabase();
+  const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: binding(database) };
   const request = (method, token = 'owner-token') => new Request('https://example.com/auth/admin/password', { method, headers: { Authorization: 'Bearer ' + token } });
   const before = await (await adminResponse(request('GET'), env)).json();
   const f = fixture(), auth = f.create(); await auth.load();
   const synchronize = () => auth.syncAdmin('https://example.com/auth/admin', async () => adminResponse(new Request('https://example.com/auth/admin'), env));
   await synchronize(); await auth.verify('login', before.password, 'admin');
   assert.equal((await adminResponse(request('POST', 'wrong'), env)).status, 401);
-  assert.equal(database.prepare('SELECT revision FROM admin_rotation').get().revision, 0);
+  assert.equal(database.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 0);
   const rotated = await (await adminResponse(request('POST'), env)).json();
   assert.notEqual(rotated.password, before.password);
   await auth.verify('login', before.password, 'admin'); // Device has not synchronized yet.
@@ -199,14 +276,11 @@ test('manual rotation requires authorization and replaces the cached password in
 });
 test('panel shows only failures in separate system and printing logs', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
-  const { DatabaseSync } = require('node:sqlite');
-  const database = new DatabaseSync(':memory:');
+  const database = storeDatabase();
   try {
-    database.exec(fs.readFileSync('server/cloudflare/schema.sql', 'utf8'));
-    database.exec(fs.readFileSync('server/cloudflare/diagnostics-schema.sql', 'utf8'));
-    const insert = database.prepare('INSERT INTO diagnostics(id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?)');
-    for (const [index, event] of ['print.started', 'print.failed', 'sync.failed', 'print_test.dialog_opened', 'print_test.failed', 'runtime.fatal'].entries()) insert.run(String(index), 'tablet', '2026-10-03T12:00:00Z', '2026-10-03T12:00:00Z', 'admin', event, 'TEST');
-    const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: { prepare: (sql) => ({ first: async () => database.prepare(sql).get(), run: async () => database.prepare(sql).run(), all: async () => ({ results: database.prepare(sql).all() }), bind: (...args) => ({ run: async () => database.prepare(sql).run(...args) }) }) } };
+    const insert = database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)');
+    for (const [index, event] of ['print.started', 'print.failed', 'sync.failed', 'print_test.dialog_opened', 'print_test.failed', 'runtime.fatal'].entries()) insert.run('seabra-1', String(index), 'tablet', '2026-10-03T12:00:00Z', '2026-10-03T12:00:00Z', 'admin', event, 'TEST');
+    const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: binding(database) };
     const cookie = (await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).headers.get('Set-Cookie').split(';')[0];
     const get = (path, headers = {}) => adminResponse(new Request('https://example.com' + path, { headers: { Cookie: cookie, ...headers } }), env);
     assert.deepEqual((await (await get('/admin/logs?kind=errors')).json()).map((row) => row.event).sort(), ['runtime.fatal', 'sync.failed']);
@@ -233,6 +307,22 @@ test('offline login persists hashed credentials, rejects wrong passwords and pro
   reopened.logout(); await assert.rejects(reopened.verify('settings', '2067'));
   assert.equal(settingsAccessCode(new Date(2026, 8, 25, 6)), '2066');
 });
+test('an offline session expires at the next local calendar day and requires login again', async () => {
+  const f = fixture(), auth = f.create();
+  f.time.value = new Date(2026, 8, 25, 23, 58).getTime();
+  await auth.load(); await auth.setup('admin', 'abc123', 'abc123');
+  await auth.verify('settings', settingsAccessCode(new Date(f.time.value)));
+  f.time.value = new Date(2026, 8, 25, 23, 59).getTime();
+  assert.equal(auth.isSessionActive(), true);
+  f.time.value = new Date(2026, 8, 26, 0, 0).getTime();
+  assert.equal(auth.isSessionActive(), false);
+  assert.throws(() => auth.listUsers(), /protegido/);
+  await assert.rejects(auth.verify('settings', settingsAccessCode(new Date(f.time.value))));
+  await auth.verify('login', 'abc123', 'admin');
+  assert.equal(auth.isSessionActive(), true);
+  const reopened = f.create(); await reopened.load();
+  assert.equal(reopened.isSessionActive(), false);
+});
 test('settings password uses the local 12-hour clock', async () => {
   assert.equal(settingsAccessCode(new Date(2026, 9, 1, 3)), '2040');
   assert.equal(settingsAccessCode(new Date(2026, 9, 1, 15)), '2040');
@@ -242,7 +332,30 @@ test('settings password uses the local 12-hour clock', async () => {
   await auth.load();
   await auth.setup('admin', 'abc123', 'abc123');
   f.time.value = new Date(2026, 9, 1, 15).getTime();
+  await auth.verify('login', 'abc123', 'admin');
   await auth.verify('settings', '2040');
+});
+
+test('admin panel reveals the same settings code using the browser local time', async () => {
+  const vm = require('node:vm');
+  const { panelPage } = await import('../server/cloudflare/admin-panel.mjs');
+  const html = panelPage('test-nonce');
+  assert.ok(html.includes('Consultar senha de Ajustes'));
+  const script = html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
+  const elements = new Map();
+  const element = (selector) => {
+    if (!elements.has(selector)) elements.set(selector, { textContent: '', handlers: {}, addEventListener(event, callback) { this.handlers[event] = callback; } });
+    return elements.get(selector);
+  };
+  const localTime = new Date(2026, 9, 3, 15, 30);
+  class LocalDate extends Date { constructor(...args) { super(...(args.length ? args : [localTime.getTime()])); } static now() { return localTime.getTime(); } }
+  vm.runInNewContext(script, {
+    Date: LocalDate, document: { querySelector: element, querySelectorAll: () => [], addEventListener() {} },
+    window: { addEventListener() {} }, location: { hash: '' }, setInterval() {}, setTimeout() {}, clearTimeout() {},
+  });
+  element('#view-settings-password').handlers.click();
+  assert.match(element('#settings-password-result').textContent, new RegExp('Senha de Ajustes: ' + settingsAccessCode(localTime)));
+  assert.match(element('#settings-password-result').textContent, /10 \+ 3 \+ 2026 \+ 3/);
 });
 test('failed credential writes never create access; corrupt storage fails closed', async () => {
   const f = fixture(), auth = f.create(); await auth.load(); f.fail = true;
@@ -267,6 +380,8 @@ test('admin rotation is weekly; offline, invalid responses and failed writes ret
   const url = 'https://example.com/auth/admin';
   const response = (value) => async () => ({ ok: true, json: async () => value });
   await auth.syncAdmin(url, response(week1));
+  await auth.verify('login', week1.password, 'admin');
+  await assert.rejects(auth.syncAdmin(url + '?storeId=seabra-2', response(week2)), /store/);
   await auth.verify('login', week1.password, 'admin');
   await assert.rejects(auth.syncAdmin(url, async () => { throw Error('offline'); }));
   await assert.rejects(auth.syncAdmin(url, response({ ...week2, hash: 'invalid' })));
