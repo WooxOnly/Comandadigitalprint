@@ -23,17 +23,17 @@ Publicado no Cloudflare Workers + D1 em 26/09/2026: https://seabra-cardapio.woox
 ### Consultar e alterar a senha
 
 1. Abra https://seabra-cardapio.wooxonly-comandas.workers.dev/admin .
-2. Entre no diálogo de login do navegador com o e-mail e a senha cadastrados pelo proprietário. O painel exige login antes de exibir seu conteúdo.
+2. Entre na tela de login do BistroHub com o e-mail e a senha cadastrados pelo proprietário. O painel exige login antes de exibir seu conteúdo.
 3. Use **Consultar senha** para ver a senha atual do usuário `admin` e a data da próxima renovação.
 4. Use **Gerar nova senha agora** e confirme para substituir a senha imediatamente no servidor. Os tablets recebem a troca na próxima sincronização; offline continuam com a anterior. A próxima renovação automática semanal continua prevista para segunda-feira às 00:00 UTC.
 
-O login do painel é diferente da senha semanal do aplicativo. E-mail e senha estão nos segredos ADMIN_PANEL_USER e ADMIN_VIEW_TOKEN do Cloudflare, fora do Git/APK. Cinco tentativas incorretas bloqueiam o acesso por 15 minutos. O navegador pode manter o login durante a sessão; use uma janela privativa em computadores compartilhados. A chave antiga foi invalidada.
+O login do painel é diferente da senha semanal do aplicativo. E-mail e senha estão nos segredos ADMIN_PANEL_USER e ADMIN_VIEW_TOKEN do Cloudflare, fora do Git/APK. Cinco tentativas incorretas bloqueiam o acesso por 15 minutos. A sessão do painel expira após uma hora sem atividade; é possível sair manualmente pelo botão **Sair**. A chave antiga foi invalidada.
 
 ### Referência para novas instalações do servidor
 
 1. Para republicar em outra conta, conectar o Cloudflare e concluir o Worker conforme `server/README.md`.
 2. Criar dois segredos independentes, aleatórios, com pelo menos 32 caracteres usando `wrangler secret put ADMIN_PASSWORD_SECRET` e `wrangler secret put ADMIN_VIEW_TOKEN` (executar pela CLI indicada no AGENTS.md). Nunca gravar os valores no repositório nem no APK.
-3. Publicar. `/auth/admin` fornece apenas o verificador da senha. O painel `/admin` exige login HTTP Basic com ADMIN_PANEL_USER e ADMIN_VIEW_TOKEN antes de exibir o conteúdo. O endpoint `/auth/admin/password` também exige autenticação. A senha semanal exibida é ocultada após um minuto ou ao trocar de aba.
+3. Publicar. `/auth/admin` fornece apenas o verificador da senha. O painel `/admin` usa formulário de login e cookie de sessão assinado; o endpoint `/auth/admin/password` também exige autenticação. A senha semanal exibida é ocultada após um minuto ou ao trocar de aba.
 4. Configurar a URL HTTPS de `/auth/admin` em `src/config/auth.ts` e gerar novo APK quando solicitado.
 
 A senha de 6 caracteres (letras maiúsculas e números, sem caracteres ambíguos) deriva de HMAC com segredo exclusivo do servidor; muda a cada segunda-feira às 00:00 UTC, sem depender de um agendamento. O segredo nunca é distribuído. O verificador usa PBKDF2-SHA256 (100 mil iterações). Senhas antigas já armazenadas continuam legíveis pelo app até receber a nova versão.

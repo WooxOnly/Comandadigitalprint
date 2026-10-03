@@ -30,7 +30,7 @@ export function TabletSettings() {
       Alert.alert(t('Configuração salva'));
     } catch { Alert.alert(t('Falha ao salvar')); }
   }
-  return <View style={[styles.panel, { marginTop: 20, width: '100%', maxWidth: 760, alignSelf: 'center' }]}>
+  return <View style={styles.panel}>
     <Text style={styles.panelTitle}>{t('Este tablet')}</Text>
     <Text style={styles.mutedText}>{id}</Text>
     <TextInput accessibilityLabel={t('Nome do tablet')} value={name} onChangeText={setName} maxLength={80} style={styles.input} />

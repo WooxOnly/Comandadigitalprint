@@ -38,7 +38,7 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
       </View>
       <View style={{ padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('Reduzir zoom')} disabled={zoom <= 75} onPress={() => setZoom(value => Math.max(75, value - 25))} style={styles.previewControl}><Text style={styles.previewControlText}>−</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Reduzir zoom')} disabled={zoom <= 25} onPress={() => setZoom(value => Math.max(25, value - 25))} style={styles.previewControl}><Text style={styles.previewControlText}>−</Text></Pressable>
           <Text style={styles.previewZoom}>{zoom}%</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={t('Ampliar zoom')} disabled={zoom >= 200} onPress={() => setZoom(value => Math.min(200, value + 25))} style={styles.previewControl}><Text style={styles.previewControlText}>+</Text></Pressable>
         </View>

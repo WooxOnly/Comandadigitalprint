@@ -6,30 +6,36 @@ const ts = require('typescript');
 const output = {};
 new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
 const { createLocalAuth, settingsAccessCode } = output;
-test('panel requires login before serving HTML and rejects cross-origin password changes', async () => {
+test('panel requires a session, ignores cached Basic auth and rejects cross-origin password changes', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'private-owner-password' };
   for (const value of ['', 'Basic invalid', 'Basic ' + btoa('admin:wrong'), 'Basic ' + btoa('other:' + env.ADMIN_VIEW_TOKEN)]) {
     const response = await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: value } }), env);
-    assert.equal(response.status, 401);
-    assert.ok(response.headers.get('WWW-Authenticate').startsWith('Basic'));
+    assert.equal(response.status, 200);
     assert.ok(!(await response.text()).includes('Gerar nova senha'));
   }
-  const authorization = 'Basic ' + btoa('admin:' + env.ADMIN_VIEW_TOKEN);
-  const panel = await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: authorization } }), env);
+  const now = 10000000;
+  const login = await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env, now);
+  assert.equal(login.status, 303);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+  assert.match(login.headers.get('Set-Cookie'), /HttpOnly; Secure; SameSite=Strict/);
+  const panel = await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
   assert.equal(panel.status, 200);
-  assert.ok((await panel.text()).includes('Consultar senha'));
-  const password = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: authorization } }), env);
+  assert.ok((await panel.text()).includes('BistroHub'));
+  const password = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
   assert.equal(password.status, 200);
+  assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: cookie } }), env, now + 61 * 60000)).status, 401);
+  const renewed = panel.headers.get('Set-Cookie').split(';')[0];
+  assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: renewed } }), env, now + 61 * 60000)).status, 204);
   for (const origin of ['', 'https://attacker.example']) {
-    const denied = await adminResponse(new Request('https://example.com/auth/admin/password', { method: 'POST', headers: { Authorization: authorization, Origin: origin } }), env);
+    const denied = await adminResponse(new Request('https://example.com/auth/admin/password', { method: 'POST', headers: { Cookie: cookie, Origin: origin } }), env, now);
     assert.equal(denied.status, 403);
   }
 });
 test('owner panel never embeds credentials and password endpoint requires the owner token', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'test-owner-token' };
-  const panel = await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: 'Basic ' + btoa('admin:' + env.ADMIN_VIEW_TOKEN) } }), env);
+  const panel = await adminResponse(new Request('https://example.com/admin'), env);
   const html = await panel.text();
   assert.ok(panel.headers.get('Content-Security-Policy').includes("frame-ancestors 'none'"));
   assert.ok(!html.includes(env.ADMIN_VIEW_TOKEN)); assert.ok(!html.includes(env.ADMIN_PASSWORD_SECRET));
@@ -169,14 +175,14 @@ test('manual rotation requires authorization and replaces the cached password in
   assert.equal(await synchronize(), true);
   await assert.rejects(auth.verify('login', before.password, 'admin'));
   await auth.verify('login', rotated.password, 'admin');
-  const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: 'Basic ' + btoa('admin:' + env.ADMIN_VIEW_TOKEN) } }), env)).text();
+  const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: (await adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: env.ADMIN_VIEW_TOKEN }) }), env)).headers.get('Set-Cookie').split(';')[0] } }), env)).text();
   new Function(panel.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1]);
   assert.ok(panel.includes('Gerar nova senha agora'));
   env.ADMIN_PANEL_USER = 'owner@example.com';
-  const correct = 'Basic ' + btoa(env.ADMIN_PANEL_USER + ':' + env.ADMIN_VIEW_TOKEN);
-  assert.equal((await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: correct } }), env)).status, 200);
-  for (let i = 0; i < 5; i++) await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: 'Basic ' + btoa('owner@example.com:wrong') } }), env);
-  assert.equal((await adminResponse(new Request('https://example.com/admin', { headers: { Authorization: correct } }), env)).status, 429);
+  const loginRequest = (password) => new Request('https://example.com/admin/login', { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: env.ADMIN_PANEL_USER, password }) });
+  assert.equal((await adminResponse(loginRequest(env.ADMIN_VIEW_TOKEN), env)).status, 303);
+  for (let i = 0; i < 5; i++) await adminResponse(loginRequest('wrong'), env);
+  assert.equal((await adminResponse(loginRequest(env.ADMIN_VIEW_TOKEN), env)).status, 429);
   database.close();
 });
 test('offline login persists hashed credentials, rejects wrong passwords and protects settings', async () => {

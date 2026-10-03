@@ -1,7 +1,7 @@
 import { itemName, translatedNote } from '../i18n/translations';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
 import { OrderWorkspace } from '../ui/OrderWorkspace';
@@ -9,20 +9,19 @@ import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
 
 export default function OrderScreen() {
   const { t, language } = useLanguage();
-  const { fontScale } = useWindowDimensions();
   const [plateListWidth, setPlateListWidth] = useState(0);
-  const plateColumns = plateListWidth >= 280 + 160 * fontScale ? 10 : 5;
-  const plateWidth = plateListWidth ? (plateListWidth - (plateColumns - 1) * 4) / plateColumns : undefined;
-  const { plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady } = useApp();
+  const plateWidth = plateListWidth ? (plateListWidth - 9 * 2) / 10 : undefined;
+  const { plate, setPlate, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady, isWide } = useApp();
   const catalog = <>
                   <View style={styles.column}>
                     <View style={styles.panel}>
                       <Text style={styles.panelTitle}>{t("Identificação")}</Text>
                       <Text style={styles.fieldLabel}>{t("Plaquinha")}</Text>
                       <View style={styles.plateList} onLayout={(event) => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t("Plaquinha ") + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
-                      <TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t("Outra plaquinha")} placeholder={t("Outra plaquinha (opcional)")} placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.spacedInput]} />
-                      <Text style={styles.fieldLabel}>{t("Cliente")} {orderSettings.requireCustomer ? t("(obrigatório)") : t("(opcional)")}</Text>
-                      <TextInput editable={!sending} value={customer} onChangeText={changeCustomer} accessibilityLabel={orderSettings.requireCustomer ? t("Nome do cliente, obrigatório") : t("Nome do cliente, opcional")} placeholder={t("Nome do cliente")} placeholderTextColor={COLORS.placeholder} style={[styles.input, !!customerError && styles.inputError]} />
+                      <View style={[styles.identityFields, isWide && styles.identityFieldsWide]}>
+                        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t("Outra plaquinha (opcional)")}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t("Outra plaquinha")} placeholder={t("Outra plaquinha (opcional)")} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+                        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t("Cliente")} {orderSettings.requireCustomer ? t("(obrigatório)") : t("(opcional)")}</Text><TextInput editable={!sending} value={customer} onChangeText={changeCustomer} accessibilityLabel={orderSettings.requireCustomer ? t("Nome do cliente, obrigatório") : t("Nome do cliente, opcional")} placeholder={t("Nome do cliente")} placeholderTextColor={COLORS.placeholder} style={[styles.input, !!customerError && styles.inputError]} /></View>
+                      </View>
                       {!!customerError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(customerError)}</Text>}
                     </View>
                     <Text style={styles.sectionTitle}>{t("Escolha os produtos")}</Text>

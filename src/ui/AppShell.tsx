@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
-              <Text style={styles.eyebrow}>{t("COMANDA DIGITAL")}</Text>
+              <Text style={styles.eyebrow}>BistroHub</Text>
               <Text style={styles.title}>{t(currentTab.title)}</Text>
             </View>
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}

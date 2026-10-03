@@ -1,8 +1,16 @@
+import { loginPage, panelPage } from './admin-panel.mjs';
+
 // The secret stays on the server. Monday 00:00 UTC starts a new password week.
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const MONDAY = Date.UTC(1970, 0, 5);
+const IDLE_MS = 60 * 60 * 1000;
+const COOKIE = '__Host-comanda_panel';
 const encode = (value) => new TextEncoder().encode(value);
 const hex = (value) => Array.from(new Uint8Array(value), (byte) => byte.toString(16).padStart(2, '0')).join('');
+const unhex = (value) => Uint8Array.from(value.match(/../g) || [], (part) => parseInt(part, 16));
+const json = (value, status = 200, extra = {}) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra } });
+const cookieHeader = (value, age) => `${COOKIE}=${value}; Max-Age=${age}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+
 export async function weeklyAdmin(secret, timestamp = Date.now(), revision = 0) {
   if (typeof secret !== 'string' || secret.length < 32) throw new Error('Admin secret not configured');
   const week = Math.floor((timestamp - MONDAY) / WEEK);
@@ -11,56 +19,125 @@ export async function weeklyAdmin(secret, timestamp = Date.now(), revision = 0) 
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const password = (await derive('admin-password')).slice(0, 12).match(/../g).map((value) => alphabet[parseInt(value, 16) % alphabet.length]).join('');
   const salt = (await derive('admin-salt')).slice(0, 32);
-  const saltBytes = Uint8Array.from(salt.match(/../g), (value) => parseInt(value, 16));
+  const saltBytes = unhex(salt);
   const passwordKey = await crypto.subtle.importKey('raw', encode(password), 'PBKDF2', false, ['deriveBits']);
   const hash = hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations: 100000 }, passwordKey, 256));
   return { username: 'admin', week, revision, salt, hash, iterations: 100000, password, nextRotation: new Date(MONDAY + (week + 1) * WEEK).toISOString() };
 }
-function panelLogin(request, env) {
-  if (!env.ADMIN_VIEW_TOKEN) return false;
-  const authorization = request.headers.get('Authorization') || '';
-  if (!authorization.startsWith('Basic ')) return false;
-  try { return atob(authorization.slice(6)) === (env.ADMIN_PANEL_USER || 'admin') + ':' + env.ADMIN_VIEW_TOKEN; } catch { return false; }
+
+async function sessionKey(env) {
+  if (!env.ADMIN_VIEW_TOKEN || !env.ADMIN_PASSWORD_SECRET) return null;
+  return crypto.subtle.importKey('raw', encode('panel-session:' + env.ADMIN_PASSWORD_SECRET + ':' + env.ADMIN_VIEW_TOKEN), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
-export async function adminResponse(request, env) {
-  const pathname = new URL(request.url).pathname;
-  const browserLogin = panelLogin(request, env);
+
+async function issueSession(env, now) {
+  const key = await sessionKey(env);
+  if (!key) throw new Error('Panel secret missing');
+  const payload = hex(encode(JSON.stringify({ user: env.ADMIN_PANEL_USER || 'admin', expires: now + IDLE_MS, nonce: crypto.randomUUID() })));
+  const signature = hex(await crypto.subtle.sign('HMAC', key, encode('panel-session:' + payload)));
+  return cookieHeader(payload + '.' + signature, IDLE_MS / 1000);
+}
+
+async function validSession(request, env, now) {
+  const cookie = request.headers.get('Cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(COOKIE + '='))?.slice(COOKIE.length + 1);
+  if (!cookie || cookie.length > 2000) return false;
+  const [payload, signature, extra] = cookie.split('.');
+  if (extra || !/^(?:[0-9a-f]{2})+$/.test(payload || '') || !/^[0-9a-f]{64}$/.test(signature || '')) return false;
+  const key = await sessionKey(env);
+  if (!key || !await crypto.subtle.verify('HMAC', key, unhex(signature), encode('panel-session:' + payload))) return false;
+  try {
+    const data = JSON.parse(new TextDecoder().decode(unhex(payload)));
+    return data.user === (env.ADMIN_PANEL_USER || 'admin') && Number.isFinite(data.expires) && data.expires > now && data.expires <= now + IDLE_MS;
+  } catch { return false; }
+}
+
+async function credentialsMatch(username, password, env) {
+  if (!env.ADMIN_VIEW_TOKEN || username.length > 120 || password.length > 256) return false;
+  const expected = encode((env.ADMIN_PANEL_USER || 'admin') + '\0' + env.ADMIN_VIEW_TOKEN);
+  const provided = encode(username + '\0' + password);
+  const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', expected), crypto.subtle.digest('SHA-256', provided)]);
+  const left = new Uint8Array(a), right = new Uint8Array(b);
+  let difference = 0;
+  for (let index = 0; index < left.length; index++) difference |= left[index] ^ right[index];
+  return difference === 0;
+}
+
+function htmlResponse(content, nonce, status = 200, extra = {}) {
+  return new Response(content, { status, headers: {
+    'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`, ...extra,
+  } });
+}
+
+async function loginLimit(env, now) {
+  if (!env.DB) return null;
+  const state = await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
+  return state?.blocked_until > now ? state.blocked_until : null;
+}
+
+async function recordLogin(env, valid, now) {
+  if (!env.DB) return;
+  if (valid) await env.DB.prepare('UPDATE panel_login SET attempts = 0, blocked_until = 0 WHERE id = 1').run();
+  else await env.DB.prepare('UPDATE panel_login SET attempts = CASE WHEN blocked_until > 0 THEN 1 ELSE attempts + 1 END, blocked_until = CASE WHEN blocked_until = 0 AND attempts >= 4 THEN ? ELSE 0 END WHERE id = 1').bind(now + 900000).run();
+}
+
+export async function adminResponse(request, env, now = Date.now()) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs';
+  if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
+  const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
-  const protectedRoute = pathname === '/admin' || pathname === '/admin/logs' || pathname === '/auth/admin/password';
-  if (protectedRoute && env.DB) {
-    const now = Date.now();
+  const sameOrigin = request.headers.get('Origin') === url.origin;
+  const nonce = crypto.randomUUID();
+
+  if (pathname === '/admin/login' && request.method === 'POST') {
+    if (!sameOrigin) return json({ error: 'Forbidden' }, 403);
     try {
-      const state = await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
-      if (state?.blocked_until > now) return new Response('Muitas tentativas. Aguarde 15 minutos.', { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(Math.ceil((state.blocked_until - now) / 1000)) } });
-      const valid = pathname === '/admin' ? browserLogin : browserLogin || tokenLogin;
-      if (!valid && request.headers.has('Authorization')) {
-        await env.DB.prepare('UPDATE panel_login SET attempts = CASE WHEN blocked_until > 0 THEN 1 ELSE attempts + 1 END, blocked_until = CASE WHEN blocked_until = 0 AND attempts >= 4 THEN ? ELSE 0 END WHERE id = 1').bind(now + 900000).run();
-      } else if (valid) await env.DB.prepare('UPDATE panel_login SET attempts = 0, blocked_until = 0 WHERE id = 1').run();
-    } catch { return new Response('Login temporariamente indisponível.', { status: 503, headers: { 'Cache-Control': 'no-store' } }); }
+      const blockedUntil = await loginLimit(env, now);
+      if (blockedUntil) return htmlResponse(loginPage(nonce, 'Muitas tentativas. Aguarde 15 minutos.'), nonce, 429, { 'Retry-After': String(Math.ceil((blockedUntil - now) / 1000)) });
+      if (!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded') || Number(request.headers.get('Content-Length')) > 4096) return json({ error: 'Invalid form' }, 400);
+      const form = await request.formData();
+      const username = String(form.get('username') || '');
+      const password = String(form.get('password') || '');
+      const valid = await credentialsMatch(username, password, env);
+      await recordLogin(env, valid, now);
+      if (!valid) return htmlResponse(loginPage(nonce, 'Usuário ou senha incorretos.'), nonce, 401);
+      return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
+    } catch { return htmlResponse(loginPage(nonce, 'Login temporariamente indisponível.'), nonce, 503); }
   }
-  if (pathname === '/admin/logs' && request.method === 'GET') {
-    if (!browserLogin) return new Response('Faça login para acessar os logs.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Painel Seabra", charset="UTF-8"', 'Cache-Control': 'no-store' } });
-    const { results } = await env.DB.prepare('SELECT device_id, created_at, event, code, order_id FROM diagnostics ORDER BY received_at DESC LIMIT 500').all();
-    return Response.json(results, { headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+
+  if (pathname === '/admin/logout' && request.method === 'POST') {
+    if (!sameOrigin) return json({ error: 'Forbidden' }, 403);
+    return new Response(null, { status: 204, headers: { 'Set-Cookie': cookieHeader('', 0), 'Cache-Control': 'no-store' } });
   }
+
   if (pathname === '/admin' && request.method === 'GET') {
-    if (!panelLogin(request, env)) return new Response('Faça login para acessar o painel.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Painel Seabra", charset="UTF-8"', 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' } });
-    const nonce = crypto.randomUUID();
-    return new Response(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Senha do admin</title>
-      <style>body{font:18px system-ui;background:#f5f3ef;color:#214b40;max-width:460px;margin:10vh auto;padding:24px}input,button,.panel-button{box-sizing:border-box;width:100%;padding:14px;margin:12px 0;font:inherit}button,.panel-button{background:#214b40;color:white;border:0;border-radius:8px;cursor:pointer}.panel-button{display:block;text-align:center;text-decoration:none}button:hover,.panel-button:hover{background:#193b32}button:focus-visible,.panel-button:focus-visible{outline:3px solid #a94025;outline-offset:3px}button:disabled{opacity:.65;cursor:wait}output{display:block;overflow-wrap:anywhere;white-space:pre-wrap}</style>
-      <h1>Senha semanal do admin</h1><a class="panel-button" href="/admin/logs">Consultar logs de erros e impressão</a><form><button name="action" value="view">Consultar senha</button><button name="action" value="rotate">Gerar nova senha agora</button></form><p>A troca manual vale até a próxima segunda-feira, quando uma nova senha será gerada automaticamente. Aparelhos offline mantêm a última senha recebida.</p><output aria-live="polite"></output>
-      <script nonce="${nonce}">const form=document.querySelector('form'),output=document.querySelector('output');form.addEventListener('submit',async event=>{event.preventDefault();const rotate=event.submitter?.value==='rotate';if(rotate&&!confirm('Gerar outra senha agora? Os aparelhos conectados passarão a usar a nova senha.'))return;const buttons=document.querySelectorAll('button');buttons.forEach(button=>button.disabled=true);output.textContent='Consultando…';try{const response=await fetch('/auth/admin/password',{method:rotate?'POST':'GET',credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();output.textContent='Usuário: admin\\nSenha: '+data.password+'\\nPróxima troca: '+new Date(data.nextRotation).toLocaleString('pt-BR');setTimeout(()=>{output.textContent=''},60000)}catch{output.textContent='Não foi possível consultar. Confira seu login e a conexão.'}finally{buttons.forEach(button=>button.disabled=false)}});document.addEventListener('visibilitychange',()=>{if(document.hidden)output.textContent=''})</script></html>`, { headers: {
-      'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'`,
-    } });
+    if (!browserLogin) {
+      const message = url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
+      return htmlResponse(loginPage(nonce, message), nonce);
+    }
+    return htmlResponse(panelPage(nonce), nonce, 200, { 'Set-Cookie': await issueSession(env, now) });
   }
-  if (pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
-  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
-  const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers });
-  const privateRoute = pathname.endsWith('/password');
+
+  if (pathname === '/admin/session' && request.method === 'GET') {
+    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
+  }
+
+  if (pathname === '/admin/logs' && request.method === 'GET') {
+    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    try {
+      const { results } = await env.DB.prepare('SELECT device_id, created_at, event, code, order_id FROM diagnostics ORDER BY received_at DESC LIMIT 500').all();
+      return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+    } catch { return json({ error: 'Logs unavailable' }, 503); }
+  }
+
+  if (panelRoute) return json({ error: 'Method not allowed' }, 405);
+  const privateRoute = pathname === '/auth/admin/password';
   if (request.method !== 'GET' && !(privateRoute && request.method === 'POST')) return json({ error: 'Method not allowed' }, 405);
   if (privateRoute && !browserLogin && !tokenLogin) return json({ error: 'Unauthorized' }, 401);
-  if (privateRoute && request.method === 'POST' && browserLogin && request.headers.get('Origin') !== new URL(request.url).origin) return json({ error: 'Forbidden' }, 403);
+  if (privateRoute && request.method === 'POST' && browserLogin && !tokenLogin && !sameOrigin) return json({ error: 'Forbidden' }, 403);
   try {
     if (request.method === 'POST') {
       if (!env.DB) throw new Error('Database unavailable');
@@ -68,8 +145,8 @@ export async function adminResponse(request, env) {
     }
     const state = env.DB ? await env.DB.prepare('SELECT revision FROM admin_rotation WHERE id = 1').first() : { revision: 0 };
     if (!state || !Number.isSafeInteger(state.revision) || state.revision < 0) throw new Error('Invalid rotation state');
-    const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), state.revision);
-    // Only the verifier is public; viewing the password requires the owner token.
-    return json(privateRoute ? { username: credential.username, password, nextRotation: credential.nextRotation } : credential);
+    const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, state.revision);
+    const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now) } : {};
+    return json(privateRoute ? { username: credential.username, password, nextRotation: credential.nextRotation } : credential, 200, extra);
   } catch { return json({ error: 'Admin service unavailable' }, 503); }
 }

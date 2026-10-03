@@ -10,8 +10,18 @@ import { styles, COLORS, CONNECTIONS } from '../ui/theme';
 export default function PrinterScreen() {
   const { t } = useLanguage();
   const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, savingOrderSettings } = useApp();
-  return <ScreenFrame><UserSettings /><View style={[styles.columns, isWide && styles.columnsWide]}>
-                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
+  return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
+                  <View style={[styles.column, isWide && styles.columnWide, { gap: 12 }]}>
+                    <UserSettings />
+                    <View style={styles.panel}>
+                      <Text style={styles.panelTitle}>{t("Cardápio online")}</Text>
+                      <Text style={styles.settingsIntro}>{t("Verificamos atualizações ao abrir o aplicativo. Você também pode atualizar quando quiser.")}</Text>
+                      <Text style={styles.helperText}>{t(menuUpdateStatus) || t("Seu cardápio fica disponível mesmo sem internet.")}</Text>
+                      <Pressable disabled={updatingMenu} accessibilityState={{ disabled: updatingMenu, busy: updatingMenu }} style={[styles.secondaryWideButton, updatingMenu && styles.pressed]} onPress={() => updateMenu(true)}><Text style={styles.secondaryButtonText}>{updatingMenu ? t("Verificando…") : t("Atualizar cardápio")}</Text></Pressable>
+                    </View>
+                  </View>
+                  <View style={[styles.column, isWide && styles.columnWide, { gap: 12 }]}>
+                  <View style={styles.panel}>
                     <LanguageSettings />
                     <Text style={styles.panelTitle}>{t("Pedidos")}</Text>
                     <View style={styles.orderLine}>
@@ -40,11 +50,7 @@ export default function PrinterScreen() {
                     <Pressable style={styles.sendButton} onPress={savePrinterSettings}><Text style={styles.sendButtonText}>{t("Salvar configurações")}</Text></Pressable>
                     <Pressable style={styles.secondaryWideButton} onPress={testPrinter}><Text style={styles.secondaryButtonText}>{t("Testar impressora")}</Text></Pressable>
                   </View>
-                  <View style={[styles.panel, styles.column, isWide && styles.columnWide]}>
-                    <Text style={styles.panelTitle}>{t("Cardápio online")}</Text>
-                    <Text style={styles.settingsIntro}>{t("Verificamos atualizações ao abrir o aplicativo. Você também pode atualizar quando quiser.")}</Text>
-                    <Text style={styles.helperText}>{t(menuUpdateStatus) || t("Seu cardápio fica disponível mesmo sem internet.")}</Text>
-                    <Pressable disabled={updatingMenu} accessibilityState={{ disabled: updatingMenu, busy: updatingMenu }} style={[styles.secondaryWideButton, updatingMenu && styles.pressed]} onPress={() => updateMenu(true)}><Text style={styles.secondaryButtonText}>{updatingMenu ? t("Verificando…") : t("Atualizar cardápio")}</Text></Pressable>
+                  <TabletSettings />
                   </View>
-                </View><TabletSettings /></ScreenFrame>;
+                </View></ScreenFrame>;
 }
