@@ -4,8 +4,8 @@ O GitHub é a fonte do código. `main` representa produção; `homologacao` rece
 
 | Ambiente | GitHub | Cloudflare Worker | D1 | Android |
 | --- | --- | --- | --- | --- |
-| Produção | `main` | `seabra-cardapio` | `seabra-cardapio` | `com.wooxonly.comandadigitalprint` (`preview` APK ou `production` AAB) |
-| Homologação | `homologacao` | `seabra-cardapio-homologacao` | `seabra-cardapio-homologacao` | `com.wooxonly.comandadigitalprint.homologacao` (`homologacao` APK) |
+| Produção | `main` | `seabra-cardapio` | `seabra-cardapio` | Expo `@onlybeones-team/matheus-sampaio`; `com.wooxonly.comandadigitalprint` (`preview` APK ou `production` AAB) |
+| Homologação | `homologacao` | `seabra-cardapio-homologacao` | `seabra-cardapio-homologacao` | Expo `@onlybeones-team/matheus-sampaio-homologacao`; `com.wooxonly.comandadigitalprint.homologacao` (`homologacao` APK) |
 
 Os aplicativos podem coexistir no mesmo tablet e usam armazenamento local e servidores diferentes. A homologação começa com banco próprio, sem copiar pedidos ou usuários de produção. A senha inicial do painel de homologação deve ser alterada em **Senha de entrada no painel** após o primeiro acesso. Os segredos de cada Worker ficam na Cloudflare, fora do repositório.
 
