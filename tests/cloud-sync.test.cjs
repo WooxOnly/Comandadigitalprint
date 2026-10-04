@@ -64,6 +64,23 @@ test('tablet numbers are stable, unique per store and available offline after sy
   } finally { f.database.close(); }
 });
 
+test('tablets show a renamed store after sync and retain its name offline', async () => {
+  const f = await fixture();
+  try {
+    const tablet = f.tablet();
+    await tablet.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token });
+    await tablet.cloud.sync();
+    assert.equal(tablet.cloud.storeName(), 'Seabra 1');
+    f.database.prepare("UPDATE stores SET name = 'Seabra Hunters Creek' WHERE id = 'seabra-1'").run();
+    await tablet.cloud.sync();
+    assert.equal(tablet.cloud.storeName(), 'Seabra Hunters Creek');
+    const restarted = f.tablet(tablet.saved);
+    restarted.offline = true;
+    await restarted.cloud.load();
+    assert.equal(restarted.cloud.storeName(), 'Seabra Hunters Creek');
+  } finally { f.database.close(); }
+});
+
 test('store migration preserves Seabra records, revisions, diagnostics and queued tablet cursors', () => {
   const database = new DatabaseSync(':memory:');
   try {

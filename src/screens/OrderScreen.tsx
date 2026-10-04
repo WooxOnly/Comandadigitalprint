@@ -39,7 +39,7 @@ export default function OrderScreen() {
     <View style={layout.sectionHeader}>
       <View style={layout.sectionTitle}>
         <Text style={styles.panelTitle}>{t('Identificação')}</Text>
-        {!identityOpen && <Text style={styles.mutedText}>{t(serviceLabel!)} · {t('Plaquinha')} {currentPlate}{customer.trim() ? ` · ${customer.trim()}` : ''}</Text>}
+        {!identityOpen && <Text style={styles.mutedText}>{t(serviceLabel!)} · {t('Mesa')} {currentPlate}{customer.trim() ? ` · ${customer.trim()}` : ''}</Text>}
       </View>
       {!!serviceMode && <Pressable onPress={() => setEditingIdentity(!identityOpen)} accessibilityRole="button" accessibilityState={{ expanded: identityOpen }} style={layout.editButton}><Text style={layout.editButtonText}>{t(identityOpen ? 'Ocultar detalhes' : 'Editar')}</Text></Pressable>}
     </View>
@@ -47,10 +47,10 @@ export default function OrderScreen() {
       <Text style={styles.fieldLabel}>{t('Onde será consumido?')}</Text>
       <View style={layout.serviceOptions}>{(['dine_in', 'takeout'] as const).map((value) => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
       {serviceModeError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t('Escolha se o pedido é para comer aqui ou para levar.')}</Text>}
-      <Text style={styles.fieldLabel}>{t('Plaquinha')}</Text>
-      <View style={styles.plateList} onLayout={(event) => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Plaquinha ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
+      <Text style={styles.fieldLabel}>{t('Mesa')}</Text>
+      <View style={styles.plateList} onLayout={(event) => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map((value) => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Mesa ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
       <View style={[styles.identityFields, isWide && styles.identityFieldsWide]}>
-        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t('Outra plaquinha (opcional)')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outra plaquinha')} placeholder={t('Outra plaquinha (opcional)')} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
+        <View style={styles.identityField}><Text style={styles.fieldLabel}>{t('Outro número de mesa (opcional)')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outro número de mesa')} placeholder={t('Outro número de mesa (opcional)')} placeholderTextColor={COLORS.placeholder} style={styles.input} /></View>
         <View style={styles.identityField}><Text style={styles.fieldLabel}>{t('Cliente')} {orderSettings.requireCustomer ? t('(obrigatório)') : t('(opcional)')}</Text><TextInput editable={!sending} value={customer} onChangeText={changeCustomer} accessibilityLabel={orderSettings.requireCustomer ? t('Nome do cliente, obrigatório') : t('Nome do cliente, opcional')} placeholder={t('Nome do cliente')} placeholderTextColor={COLORS.placeholder} style={[styles.input, !!customerError && styles.inputError]} /></View>
       </View>
       {!!customerError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(customerError)}</Text>}
@@ -92,7 +92,7 @@ export default function OrderScreen() {
 
   return <View style={layout.root}>
     <View style={layout.topBar}><View style={layout.topBarInner}>
-      <View style={layout.topMeta}><Text numberOfLines={2} style={layout.topMetaTitle}>{serviceLabel ? `${t(serviceLabel)} · ` : ''}{t('Plaquinha')} {currentPlate} · {itemCount}</Text>{!!customer.trim() && <Text numberOfLines={1} style={layout.topMetaDetail}>{t('Cliente')}: {customer.trim()}</Text>}</View>
+      <View style={layout.topMeta}><Text numberOfLines={2} style={layout.topMetaTitle}>{serviceLabel ? `${t(serviceLabel)} · ` : ''}{t('Mesa')} {currentPlate} · {itemCount}</Text>{!!customer.trim() && <Text numberOfLines={1} style={layout.topMetaDetail}>{t('Cliente')}: {customer.trim()}</Text>}</View>
       <Pressable disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled, busy: sending }} accessibilityHint={t('Salvar e conferir impressão')} onPress={finishOrder} style={[layout.finishButton, disabled && styles.pressed]}><Text style={layout.finishButtonText}>{sending ? t('Salvando e abrindo prévia…') : t('Finalizar pedido')}</Text>{isWide && <Text style={layout.finishButtonHint}>{t('Salvar e conferir impressão')}</Text>}</Pressable>
     </View></View>
     <OrderWorkspace catalog={catalog} order={isWide ? order : null} />

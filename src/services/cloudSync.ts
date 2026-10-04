@@ -2,7 +2,7 @@ import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; storeId: string; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { version: 1; storeId: string; storeName?: string; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
 type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
@@ -147,7 +147,9 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await pull(token);
         if (session?.token !== token) return;
-        await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
+        const store = await request('/store?storeId=' + encodeURIComponent(storeId()), undefined, token);
+        if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80) throw new CloudError('INVALID_DATA');
+        await serial(() => persist({ ...state, storeName: store.name, lastSync: new Date().toISOString() }));
         status = Object.values(state.pending).some((p) => p.conflict) ? 'CONFLICT' : Object.keys(state.pending).length ? 'PENDING' : 'SYNCED';
       } catch (error) { status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE'; }
       finally { emit(); }
@@ -157,6 +159,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   return {
     load, write, sync,
     storeId,
+    storeName() { return state?.storeName ?? null; },
     async sendDiagnostic(entry: unknown) { if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/diagnostics', entry); },
     identity() { if (!state) throw new Error('Storage not ready'); return state.deviceId; },
     tabletNumber() { return state?.tabletNumber ?? null; },

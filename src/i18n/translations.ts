@@ -377,17 +377,17 @@ export const translations: Record<string, readonly [string, string]> = {
     "Saved orders will appear here.",
     "Las comandas guardadas aparecerán aquí."
   ],
-  "Plaquinha": [
-    "Order number",
-    "Número de pedido"
+  "Mesa": [
+    "Table",
+    "Mesa"
   ],
   "Pedido nº": [
     "Order #",
     "Pedido n.º"
   ],
-  "Plaquinha ": [
-    "Order number ",
-    "Número de pedido "
+  "Mesa ": [
+    "Table ",
+    "Mesa "
   ],
   "Cliente não informado": [
     "Customer not provided",
@@ -541,13 +541,13 @@ export const translations: Record<string, readonly [string, string]> = {
     "Save and check printout",
     "Guardar y revisar impresión"
   ],
-  "Outra plaquinha": [
-    "Other order number",
-    "Otro número de pedido"
+  "Outro número de mesa": [
+    "Other table number",
+    "Otro número de mesa"
   ],
-  "Outra plaquinha (opcional)": [
-    "Other order number (optional)",
-    "Otro número de pedido (opcional)"
+  "Outro número de mesa (opcional)": [
+    "Other table number (optional)",
+    "Otro número de mesa (opcional)"
   ],
   "Cliente": [
     "Customer",

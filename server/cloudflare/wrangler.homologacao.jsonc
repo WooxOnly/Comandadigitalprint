@@ -1,0 +1,13 @@
+{
+  "name": "seabra-cardapio-homologacao",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-25",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "seabra-cardapio-homologacao",
+      "database_id": "ab7ad9d8-82f3-4a03-a645-3245a7817659"
+    }
+  ]
+}

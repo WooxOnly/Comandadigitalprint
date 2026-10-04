@@ -11,9 +11,10 @@ import { styles, COLORS, TABS, ROUTES } from './theme';
 import { CloudStatus } from './CloudStatus';
 import { ReceiptPreview } from './ReceiptPreview';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
-import { getStoreId } from '../config/store';
+import { useStoreName } from './useStoreName';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
+  const storeName = useStoreName();
   const path = usePathname();
   const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/'))) || TABS[0];
   const screen = currentTab.screen;
@@ -29,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
-              <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {getStoreId()}</Text>
+              <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
               <Text style={styles.title}>{t(path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title)}</Text>
             </View>
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}

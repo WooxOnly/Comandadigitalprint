@@ -63,7 +63,7 @@ export function buildOrderHtml(order: PrintableOrder, paperWidth: PrinterSetting
 <body>
   <header>
     <div class="heading">${t('COMANDA DE PRODUÇÃO')}</div><div class="kitchen">${t('COZINHA')}</div>
-    <div class="identification">${orderNumber ? `<strong class="order-number">${t('Pedido nº')}: ${escapeHtml(orderNumber)}</strong>` : ''}<strong class="plate">${t('Plaquinha')}: ${escapeHtml(order.plate)}</strong>${order.serviceMode ? `<div class="service">${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</div>` : ''}<div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
+    <div class="identification">${orderNumber ? `<strong class="order-number">${t('Pedido nº')}: ${escapeHtml(orderNumber)}</strong>` : ''}<strong class="plate">${t('Mesa')}: ${escapeHtml(order.plate)}</strong>${order.serviceMode ? `<div class="service">${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</div>` : ''}<div class="customer">${t('Cliente')}: ${escapeHtml(order.customer || t('Não informado'))}</div></div>
     <div class="date">${t('Data')}: ${new Date(order.createdAt).toLocaleString(LOCALES[language])}</div>
   </header>
   ${itemRows}

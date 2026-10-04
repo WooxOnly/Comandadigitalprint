@@ -34,6 +34,7 @@ test('all receipt languages preserve product names and extras, including reprint
   for (const [language, title, half, success, service, number] of [['pt', 'COMANDA DE PRODUÇÃO', '1ª metade:', 'Impressora configurada com sucesso', 'Tipo de pedido: Para levar', 'Pedido nº: 1-003'], ['en', 'KITCHEN ORDER', '1st half:', 'Printer configured successfully', 'Order type: To go', 'Order #: 1-003'], ['es', 'COMANDA DE PRODUCCIÓN', '1.ª mitad:', 'Impresora configurada correctamente', 'Tipo de pedido: Para llevar', 'Pedido n.º: 1-003']]) {
     await printer.printOrder(order, { connection: 'system', paperWidth: '58' }, language);
     const html = printer.files.at(-1).html;
+    assert.ok(html.includes(language === 'en' ? 'Table: 7' : 'Mesa: 7'));
     for (const text of [title, half, service, number, 'Rúcula com tomate seco', 'Requeijão cremoso', 'Frango com Catupiry', 'Calabresa com cebola', 'Mussarela']) assert.ok(html.includes(text), `${language}: ${text}`);
     assert.ok(printer.buildPrinterTestHtml('80', language).includes(success));
     if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
@@ -55,7 +56,7 @@ for (const paperWidth of ['58', '80', '88']) {
     assert.doesNotMatch(html, /Tipo de pedido|Order type/);
     assert.ok(Math.abs(options.width * 25.4 / 72 - Number(paperWidth)) < 0.2);
     assert.equal(printer.files[0].width, options.width);
-    assert.doesNotMatch(html, /Plaquinha|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
+    assert.doesNotMatch(html, /Mesa|Cliente:|COMANDA DE PRODUÇÃO|R\$/);
   });
 
   test(`production receipt uses ${paperWidth} mm for both HTML and print dialog`, async () => {
@@ -75,7 +76,7 @@ for (const paperWidth of ['58', '80', '88']) {
     assert.match(html, /margin: 0 auto/);
     assert.match(html, /text-align: center/);
     assert.doesNotMatch(html, /Tipo de pedido:/);
-    for (const value of ['Plaquinha: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', '1ª metade: Calabresa', '2ª metade: Queijo', '+ Bacon &amp; alho', '(2ª metade: Queijo)', '+ Milho', '(inteira)', 'Sem cebola\nMolho à parte']) {
+    for (const value of ['Mesa: 7', 'Ana &amp; João', '2x Pizza &lt;especial&gt;', '1ª metade: Calabresa', '2ª metade: Queijo', '+ Bacon &amp; alho', '(2ª metade: Queijo)', '+ Milho', '(inteira)', 'Sem cebola\nMolho à parte']) {
       assert.ok(html.includes(value));
     }
     assert.doesNotMatch(html, /R\$|47[.,]83|95[.,]66|subtotal|total:/i);

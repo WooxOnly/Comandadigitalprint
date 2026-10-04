@@ -5,11 +5,27 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://seabra-cardapio.wooxonly-comandas.workers.dev"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "homologacao": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "homologacao",
+        "EXPO_PUBLIC_API_BASE_URL": "https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://seabra-cardapio.wooxonly-comandas.workers.dev"
+      },
       "android": {
         "buildType": "app-bundle"
       }

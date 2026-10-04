@@ -6,7 +6,7 @@ import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { styles } from './theme';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
-import { getStoreId } from '../config/store';
+import { useStoreName } from './useStoreName';
 
 export function PasswordField({ label, value, onChangeText }: { label: string; value: string; onChangeText: (value: string) => void }) {
   return <><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={128} style={styles.input} /></>;
@@ -14,6 +14,7 @@ export function PasswordField({ label, value, onChangeText }: { label: string; v
 function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlock?: () => void }) {
   const { t } = useLanguage();
   const auth = useAuth();
+  const storeName = useStoreName();
   const [username, setUsername] = useState('admin');
   const [showUsers, setShowUsers] = useState(false);
   const [password, setPassword] = useState('');
@@ -42,7 +43,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
       <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
-        {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {getStoreId()}</Text>}
+        {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {storeName}</Text>}
         <Text style={styles.panelTitle}>{t(settings ? 'Acesso protegido' : 'Entrar')}</Text>
         {!auth.ready ? <><Text style={styles.errorText}>{t(auth.error || 'Carregando dados salvos…')}</Text>{auth.error && <Pressable style={styles.secondaryWideButton} onPress={auth.load}><Text style={styles.secondaryButtonText}>{t('Tente novamente')}</Text></Pressable>}</> : <>
           {settings ? <Text style={styles.settingsIntro}>{t('Digite a senha de Configurações para continuar.')}</Text> : <>
