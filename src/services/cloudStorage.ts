@@ -23,6 +23,7 @@ const stateKey = () => getStoreId() === LEGACY_STORE_ID ? CLOUD_STATE_KEY : CLOU
 const encryptionKeyName = () => getStoreId() === LEGACY_STORE_ID ? 'comandadigitalprint.cloud-key.v1' : 'comandadigitalprint.cloud-key.v1.' + getStoreId();
 const cloudFilePrefix = () => getStoreId() === LEGACY_STORE_ID ? 'comanda-cloud-' : 'comanda-cloud-' + getStoreId() + '-';
 const BACKUP_NAME = /^backup-(\d{8})-\d{13}-[\w-]+\.json$/;
+const RECOVERY_NAME = /^recovery-(\d{8})-\d{13}-[\w-]+\.json$/;
 const BACKUP_DAYS = 14;
 let encryptionKey: Promise<Uint8Array> | undefined;
 let reportBackupError: (error: unknown) => void = () => {};
@@ -53,7 +54,7 @@ function backupDirectory() { return new Directory(Paths.document, getStoreId() =
 function backupFiles() {
   const directory = backupDirectory();
   if (!directory.exists) return [];
-  return directory.list().filter((entry): entry is File => entry instanceof File && BACKUP_NAME.test(entry.name)).sort((a, b) => b.name.localeCompare(a.name));
+  return directory.list().filter((entry): entry is File => entry instanceof File && (BACKUP_NAME.test(entry.name) || RECOVERY_NAME.test(entry.name))).sort((a, b) => Number(b.name.split('-')[2]) - Number(a.name.split('-')[2]));
 }
 function localDate() {
   const date = new Date();
@@ -71,7 +72,7 @@ async function saveBackup(source: File) {
   }
   // Keep the last complete copy for each of the most recent days.
   const seen = new Set<string>();
-  for (const file of backupFiles()) {
+  for (const file of backupFiles().filter(file => BACKUP_NAME.test(file.name))) {
     const day = BACKUP_NAME.exec(file.name)![1];
     if (!seen.has(day) && seen.size < BACKUP_DAYS) { seen.add(day); continue; }
     file.delete();
@@ -209,3 +210,34 @@ export const authStorage = {
     await SecureStore.setItemAsync(localAuthKey(key), value);
   },
 };
+
+export async function listVerifiedBackups() {
+  await cloud.load();
+  const results: { name: string; createdAt: string; valid: boolean; records?: number; pending?: number; pendingCash?: boolean; orders?: number }[] = [];
+  for (const file of backupFiles()) {
+    const match = (BACKUP_NAME.exec(file.name) ?? RECOVERY_NAME.exec(file.name))!;
+    const stamp = file.name.split('-')[2];
+    try { const info = cloud.inspectRecovery(JSON.parse(await decryptEnvelope(await file.text()))); results.push({ name: file.name, createdAt: new Date(Number(stamp)).toISOString(), valid: true, records: info.records, pending: info.pending, pendingCash: info.pendingCash, orders: info.orders }); }
+    catch { results.push({ name: file.name, createdAt: `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`, valid: false }); }
+  }
+  return results;
+}
+export async function recoverLocalBackup(name: string) {
+  await cloud.load();
+  if (!BACKUP_NAME.test(name) && !RECOVERY_NAME.test(name)) throw new Error('Backup inválido.');
+  if (!cloud.allowed('restore')) throw new Error('Usuário sem permissão para esta ação.');
+  const file = backupFiles().find(entry => entry.name === name); if (!file) throw new Error('Backup não encontrado.');
+  const value = JSON.parse(await decryptEnvelope(await file.text()));
+  cloud.inspectRecovery(value);
+  // Preserve a complete current snapshot before merging missing records.
+  const saved = await encryptedStorage.getItem(stateKey());
+  if (saved) {
+    const directory = backupDirectory(); directory.create({ idempotent: true });
+    const file = new File(directory, `recovery-${localDate()}-${String(Date.now()).padStart(13, '0')}-${randomUUID()}.json`);
+    try { file.create(); file.write(await encryptValue(saved)); } catch (error) { try { file.delete(); } catch {} throw error; }
+  }
+  const recovered = await cloud.restoreMissing(value);
+  await cloud.sync();
+  for (const file of backupFiles().filter(file => RECOVERY_NAME.test(file.name)).slice(14)) file.delete();
+  return recovered;
+}

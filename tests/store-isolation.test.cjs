@@ -65,7 +65,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
     { id: 'seabra-1', name: 'Seabra 1', code: 1 },
     { id: 'seabra-2', name: 'Seabra 2', code: 2 },
   ] });
-  assert.deepEqual(await (await call('/store?storeId=seabra-2')).json(), { storeId: 'seabra-2', name: 'Seabra 2' });
+  assert.deepEqual(await (await call('/store?storeId=seabra-2')).json(), { storeId: 'seabra-2', name: 'Seabra 2', modules: { preorders: false, cash: false } });
   assert.equal((await call('/store?storeId=missing')).status, 404);
   assert.equal((await call('/store?storeId=invalid_')).status, 400);
   assert.equal((await call('/login', { storeId: 'seabra-2', username: 'admin', password: first.password })).status, 401);

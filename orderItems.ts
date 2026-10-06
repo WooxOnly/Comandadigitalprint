@@ -3,7 +3,7 @@ import { translate, type Language } from './src/i18n/translations';
 
 export type PizzaMode = 'whole' | 'halves';
 export type Extra = { name: string; placement: 'whole' | 'first' | 'second' };
-export type OrderItem = Omit<Product, 'price'> & { quantity: number; note: string; flavors?: string[]; extras?: Extra[] };
+export type OrderItem = Omit<Product, 'price'> & { quantity: number; note: string; productId?: string; secondProductId?: string; flavors?: string[]; extras?: Extra[] };
 
 let sequence = 0;
 export function createOrderItem(product: Product, note: string, mode: PizzaMode | null, second: Product | null, extras: Extra[]): OrderItem {
@@ -15,6 +15,7 @@ export function createOrderItem(product: Product, note: string, mode: PizzaMode 
   if (mode !== 'halves' && extras.some((extra) => extra.placement !== 'whole')) throw new Error('Extras por metade exigem uma pizza de dois sabores.');
   return {
     id: `order-item-${Date.now()}-${++sequence}`, name: pizza ? (mode === 'halves' ? 'Pizza de dois sabores' : `Pizza inteira — ${product.name}`) : product.name,
+    productId: product.id, ...(mode === 'halves' && second ? { secondProductId: second.id } : {}),
     category: product.category, kind: product.kind, quantity: 1, note: note.trim(),
     ...(pizza && mode === 'halves' && second ? { flavors: [product.name, second.name] } : {}),
     extras: extras.map((extra) => ({ ...extra })),

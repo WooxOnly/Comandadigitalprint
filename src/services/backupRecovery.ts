@@ -1,0 +1,12 @@
+import { validCloudValue } from '../../shared/cloud-validation.mjs';
+export type BackupSnapshot = { version: 1; storeId?: string; deviceId: string; cursor: number; values: Record<string, { key: string; value: unknown; revision: number }>; pending: Record<string, { key: string; value: unknown; base: number; id: string; conflict?: { key: string; value: unknown; revision: number } }>; cashAttempt?: Record<string, unknown> };
+export function inspectBackupSnapshot(input: unknown, storeId: string, deviceId?: string) {
+  const value = input as BackupSnapshot;
+  if (!value || value.version !== 1 || (value.storeId ?? 'seabra-1') !== storeId || !/^[a-f0-9-]{36}$/.test(value.deviceId) || (deviceId && value.deviceId !== deviceId) || !Number.isSafeInteger(value.cursor) || value.cursor < 0 || !value.values || typeof value.values !== 'object' || Array.isArray(value.values) || !value.pending || typeof value.pending !== 'object' || Array.isArray(value.pending)) throw new Error('Backup inválido ou de outra empresa/tablet.');
+  for (const [key, row] of Object.entries(value.values)) if (!row || row.key !== key || !validCloudValue(key, row.value) || !Number.isSafeInteger(row.revision) || row.revision < 0) throw new Error('Backup contém registros inválidos.');
+  for (const [key, row] of Object.entries(value.pending)) {
+    if (!row || row.key !== key || !value.values[key] || JSON.stringify(value.values[key].value) !== JSON.stringify(row.value) || !validCloudValue(key, row.value) || !Number.isSafeInteger(row.base) || row.base < 0 || !/^[a-zA-Z0-9-]{16,80}$/.test(row.id) || (row.conflict && (row.conflict.key !== key || !validCloudValue(key, row.conflict.value) || !Number.isSafeInteger(row.conflict.revision) || row.conflict.revision < 1))) throw new Error('Backup contém uma fila inválida.');
+  }
+  if (value.cashAttempt && (!['open', 'close', 'sale', 'in', 'out', 'void', 'refund'].includes(String(value.cashAttempt.operation)) || (value.cashAttempt.operation !== 'close' && !/^[a-zA-Z0-9-]{16,160}$/.test(String(value.cashAttempt.id))) || (value.cashAttempt.operation !== 'open' && !/^[a-zA-Z0-9-]{16,160}$/.test(String(value.cashAttempt.sessionId))))) throw new Error('Backup contém operação de caixa inválida.');
+  return { snapshot: value, records: Object.keys(value.values).length, pending: Object.keys(value.pending).length, pendingCash: !!value.cashAttempt, orders: Object.keys(value.values).filter(key => key.startsWith('order:')).length };
+}

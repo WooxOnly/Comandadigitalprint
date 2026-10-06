@@ -1,14 +1,19 @@
+import { customerReceiptPrinter, type PrinterRouting } from './src/services/printerRouting';
 import { translate, itemName, translatedNote, LOCALES, type Language } from './src/i18n/translations';
 import * as Print from 'expo-print';
 import { Platform } from 'react-native';
 import { createPrintJob } from './src/services/printJob';
+import { buildOrderEscpos, buildPrinterTestEscpos } from './src/services/escposReceipt';
+import { sendNetworkReceipt } from './src/services/networkPrinter';
+import { buildCustomerReceiptEscpos, buildCustomerReceiptHtml } from './src/services/customerReceipt';
+import type { CustomerReceipt } from './src/services/business';
 const runPrintJob = createPrintJob();
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
-export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88' };
+export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88'; routing?: PrinterRouting };
 export type ServiceMode = 'dine_in' | 'takeout';
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
-export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: PrintableOrderItem[]; createdAt: string; tabletLabel?: string; dailyNumber?: number };
+export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: (PrintableOrderItem & { category?: string })[]; createdAt: string; tabletLabel?: string; dailyNumber?: number };
 
 // expo-print uses points (72 per inch), not screen pixels. Long orders paginate.
 export function getReceiptPageSize(paperWidth: PrinterSettings['paperWidth']) {
@@ -110,9 +115,26 @@ async function printHtml(html: string, settings: PrinterSettings, language: Lang
 }
 
 export async function printOrder(order: PrintableOrder, settings: PrinterSettings, language: Language = 'pt') {
+  if (settings.connection === 'wifi') {
+    await runPrintJob(() => sendNetworkReceipt(buildOrderEscpos(order, settings.paperWidth, language), settings));
+    return;
+  }
   await printHtml(buildOrderHtml(order, settings.paperWidth, language), settings, language);
 }
 
 export async function printPrinterTest(settings: PrinterSettings, language: Language = 'pt') {
+  if (settings.connection === 'wifi') {
+    await runPrintJob(() => sendNetworkReceipt(buildPrinterTestEscpos(settings.paperWidth, language), settings));
+    return;
+  }
   await printHtml(buildPrinterTestHtml(settings.paperWidth, language), settings, language);
+}
+
+export async function printCustomerReceipt(receipt: CustomerReceipt, settings: PrinterSettings, language: Language = 'pt') {
+  settings = customerReceiptPrinter(settings);
+  if (settings.connection === 'wifi') {
+    await runPrintJob(() => sendNetworkReceipt(buildCustomerReceiptEscpos(receipt, settings.paperWidth, language), settings));
+    return;
+  }
+  await printHtml(buildCustomerReceiptHtml(receipt, settings.paperWidth, language), settings, language);
 }

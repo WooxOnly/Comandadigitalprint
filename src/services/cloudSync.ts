@@ -1,8 +1,12 @@
+import { inspectBackupSnapshot } from './backupRecovery';
+import { DEFAULT_ACCESS, validAccess, allowedAccess } from '../../shared/operations-validation.mjs';
+import type { AccessAction, AccessSettings } from './access';
+import { DEFAULT_STORE_MODULES, validStoreModules, type StoreModules, type CashOverview, type CashReport } from './business';
 import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; storeId: string; storeName?: string; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { version: 1; operationsVersion?: 1; access?: AccessSettings; storeId: string; storeName?: string; modules?: StoreModules; cashOverview?: CashOverview; cashAttempt?: Record<string, unknown>; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
 type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
@@ -13,6 +17,9 @@ export class CloudError extends Error {
 }
 export function createCloudSync(storage: Store, endpoint: string, uuid: () => string, seed: (storeId: string) => Promise<Record<string, unknown>>, fetcher: typeof fetch = fetch, selectedStore: string | (() => string) = LEGACY_STORE_ID) {
   let state: State;
+  let offlineActor = '';
+  const actor = () => session?.username || offlineActor || state?.reader || '';
+  const can = (action: AccessAction) => allowedAccess(state?.access ?? DEFAULT_ACCESS, action, actor());
   let loading: Promise<void> | undefined;
   let lock: Promise<unknown> = Promise.resolve();
   let running: Promise<void> | undefined;
@@ -41,8 +48,8 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         if (parsed.version !== 1 || !parsed.values || !parsed.pending || !Number.isSafeInteger(parsed.cursor)) throw Error('Invalid cloud cache');
         if (typeof parsed.deviceId !== 'string') throw Error('Invalid tablet identity');
         if (parsed.storeId !== id && !(id === LEGACY_STORE_ID && parsed.storeId === undefined)) throw new CloudError('STORE_MISMATCH');
-        state = { ...parsed, storeId: id };
-        if (parsed.storeId === undefined) await persist(state);
+        state = { ...parsed, operationsVersion: 1, cursor: parsed.operationsVersion === 1 ? parsed.cursor : 0, storeId: id, modules: { ...DEFAULT_STORE_MODULES, ...parsed.modules } };
+        if (parsed.storeId === undefined || parsed.operationsVersion !== 1) await persist(state);
       } else {
         const deviceId = uuid(), values: State['values'] = {}, pending: State['pending'] = {};
         const initial = await seed(id);
@@ -52,7 +59,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
           if (!validCloudValue(key, value)) throw Error('Invalid local data: ' + key);
           values[key] = { key, value, revision: 0 }; pending[key] = { key, value, base: 0, id: uuid() };
         }
-        await persist({ version: 1, storeId: id, deviceId, values, pending, cursor: 0, lastSync: null });
+        await persist({ version: 1, operationsVersion: 1, storeId: id, deviceId, values, pending, cursor: 0, lastSync: null });
       }
     }).catch((error) => { loading = undefined; throw error; });
     await loading;
@@ -78,6 +85,16 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       let changed = false;
       for (const [key, value] of Object.entries(entries)) {
         if (!validCloudValue(key, value)) throw new CloudError('INVALID_DATA');
+        if ((key === 'menu' || key.startsWith('product-option:')) && !can('menu')) throw new CloudError('ACCESS_DENIED');
+        if ((['printer', 'order-settings', 'logo'].includes(key) || key.startsWith('printer:')) && !can('settings')) throw new CloudError('ACCESS_DENIED');
+        if (key.startsWith('activity:') && ['reprint', 'restore'].includes((value as { kind: string }).kind) && !can((value as { kind: AccessAction }).kind)) throw new CloudError('ACCESS_DENIED');
+        if (key.startsWith('preparation:') && !state.modules?.preparation) throw new CloudError('MODULE_DISABLED');
+        if (key.startsWith('customer:') && !state.modules?.customers) throw new CloudError('MODULE_DISABLED');
+        if (key.startsWith('preorder:') && !state.modules?.preorders) throw new CloudError('MODULE_DISABLED');
+        if (key === 'menu' && state.modules?.cash && !(session && (session.username === 'admin' || state.cashOverview?.settings?.managers.includes(session.username)))) {
+          const menu = (state.values.menu?.value ?? []) as { id: string; price: number }[];
+          if ((value as { id: string; price: number }[]).some(product => !menu.some(previous => previous.id === product.id && previous.price === product.price))) throw new CloudError('MANAGER_REQUIRED');
+        }
         if (JSON.stringify(values[key]?.value) === JSON.stringify(value)) continue;
         if (key.startsWith('order:') && values[key]) throw new CloudError('IMMUTABLE_ORDER');
         const revision = values[key]?.revision || 0;
@@ -93,7 +110,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   async function pull(token: string) {
     let more = true;
     while (more && session?.token === token) {
-      const result = await request('/changes?after=' + state.cursor, undefined, token);
+      const result = await request('/changes?after=' + state.cursor + '&features=operations-v1', undefined, token);
       if (!Array.isArray(result.changes) || !Number.isSafeInteger(result.cursor) || result.cursor < state.cursor || typeof result.more !== 'boolean') throw new CloudError('INVALID_DATA');
       await serial(async () => {
         if (session?.token !== token) return;
@@ -116,10 +133,24 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       const token = session.token, username = session.username;
       status = 'SYNCING'; emit();
       try {
+        const store = await request('/store?storeId=' + encodeURIComponent(storeId()) + '&moduleVersion=3', undefined, token);
+        if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80 || (store.modules !== undefined && !validStoreModules(store.modules))) throw new CloudError('INVALID_DATA');
+        await serial(() => persist({ ...state, storeName: store.name, modules: { ...DEFAULT_STORE_MODULES, ...store.modules } }));
+        try { const access = await request('/access', undefined, token); if (!validAccess(access)) throw new CloudError('INVALID_DATA'); await serial(() => persist({ ...state, access })); } catch (error) { if (!(error instanceof CloudError) || error.status !== 404) throw error; }
         // Upload individual immutable orders: retries cannot duplicate an order.
         for (const sent of Object.values(state.pending)) {
           if (session?.token !== token) return;
-          if (sent.conflict || (sent.key.startsWith('user:') && username !== 'admin' && sent.key !== 'user:' + username)) continue;
+          if (sent.key.startsWith('activity:') && ['reprint', 'restore'].includes((sent.value as { kind: string }).kind) && !can((sent.value as { kind: AccessAction }).kind)) continue;
+          if ((sent.key === 'menu' || sent.key.startsWith('product-option:')) && !can('menu')) continue;
+          if ((['printer', 'order-settings', 'logo'].includes(sent.key) || sent.key.startsWith('printer:')) && !can('settings')) continue;
+          if (sent.key.startsWith('preparation:') && (!state.modules?.preparation || state.pending['order:' + (sent.value as { orderId: string }).orderId])) continue;
+          if (((sent.key.startsWith('preorder:') && !state.modules?.preorders) || (sent.key.startsWith('customer:') && !state.modules?.customers)) || sent.conflict || (sent.key.startsWith('user:') && username !== 'admin' && sent.key !== 'user:' + username)) continue;
+          if (sent.key.startsWith('preorder:') && (sent.value as { customerId?: string }).customerId) {
+            const linkedId = (sent.value as { customerId: string }).customerId;
+            // A disabled/conflicted customer must not block independent kitchen
+            // writes. Preserve the linked preorder until its customer can sync.
+            if (sent.base === 0 && (!state.modules?.customers || (state.pending['customer:' + linkedId] && !state.values['customer:' + linkedId]?.revision))) continue;
+          }
           try {
             const ack = await request('/change', { key: sent.key, value: sent.value, base: sent.base, id: sent.id }, token);
             if (!Number.isSafeInteger(ack.revision) || ack.revision < 1) throw new CloudError('INVALID_DATA');
@@ -147,9 +178,14 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await pull(token);
         if (session?.token !== token) return;
-        const store = await request('/store?storeId=' + encodeURIComponent(storeId()), undefined, token);
-        if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80) throw new CloudError('INVALID_DATA');
-        await serial(() => persist({ ...state, storeName: store.name, lastSync: new Date().toISOString() }));
+        if (state.modules?.cash) {
+          await serial(async () => {
+            const overview = await request('/cash?deviceId=' + encodeURIComponent(state.deviceId), undefined, token);
+            if (!Array.isArray(overview.sessions) || !Array.isArray(overview.entries)) throw new CloudError('INVALID_DATA');
+            if (session?.token === token) await persist({ ...state, cashOverview: overview });
+          });
+        }
+        await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
         status = Object.values(state.pending).some((p) => p.conflict) ? 'CONFLICT' : Object.keys(state.pending).length ? 'PENDING' : 'SYNCED';
       } catch (error) { status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE'; }
       finally { emit(); }
@@ -159,6 +195,70 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   return {
     load, write, sync,
     storeId,
+    setOfflineActor(username: string) { offlineActor = username; },
+    access() { return state?.access ?? DEFAULT_ACCESS as AccessSettings; },
+    allowed(action: AccessAction, username = actor()) { return allowedAccess(state?.access ?? DEFAULT_ACCESS, action, username); },
+    async activity(kind: 'print' | 'reprint' | 'restore', target: string, details = '') { const id = uuid(); await write({ ['activity:' + id]: { id, kind, target, details, createdAt: new Date().toISOString() } }); },
+    modules() { return state?.modules ?? DEFAULT_STORE_MODULES; },
+    cashOverview() { return state?.cashOverview ?? null; },
+    pendingCashCommand() { return state?.cashAttempt ?? null; },
+    inspectRecovery(input: unknown) { return inspectBackupSnapshot(input, storeId(), state?.deviceId); },
+    async restoreMissing(input: unknown) {
+      await load(); if (running) await running;
+      return serial(async () => {
+        if (!can('restore')) throw new CloudError('ACCESS_DENIED');
+        const { snapshot } = inspectBackupSnapshot(input, storeId(), state.deviceId);
+        if (state.cashAttempt && JSON.stringify(state.cashAttempt) !== JSON.stringify(snapshot.cashAttempt)) throw new CloudError('CASH_PENDING');
+        const values = { ...state.values }, pending = { ...state.pending }; let recovered = 0;
+        for (const [key, row] of Object.entries(snapshot.values)) { if (values[key]) continue; values[key] = row; if (snapshot.pending[key]) pending[key] = snapshot.pending[key]; recovered++; }
+        const id = uuid(), key = 'activity:' + id, activity = { id, kind: 'restore', target: state.deviceId, details: `Registros recuperados: ${recovered}`, createdAt: new Date().toISOString() };
+        values[key] = { key, value: activity, revision: 0 }; pending[key] = { key, value: activity, base: 0, id: uuid() };
+        await persist({ ...state, values, pending, cursor: 0, cashAttempt: state.cashAttempt ?? snapshot.cashAttempt });
+        return recovered;
+      });
+    },
+    async recoverFromCloud() {
+      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      if (!can('restore')) throw new CloudError('ACCESS_DENIED');
+      if (running) await running;
+      await serial(() => persist({ ...state, cursor: 0 }));
+      await sync();
+      if (['UNAVAILABLE', 'STORAGE_ERROR', 'LOGIN_REQUIRED'].includes(status)) throw new CloudError(status);
+      await this.activity('restore', state.deviceId, 'Releitura completa dos dados da empresa na nuvem');
+    },
+    async customerHistory(customerId: string) {
+      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      return request('/customers/history?' + new URLSearchParams({ customerId }));
+    },
+    async cashReport(start: string, end: string, timeZone: string) {
+      await load();
+      if (!session) throw new CloudError('LOGIN_REQUIRED');
+      const result = await request('/cash/report?' + new URLSearchParams({ start, end, timeZone }));
+      if (result.storeId !== storeId() || !Array.isArray(result.days) || !Array.isArray(result.products) || !Array.isArray(result.methods) || !Array.isArray(result.closings) || !Array.isArray(result.movements) || !result.totals) throw new CloudError('INVALID_DATA');
+      return result as CashReport;
+    },
+    async cashCommand(input: Record<string, unknown>) {
+      await load();
+      return serial(async () => {
+        if (!session) throw new CloudError('LOGIN_REQUIRED');
+        const attempt = JSON.parse(JSON.stringify(input)) as Record<string, unknown>;
+        if (state.cashAttempt && JSON.stringify(state.cashAttempt) !== JSON.stringify(attempt)) throw new CloudError('CASH_PENDING');
+        // Persist the exact request before sending. A lost acknowledgement or
+        // application restart must reuse its ID rather than create another sale.
+        await persist({ ...state, cashAttempt: attempt });
+        let overview: CashOverview;
+        try { overview = await request('/cash', { ...attempt, deviceId: state.deviceId }); }
+        catch (error) {
+          if (error instanceof CloudError && [400, 401, 403, 404, 409].includes(error.status)) {
+            await persist({ ...state, cashAttempt: undefined });
+          }
+          throw error;
+        }
+        if (!Array.isArray(overview.sessions) || !Array.isArray(overview.entries)) throw new CloudError('INVALID_DATA');
+        await persist({ ...state, cashOverview: overview, cashAttempt: undefined });
+        return overview;
+      });
+    },
     storeName() { return state?.storeName ?? null; },
     async sendDiagnostic(entry: unknown) { if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/diagnostics', entry); },
     identity() { if (!state) throw new Error('Storage not ready'); return state.deviceId; },

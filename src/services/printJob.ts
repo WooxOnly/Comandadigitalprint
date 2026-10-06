@@ -3,6 +3,11 @@ export function printFailureMessage(error: unknown) {
   if (code === 'PRINT_BUSY') return 'Já existe uma impressão em andamento.';
   if (code === 'PRINT_TIMEOUT') return 'A impressão não respondeu. Confira a impressora antes de tentar novamente pelo histórico.';
   if (code === 'PRINT_UNSUPPORTED_CONNECTION') return 'Conexão direta indisponível. Use a impressão pelo sistema.';
+  if (code === 'PRINT_INVALID_ADDRESS') return 'Informe um endereço IP válido para a impressora.';
+  if (code === 'PRINT_INVALID_PORT') return 'Informe uma porta de rede entre 1 e 65535.';
+  if (code === 'PRINT_NETWORK_UNAVAILABLE') return 'A impressão pela rede exige o aplicativo atualizado instalado no aparelho.';
+  if (code === 'PRINT_NETWORK_FAILED') return 'Não foi possível conectar à impressora. Confira o IP, a porta e a conexão com a rede local.';
+  if (code === 'PRINT_DELIVERY_UNKNOWN') return 'Não foi possível confirmar o envio. Confira a impressora antes de reimprimir pelo histórico.';
   return 'Não foi possível iniciar a impressão.';
 }
 

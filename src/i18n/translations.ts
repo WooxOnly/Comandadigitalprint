@@ -912,6 +912,8 @@ export const translations: Record<string, readonly [string, string]> = {
 };
 
 Object.assign(translations, {
+  'Mostrando os dez primeiros clientes. Refine a busca.': ['Showing the first ten customers. Refine your search.', 'Se muestran los primeros diez clientes. Refine la búsqueda.'],
+  'Mostrando os 100 primeiros clientes. Refine a busca para encontrar outros.': ['Showing the first 100 customers. Refine your search to find others.', 'Se muestran los primeros 100 clientes. Refine la búsqueda para encontrar otros.'],
   "Sincronizando…": [
     "Synchronizing…",
     "Sincronizando…"
@@ -1093,6 +1095,762 @@ Object.assign(translations, {
   'Abrindo impressão…': ['Opening print dialog…', 'Abriendo impresión…'],
   'Salvando e abrindo prévia…': ['Saving and opening preview…', 'Guardando y abriendo vista previa…'],
   'Salvar e conferir impressão': ['Save and preview print', 'Guardar y revisar impresión'],
+});
+
+Object.assign(translations, {
+  'Conecte o aparelho à mesma rede da impressora. Informe o IP e a porta, salve e use Testar impressora.': ['Connect the device to the same network as the printer. Enter its IP and port, save and use Test printer.', 'Conecte el dispositivo a la misma red que la impresora. Introduzca su IP y puerto, guarde y use Probar impresora.'],
+  'Informe um endereço IP válido para a impressora.': ['Enter a valid printer IP address.', 'Introduzca una dirección IP válida para la impresora.'],
+  'Informe uma porta de rede entre 1 e 65535.': ['Enter a network port between 1 and 65535.', 'Introduzca un puerto de red entre 1 y 65535.'],
+  'A impressão pela rede exige o aplicativo atualizado instalado no aparelho.': ['Network printing requires the updated app installed on the device.', 'La impresión por red requiere la aplicación actualizada instalada en el dispositivo.'],
+  'Não foi possível conectar à impressora. Confira o IP, a porta e a conexão com a rede local.': ['Could not connect to the printer. Check the IP, port and local network connection.', 'No se pudo conectar a la impresora. Revise la IP, el puerto y la conexión a la red local.'],
+  'Não foi possível confirmar o envio. Confira a impressora antes de reimprimir pelo histórico.': ['Could not confirm sending. Check the printer before reprinting from history.', 'No se pudo confirmar el envío. Revise la impresora antes de reimprimir desde el historial.'],
+  'Comanda enviada à impressora pela rede. Confira a saída do papel.': ['Order sent to the printer over the network. Check the paper output.', 'Comanda enviada a la impresora por la red. Compruebe la salida del papel.'],
+  'Teste enviado à impressora pela rede. Confira a saída do papel.': ['Test sent to the printer over the network. Check the paper output.', 'Prueba enviada a la impresora por la red. Compruebe la salida del papel.'],
+  'Enviando impressão…': ['Sending print job…', 'Enviando impresión…'],
+});
+
+Object.assign(translations, {
+  'Encomendas': ['Scheduled orders', 'Pedidos programados'],
+  'Módulos da empresa': ['Company modules', 'Módulos de la empresa'],
+  'A habilitação de módulos é gerenciada no portal da empresa e atualizada pela sincronização.': ['Modules are enabled in the company portal and updated through sync.', 'Los módulos se habilitan en el portal de la empresa y se actualizan mediante sincronización.'],
+  'Habilitado': ['Enabled', 'Habilitado'], 'Desabilitado': ['Disabled', 'Deshabilitado'],
+  'Caixa': ['Cash register', 'Caja'],
+  'Retiradas e entregas agendadas': ['Scheduled pickup and delivery', 'Recogidas y entregas programadas'],
+  'Abertura, recebimentos e fechamento': ['Opening, payments and closing', 'Apertura, cobros y cierre'],
+  'Módulo não habilitado para esta empresa.': ['Module not enabled for this company.', 'Módulo no habilitado para esta empresa.'],
+  'Agende retiradas e entregas sem alterar as comandas do dia.': ['Schedule pickup and delivery alongside daily kitchen orders.', 'Programe recogidas y entregas junto con las comandas del día.'],
+  'Fechar cadastro': ['Close form', 'Cerrar formulario'],
+  'Nova encomenda': ['New scheduled order', 'Nuevo pedido programado'],
+  'Contato': ['Contact', 'Contacto'],
+  'Data (AAAA-MM-DD)': ['Date (YYYY-MM-DD)', 'Fecha (AAAA-MM-DD)'],
+  'Hora local (HH:MM)': ['Local time (HH:MM)', 'Hora local (HH:MM)'],
+  'Retirada': ['Pickup', 'Recogida'], 'Entrega': ['Delivery', 'Entrega'],
+  'Endereço de entrega': ['Delivery address', 'Dirección de entrega'],
+  'Salvar encomenda': ['Save scheduled order', 'Guardar pedido programado'],
+  'Informe cliente, contato, itens e endereço para entrega.': ['Enter customer, contact, items and a delivery address.', 'Indique cliente, contacto, artículos y dirección de entrega.'],
+  'Informe a data em AAAA-MM-DD e a hora em HH:MM.': ['Enter the date as YYYY-MM-DD and the time as HH:MM.', 'Introduzca la fecha en AAAA-MM-DD y la hora en HH:MM.'],
+  'Escolha uma data e hora futuras válidas.': ['Choose a valid future date and time.', 'Elija una fecha y hora futuras válidas.'],
+  'Agendada': ['Scheduled', 'Programado'], 'Em preparo': ['Preparing', 'En preparación'],
+  'Pronta': ['Ready', 'Listo'], 'Concluída': ['Completed', 'Completado'], 'Cancelada': ['Cancelled', 'Cancelado'],
+  'Alterar status': ['Change status', 'Cambiar estado'], 'Confirmar': ['Confirm', 'Confirmar'],
+  'Nenhuma encomenda cadastrada.': ['No scheduled orders yet.', 'No hay pedidos programados.'],
+  'Encomenda não encontrada.': ['Scheduled order not found.', 'Pedido programado no encontrado.'],
+  'Aguarde a operação em andamento.': ['Wait for the current operation.', 'Espere a que termine la operación actual.'],
+  'Itens': ['Items', 'Artículos'], 'Buscar produto': ['Search products', 'Buscar productos'],
+  'Aumentar quantidade': ['Increase quantity', 'Aumentar cantidad'], 'Diminuir quantidade': ['Decrease quantity', 'Reducir cantidad'],
+  'Preço unitário (USD)': ['Unit price (USD)', 'Precio unitario (USD)'],
+  'Preço do produto (USD)': ['Product price (USD)', 'Precio del producto (USD)'],
+  'Nos módulos, use as observações para informar sabores e adicionais. O preço unitário é o valor final do item.': ['Use notes for flavors and extras. The unit price is the final item price.', 'Use las observaciones para sabores y extras. El precio unitario es el precio final del artículo.'],
+  'Limite de itens atingido.': ['Item limit reached.', 'Se alcanzó el límite de artículos.'],
+  'Caixa em USD: dinheiro, cartão e Zelle. Cada tablet tem sua própria abertura e fechamento.': ['Register in USD: cash, card and Zelle. Each tablet has its own opening and closing.', 'Caja en USD: efectivo, tarjeta y Zelle. Cada tableta tiene su propia apertura y cierre.'],
+  'Movimentações do caixa exigem conexão. As comandas e encomendas continuam disponíveis sem depender do caixa.': ['Register transactions require a connection. Kitchen and scheduled orders work independently of the register.', 'Los movimientos de caja requieren conexión. Las comandas y los pedidos programados funcionan de forma independiente de la caja.'],
+  'Atualizar caixa': ['Refresh register', 'Actualizar caja'],
+  'Há uma operação sem confirmação. Consulte seu resultado antes de movimentar o caixa novamente.': ['An operation is awaiting confirmation. Check its result before another register transaction.', 'Una operación está pendiente de confirmación. Consulte su resultado antes de otro movimiento de caja.'],
+  'Consultar operação pendente': ['Check pending operation', 'Consultar operación pendiente'],
+  'Consulte a operação pendente antes de iniciar outra movimentação.': ['Check the pending operation before starting another transaction.', 'Consulte la operación pendiente antes de iniciar otro movimiento.'],
+  'Recebimento registrado': ['Payment recorded', 'Cobro registrado'],
+  'Troco': ['Change', 'Cambio'],
+  'Imprimir recibo não fiscal': ['Print non-fiscal receipt', 'Imprimir recibo no fiscal'],
+  'Abertura de caixa': ['Register opening', 'Apertura de caja'],
+  'Dinheiro inicial (USD)': ['Opening cash (USD)', 'Efectivo inicial (USD)'],
+  'Abrir caixa': ['Open register', 'Abrir caja'], 'Caixa aberto': ['Register open', 'Caja abierta'],
+  'Saldo esperado em dinheiro': ['Expected cash balance', 'Saldo esperado en efectivo'],
+  'Dinheiro': ['Cash', 'Efectivo'], 'Cartão': ['Card', 'Tarjeta'], 'Zelle': ['Zelle', 'Zelle'],
+  'Registrar recebimento': ['Record payment', 'Registrar cobro'],
+  'Cliente (opcional)': ['Customer (optional)', 'Cliente (opcional)'], 'Total': ['Total', 'Total'],
+  'Recebido em dinheiro (USD)': ['Cash received (USD)', 'Efectivo recibido (USD)'],
+  'Confirme o pagamento no terminal do cartão ou no Zelle antes de registrar. Este aplicativo registra o recebimento.': ['Confirm payment on the card terminal or Zelle before recording it. This app records the payment.', 'Confirme el pago en el terminal de tarjeta o Zelle antes de registrarlo. Esta aplicación registra el cobro.'],
+  'Entradas e saídas': ['Cash in and out', 'Entradas y salidas'],
+  'Valor (USD)': ['Amount (USD)', 'Importe (USD)'], 'Motivo': ['Reason', 'Motivo'],
+  'Entrada de dinheiro': ['Cash in', 'Entrada de efectivo'], 'Saída de dinheiro': ['Cash out', 'Salida de efectivo'],
+  'Fechamento de caixa': ['Register closing', 'Cierre de caja'],
+  'Dinheiro contado (USD)': ['Counted cash (USD)', 'Efectivo contado (USD)'],
+  'Fechar caixa': ['Close register', 'Cerrar caja'], 'Fechamentos recentes': ['Recent closings', 'Cierres recientes'],
+  'Esperado': ['Expected', 'Esperado'], 'Contado': ['Counted', 'Contado'], 'Diferença': ['Difference', 'Diferencia'],
+  'Movimentações recentes': ['Recent transactions', 'Movimientos recientes'], 'Recebimento': ['Payment', 'Cobro'],
+  'Abra o caixa antes de registrar movimentações.': ['Open the register before recording transactions.', 'Abra la caja antes de registrar movimientos.'],
+  'Este tablet já tem um caixa aberto.': ['This tablet already has an open register.', 'Esta tableta ya tiene una caja abierta.'],
+  'O saldo em dinheiro é insuficiente para esta saída.': ['Insufficient cash balance for this withdrawal.', 'Saldo en efectivo insuficiente para esta salida.'],
+  'O valor recebido é menor que o total.': ['The received amount is less than the total.', 'El importe recibido es menor que el total.'],
+  'A operação já foi registrada com outros dados.': ['This operation was already recorded with different data.', 'Esta operación ya se registró con otros datos.'],
+  'Este pedido já foi recebido no caixa.': ['Payment for this order has already been recorded.', 'El cobro de este pedido ya se registró.'],
+  'Sincronize o pedido antes de receber no caixa.': ['Sync the order before recording its payment.', 'Sincronice el pedido antes de registrar su cobro.'],
+  'Confira os valores e os itens da operação.': ['Check the amounts and items in this transaction.', 'Revise los importes y artículos de esta operación.'],
+  'Conecte à internet e entre na nuvem para movimentar o caixa.': ['Connect to the internet and sign in to the cloud to use the register.', 'Conéctese a internet e inicie sesión en la nube para usar la caja.'],
+  'Informe um valor em dólares com até duas casas decimais.': ['Enter a dollar amount with up to two decimal places.', 'Introduzca un importe en dólares con hasta dos decimales.'],
+  'Valor acima do limite permitido.': ['Amount exceeds the allowed limit.', 'El importe supera el límite permitido.'],
+  'Confira os preços e as quantidades dos itens.': ['Check item prices and quantities.', 'Revise los precios y las cantidades.'],
+  'O total deve ser maior que zero e estar dentro do limite permitido.': ['The total must be greater than zero and within the allowed limit.', 'El total debe ser mayor que cero y estar dentro del límite permitido.'],
+  'Recibo não fiscal': ['Non-fiscal receipt', 'Recibo no fiscal'],
+  'RECIBO NÃO FISCAL': ['NON-FISCAL RECEIPT', 'RECIBO NO FISCAL'],
+  'Pagamento': ['Payment', 'Pago'], 'Recebido': ['Received', 'Recibido'],
+  'Recibo enviado à impressora pela rede. Confira a saída do papel.': ['Receipt sent to the network printer. Check the paper output.', 'Recibo enviado a la impresora por la red. Compruebe la salida del papel.'],
+});
+
+Object.assign(translations, {
+  'Relatórios do Caixa': ['Register reports', 'Informes de caja'],
+  'A tela mostra os primeiros 100 registros. O CSV inclui todos os detalhes do período.': ['The screen shows the first 100 records. The CSV includes all period details.', 'La pantalla muestra los primeros 100 registros. El CSV incluye todos los detalles del período.'],
+  'Desconto': ['Discount', 'Descuento'], 'Descontos': ['Discounts', 'Descuentos'],
+  'Desconto autorizado': ['Authorized discount', 'Descuento autorizado'],
+  'Percentual (%)': ['Percentage (%)', 'Porcentaje (%)'], 'Motivo do desconto': ['Discount reason', 'Motivo del descuento'],
+  'Cancelar venda': ['Void sale', 'Cancelar venta'], 'Estornar venda': ['Refund sale', 'Reembolsar venta'],
+  'Confirme a devolução em dinheiro, cartão ou Zelle antes de registrar. O aplicativo registra a devolução integral.': ['Confirm the cash, card or Zelle return before recording it. The app records a full return.', 'Confirme la devolución en efectivo, tarjeta o Zelle antes de registrarla. La aplicación registra la devolución íntegra.'],
+  'Motivo obrigatório': ['Required reason', 'Motivo obligatorio'],
+  'Confirmar devolução integral': ['Confirm full return', 'Confirmar devolución íntegra'],
+  'Venda cancelada': ['Sale voided', 'Venta cancelada'], 'Venda estornada': ['Sale refunded', 'Venta reembolsada'],
+  'Cancelamento': ['Void', 'Cancelación'], 'Estorno': ['Refund', 'Reembolso'],
+  'VENDA CANCELADA': ['SALE VOIDED', 'VENTA CANCELADA'], 'ESTORNO INTEGRAL': ['FULL REFUND', 'REEMBOLSO ÍNTEGRO'],
+  'Devolvido': ['Returned', 'Devuelto'], 'Subtotal': ['Subtotal', 'Subtotal'],
+  'Somente gerentes e administradores podem autorizar esta operação.': ['Only managers and administrators can authorize this operation.', 'Solo los gerentes y administradores pueden autorizar esta operación.'],
+  'Somente gerentes e administradores podem consultar relatórios.': ['Only managers and administrators can view reports.', 'Solo los gerentes y administradores pueden consultar informes.'],
+  'Somente gerentes e administradores podem alterar preços no cardápio.': ['Only managers and administrators can change menu prices.', 'Solo los gerentes y administradores pueden cambiar los precios del menú.'],
+  'O preço ou produto mudou. Atualize os itens ou peça autorização de um gerente.': ['The price or product changed. Refresh the items or ask a manager to authorize it.', 'El precio o producto cambió. Actualice los artículos o solicite la autorización de un gerente.'],
+  'Preços e descontos são autorizados por gerentes ou administradores.': ['Prices and discounts are authorized by managers or administrators.', 'Los precios y descuentos son autorizados por gerentes o administradores.'],
+  'Preço ajustado por': ['Price adjusted by', 'Precio ajustado por'],
+  'O desconto deve ser menor que o subtotal.': ['The discount must be less than the subtotal.', 'El descuento debe ser menor que el subtotal.'],
+  'A taxa mudou. Atualize o caixa e confira o total antes de receber.': ['The tax rate changed. Refresh the register and check the total before accepting payment.', 'La tasa cambió. Actualice la caja y revise el total antes de cobrar.'],
+  'Esta venda já foi cancelada ou estornada.': ['This sale was already voided or refunded.', 'Esta venta ya fue cancelada o reembolsada.'],
+  'Venda não encontrada nesta empresa.': ['Sale not found in this company.', 'Venta no encontrada en esta empresa.'],
+  'Para cancelar, use o caixa original aberto. Após o fechamento, registre um estorno.': ['Void the sale in its original open register. After closing, record a refund.', 'Cancele la venta en su caja original abierta. Después del cierre, registre un reembolso.'],
+  'Relatório da empresa com todos os tablets. As datas seguem o fuso horário deste aparelho.': ['Company report across all tablets. Dates use this device’s time zone.', 'Informe de la empresa con todas las tabletas. Las fechas usan la zona horaria de este dispositivo.'],
+  'Data inicial (AAAA-MM-DD)': ['Start date (YYYY-MM-DD)', 'Fecha inicial (AAAA-MM-DD)'],
+  'Data final (AAAA-MM-DD)': ['End date (YYYY-MM-DD)', 'Fecha final (AAAA-MM-DD)'],
+  'Informe um período válido em AAAA-MM-DD.': ['Enter a valid period as YYYY-MM-DD.', 'Introduzca un período válido en AAAA-MM-DD.'],
+  'Escolha um período de até 366 dias.': ['Choose a period of up to 366 days.', 'Elija un período de hasta 366 días.'],
+  'O período contém muitos registros. Selecione um intervalo menor.': ['The period contains too many records. Choose a shorter range.', 'El período contiene demasiados registros. Elija un intervalo menor.'],
+  'Conecte à internet para consultar o relatório.': ['Connect to the internet to view the report.', 'Conéctese a internet para consultar el informe.'],
+  'Entre na nuvem para consultar o relatório.': ['Sign in to the cloud to view the report.', 'Inicie sesión en la nube para consultar el informe.'],
+  'Carregando…': ['Loading…', 'Cargando…'], 'Consultar relatório': ['View report', 'Consultar informe'],
+  'Exportar CSV': ['Export CSV', 'Exportar CSV'], 'Resumo do período': ['Period summary', 'Resumen del período'],
+  'Vendas brutas': ['Gross sales', 'Ventas brutas'], 'Imposto recebido': ['Tax collected', 'Impuesto cobrado'],
+  'Cancelamentos e estornos': ['Voids and refunds', 'Cancelaciones y reembolsos'],
+  'Imposto devolvido': ['Tax returned', 'Impuesto devuelto'],
+  'Vendas líquidas sem imposto': ['Net sales excluding tax', 'Ventas netas sin impuesto'],
+  'Imposto líquido': ['Net tax', 'Impuesto neto'],
+  'Recebimentos líquidos com imposto': ['Net receipts including tax', 'Cobros netos con impuesto'],
+  'Por forma de pagamento': ['By payment method', 'Por forma de pago'], 'Por dia': ['By day', 'Por día'],
+  'Por produto': ['By product', 'Por producto'], 'Vendas': ['Sales', 'Ventas'],
+  'Quantidade vendida': ['Quantity sold', 'Cantidad vendida'], 'Quantidade devolvida': ['Quantity returned', 'Cantidad devuelta'],
+  'Fechamentos e diferenças': ['Closings and differences', 'Cierres y diferencias'],
+  'Registro de operações': ['Operation log', 'Registro de operaciones'],
+  'Nenhuma movimentação neste período.': ['No transactions in this period.', 'No hay movimientos en este período.'],
+  'Compartilhamento de arquivos indisponível neste aparelho.': ['File sharing is unavailable on this device.', 'El uso compartido de archivos no está disponible en este dispositivo.'],
+});
+
+Object.assign(translations, {
+  "Cadastro de Clientes": [
+    "Customer directory",
+    "Registro de clientes"
+  ],
+  "Contatos, endereços e histórico": [
+    "Contacts, addresses and history",
+    "Contactos, direcciones e historial"
+  ],
+  "Cadastre contatos e endereços. Este módulo pode ser usado sozinho.": [
+    "Save contacts and addresses. This module can be used on its own.",
+    "Registre contactos y direcciones. Este módulo puede usarse por separado."
+  ],
+  "Novo cliente": [
+    "New customer",
+    "Nuevo cliente"
+  ],
+  "Buscar cliente": [
+    "Find customer",
+    "Buscar cliente"
+  ],
+  "Mostrar arquivados": [
+    "Show archived",
+    "Mostrar archivados"
+  ],
+  "Ocultar arquivados": [
+    "Hide archived",
+    "Ocultar archivados"
+  ],
+  "Nome": [
+    "Name",
+    "Nombre"
+  ],
+  "Telefone": [
+    "Phone",
+    "Teléfono"
+  ],
+  "E-mail": [
+    "Email",
+    "Correo electrónico"
+  ],
+  "Endereços (um por linha)": [
+    "Addresses (one per line)",
+    "Direcciones (una por línea)"
+  ],
+  "Observações": [
+    "Notes",
+    "Notas"
+  ],
+  "Salvar cliente": [
+    "Save customer",
+    "Guardar cliente"
+  ],
+  "Arquivado": [
+    "Archived",
+    "Archivado"
+  ],
+  "Arquivar cliente": [
+    "Archive customer",
+    "Archivar cliente"
+  ],
+  "Reativar cliente": [
+    "Reactivate customer",
+    "Reactivar cliente"
+  ],
+  "Arquivar": [
+    "Archive",
+    "Archivar"
+  ],
+  "Reativar": [
+    "Reactivate",
+    "Reactivar"
+  ],
+  "Histórico do cliente": [
+    "Customer history",
+    "Historial del cliente"
+  ],
+  "Nenhum pedido vinculado a este cliente.": [
+    "No orders linked to this customer.",
+    "No hay pedidos vinculados a este cliente."
+  ],
+  "Mostrando os 100 registros mais recentes.": [
+    "Showing the 100 most recent records.",
+    "Se muestran los 100 registros más recientes."
+  ],
+  "Nenhum cliente encontrado.": [
+    "No customers found.",
+    "No se encontraron clientes."
+  ],
+  "Selecionar cliente cadastrado (opcional)": [
+    "Select a saved customer (optional)",
+    "Seleccionar un cliente registrado (opcional)"
+  ],
+  "Desvincular cliente": [
+    "Unlink customer",
+    "Desvincular cliente"
+  ],
+  "Cliente não encontrado.": [
+    "Customer not found.",
+    "Cliente no encontrado."
+  ],
+  "Informe nome e telefone ou e-mail, com até dez endereços.": [
+    "Enter a name and phone or email, with up to ten addresses.",
+    "Indique nombre y teléfono o correo, con hasta diez direcciones."
+  ],
+  "Conecte à internet para consultar o histórico completo. As encomendas salvas neste tablet aparecem abaixo.": [
+    "Connect to view the full history. Scheduled orders saved on this tablet appear below.",
+    "Conéctese para consultar el historial completo. Los pedidos programados guardados en esta tablet aparecen abajo."
+  ],
+  "Taxa de entrega (USD)": [
+    "Delivery fee (USD)",
+    "Cargo de entrega (USD)"
+  ],
+  "Taxa de entrega": [
+    "Delivery fee",
+    "Cargo de entrega"
+  ],
+  "Responsável pela entrega": [
+    "Delivery driver",
+    "Responsable de la entrega"
+  ],
+  "Aguardando entrega": [
+    "Waiting for delivery",
+    "Esperando entrega"
+  ],
+  "Saiu para entrega": [
+    "Out for delivery",
+    "En reparto"
+  ],
+  "Entregue": [
+    "Delivered",
+    "Entregado"
+  ],
+  "Salvar entrega": [
+    "Save delivery",
+    "Guardar entrega"
+  ],
+  "Informe o responsável pela entrega.": [
+    "Enter the delivery driver.",
+    "Indique el responsable de la entrega."
+  ],
+  "Entrega já concluída.": [
+    "Delivery already completed.",
+    "La entrega ya está completada."
+  ],
+  "Encomenda indisponível para alterar entrega.": [
+    "Delivery cannot be changed for this scheduled order.",
+    "No se puede modificar la entrega de este pedido programado."
+  ],
+  "Marque a entrega como entregue antes de concluir a encomenda.": [
+    "Mark the delivery as delivered before completing the scheduled order.",
+    "Marque la entrega como entregada antes de completar el pedido programado."
+  ],
+  "Gorjeta voluntária (USD)": [
+    "Voluntary tip (USD)",
+    "Propina voluntaria (USD)"
+  ],
+  "Gorjeta": [
+    "Tip",
+    "Propina"
+  ],
+  "Gorjeta não entra no sales tax. A taxa de entrega usa a taxa configurada da empresa.": [
+    "Tips are excluded from sales tax. Delivery fees use the company tax rate.",
+    "Las propinas no incluyen sales tax. La entrega usa la tasa de la empresa."
+  ],
+  "Dividir pagamento": [
+    "Split payment",
+    "Dividir pago"
+  ],
+  "Usar uma forma de pagamento": [
+    "Use one payment method",
+    "Usar una forma de pago"
+  ],
+  "Valor acima do total": [
+    "Amount over total",
+    "Importe superior al total"
+  ],
+  "Falta receber": [
+    "Remaining to collect",
+    "Falta cobrar"
+  ],
+  "Pagamento dividido": [
+    "Split payment",
+    "Pago dividido"
+  ],
+  "Estorno parcial": [
+    "Partial refund",
+    "Reembolso parcial"
+  ],
+  "ESTORNO PARCIAL": [
+    "PARTIAL REFUND",
+    "REEMBOLSO PARCIAL"
+  ],
+  "Saldo restante": [
+    "Remaining balance",
+    "Saldo restante"
+  ],
+  "Saldo disponível": [
+    "Available balance",
+    "Saldo disponible"
+  ],
+  "Saldo integral": [
+    "Full remaining balance",
+    "Saldo restante completo"
+  ],
+  "Parte do valor": [
+    "Partial amount",
+    "Parte del importe"
+  ],
+  "Selecionar itens": [
+    "Select items",
+    "Seleccionar artículos"
+  ],
+  "Valor a devolver (USD)": [
+    "Refund amount (USD)",
+    "Importe a reembolsar (USD)"
+  ],
+  "Quantidade disponível": [
+    "Available quantity",
+    "Cantidad disponible"
+  ],
+  "Quantidade a devolver": [
+    "Quantity to return",
+    "Cantidad a devolver"
+  ],
+  "Devolver gorjeta": [
+    "Refund tip",
+    "Reembolsar propina"
+  ],
+  "Devolver taxa de entrega e seu imposto": [
+    "Refund delivery fee and its tax",
+    "Reembolsar entrega y su impuesto"
+  ],
+  "Devolução": [
+    "Refund",
+    "Reembolso"
+  ],
+  "Confirmar devolução": [
+    "Confirm refund",
+    "Confirmar reembolso"
+  ],
+  "Confira as quantidades a devolver.": [
+    "Check the quantities to return.",
+    "Revise las cantidades a devolver."
+  ],
+  "Confirme a devolução no dinheiro, cartão ou Zelle antes de registrar. As formas de pagamento seguem proporcionalmente o saldo da venda.": [
+    "Confirm the cash, card or Zelle refund before recording it. Refund methods are proportional to the remaining sale balance.",
+    "Confirme el reembolso en efectivo, tarjeta o Zelle antes de registrarlo. Se distribuye proporcionalmente al saldo de la venta."
+  ],
+  "Estorno por valor distribui a devolução entre produtos, imposto, gorjeta e entrega, sem registrar quantidade devolvida.": [
+    "An amount refund is allocated across products, tax, tip and delivery, without recording returned quantities.",
+    "El reembolso por importe se distribuye entre productos, impuesto, propina y entrega, sin registrar cantidades devueltas."
+  ],
+  "Gorjetas recebidas": [
+    "Tips received",
+    "Propinas recibidas"
+  ],
+  "Gorjetas devolvidas": [
+    "Tips refunded",
+    "Propinas reembolsadas"
+  ],
+  "Gorjetas líquidas": [
+    "Net tips",
+    "Propinas netas"
+  ],
+  "Taxas de entrega recebidas": [
+    "Delivery fees received",
+    "Cargos de entrega recibidos"
+  ],
+  "Taxas de entrega devolvidas": [
+    "Delivery fees refunded",
+    "Cargos de entrega reembolsados"
+  ],
+  "Taxas de entrega líquidas": [
+    "Net delivery fees",
+    "Cargos de entrega netos"
+  ],
+  "Recebimentos líquidos com imposto, gorjeta e entrega": [
+    "Net receipts including tax, tips and delivery",
+    "Cobros netos con impuesto, propina y entrega"
+  ],
+  "Confira as formas e valores de pagamento.": [
+    "Check the payment methods and amounts.",
+    "Revise las formas y los importes de pago."
+  ],
+  "A soma dos pagamentos deve ser igual ao total.": [
+    "Payments must add up to the total.",
+    "La suma de los pagos debe ser igual al total."
+  ],
+  "Selecione um cliente ativo desta empresa.": [
+    "Select an active customer from this company.",
+    "Seleccione un cliente activo de esta empresa."
+  ],
+  "Confira os itens ou o valor a devolver.": [
+    "Check the items or refund amount.",
+    "Revise los artículos o el importe a devolver."
+  ],
+  "Outra devolução foi registrada. Atualize o caixa e confira o saldo restante.": [
+    "Another refund was recorded. Refresh the register and check the remaining balance.",
+    "Se registró otro reembolso. Actualice la caja y revise el saldo restante."
+  ],
+  "Esta venda tem estorno parcial. Devolva o saldo restante pelo estorno.": [
+    "This sale has a partial refund. Refund the remaining balance.",
+    "Esta venta tiene un reembolso parcial. Reembolse el saldo restante."
+  ]
+});
+
+Object.assign(translations, {
+  "Usuário sem permissão para esta ação.": [
+    "User is not authorized for this action.",
+    "Usuario sin permiso para esta acción."
+  ],
+  "Acesso restrito": [
+    "Restricted access",
+    "Acceso restringido"
+  ],
+  "Recuperação de dados": [
+    "Data recovery",
+    "Recuperación de datos"
+  ],
+  "1. Tablet substituto ou dados da nuvem": [
+    "1. Replacement tablet or cloud data",
+    "1. Tablet de reemplazo o datos de la nube"
+  ],
+  "Vincule o novo tablet à mesma empresa e entre na nuvem. Recupere os registros sincronizados mantendo a identidade e as preferências deste aparelho.": [
+    "Link the new tablet to the same company and sign in to the cloud. Recover synced records while keeping this device’s identity and preferences.",
+    "Vincule la nueva tablet a la misma empresa e inicie sesión en la nube. Recupere los registros sincronizados conservando la identidad y preferencias de este dispositivo."
+  ],
+  "Recuperar da nuvem": [
+    "Recover from cloud",
+    "Recuperar de la nube"
+  ],
+  "A recuperação mantém dados atuais e operações pendentes.": [
+    "Recovery keeps current data and pending operations.",
+    "La recuperación conserva los datos actuales y las operaciones pendientes."
+  ],
+  "Dados da nuvem consultados. Confira o histórico e as pendências.": [
+    "Cloud data retrieved. Check history and pending operations.",
+    "Datos de la nube consultados. Revise el historial y las operaciones pendientes."
+  ],
+  "2. Verificar cópias locais": [
+    "2. Verify local backups",
+    "2. Verificar copias locales"
+  ],
+  "As cópias locais são criptografadas e pertencem a este tablet. A verificação testa leitura, integridade e fila. No tablet substituto, use os dados da nuvem; cópias locais não sincronizadas continuam no aparelho original.": [
+    "Local backups are encrypted and belong to this tablet. Verification checks readability, integrity and the pending queue. Use cloud data on a replacement tablet; unsynced local backups remain on the original device.",
+    "Las copias locales están cifradas y pertenecen a esta tablet. La verificación comprueba lectura, integridad y cola pendiente. Use los datos de la nube en una tablet de reemplazo; las copias locales sin sincronizar permanecen en el dispositivo original."
+  ],
+  "Verificar backups": [
+    "Verify backups",
+    "Verificar copias"
+  ],
+  "Backup verificado": [
+    "Backup verified",
+    "Copia verificada"
+  ],
+  "Backup indisponível": [
+    "Backup unavailable",
+    "Copia no disponible"
+  ],
+  "Operação de caixa pendente": [
+    "Pending register operation",
+    "Operación de caja pendiente"
+  ],
+  "Recuperar registros ausentes": [
+    "Recover missing records",
+    "Recuperar registros faltantes"
+  ],
+  "Os registros atuais prevalecem. Operações financeiras pendentes recuperadas exigem consulta do resultado no Caixa.": [
+    "Current records take precedence. Check the result of recovered pending financial operations in Cash.",
+    "Los registros actuales prevalecen. Consulte en Caja el resultado de las operaciones financieras pendientes recuperadas."
+  ],
+  "Registros recuperados": [
+    "Records recovered",
+    "Registros recuperados"
+  ],
+  "Registros": [
+    "Records",
+    "Registros"
+  ],
+  "Consulte a operação pendente no Caixa antes de recuperar dados.": [
+    "Check the pending Cash operation before recovering data.",
+    "Consulte la operación pendiente en Caja antes de recuperar datos."
+  ],
+  "Entre na nuvem antes de recuperar dados.": [
+    "Sign in to the cloud before recovering data.",
+    "Inicie sesión en la nube antes de recuperar datos."
+  ],
+  "Não foi possível recuperar agora. Confira conexão e armazenamento.": [
+    "Recovery is currently unavailable. Check connection and storage.",
+    "No se pudo recuperar ahora. Revise la conexión y el almacenamiento."
+  ],
+  "Backup inválido ou de outra empresa/tablet.": [
+    "Invalid backup or backup from another company/tablet.",
+    "Copia inválida o de otra empresa/tablet."
+  ],
+  "Backup contém registros inválidos.": [
+    "Backup contains invalid records.",
+    "La copia contiene registros inválidos."
+  ],
+  "Backup contém uma fila inválida.": [
+    "Backup contains an invalid pending queue.",
+    "La copia contiene una cola pendiente inválida."
+  ],
+  "Backup contém operação de caixa inválida.": [
+    "Backup contains an invalid register operation.",
+    "La copia contiene una operación de caja inválida."
+  ],
+  "Painel de preparo": [
+    "Preparation panel",
+    "Panel de preparación"
+  ],
+  "Recebido": [
+    "Received",
+    "Recibido"
+  ],
+  "Pronto": [
+    "Ready",
+    "Listo"
+  ],
+  "Finalizado": [
+    "Completed",
+    "Finalizado"
+  ],
+  "Acompanhe o preparo das comandas sem alterar seus itens ou impressão.": [
+    "Track kitchen order preparation without changing items or printing.",
+    "Siga la preparación de las comandas sin cambiar sus artículos ni su impresión."
+  ],
+  "Dia anterior": [
+    "Previous day",
+    "Día anterior"
+  ],
+  "Próximo dia": [
+    "Next day",
+    "Día siguiente"
+  ],
+  "Ocultar finalizados": [
+    "Hide completed",
+    "Ocultar finalizados"
+  ],
+  "Mostrar finalizados": [
+    "Show completed",
+    "Mostrar finalizados"
+  ],
+  "Informe a data em AAAA-MM-DD.": [
+    "Enter the date as YYYY-MM-DD.",
+    "Ingrese la fecha en AAAA-MM-DD."
+  ],
+  "Destacar atraso após (minutos)": [
+    "Highlight delays after (minutes)",
+    "Destacar retrasos después de (minutos)"
+  ],
+  "Atualizar pedidos": [
+    "Refresh orders",
+    "Actualizar pedidos"
+  ],
+  "Atrasado": [
+    "Overdue",
+    "Atrasado"
+  ],
+  "Atrasada": [
+    "Overdue",
+    "Atrasada"
+  ],
+  "Atrasadas": [
+    "Overdue",
+    "Atrasadas"
+  ],
+  "Nenhuma comanda neste período.": [
+    "No kitchen orders in this period.",
+    "No hay comandas en este período."
+  ],
+  "Próxima hora": [
+    "Next hour",
+    "Próxima hora"
+  ],
+  "Agenda de encomendas": [
+    "Preorder calendar",
+    "Agenda de pedidos programados"
+  ],
+  "Todas": [
+    "All",
+    "Todas"
+  ],
+  "Dia": [
+    "Day",
+    "Día"
+  ],
+  "Semana": [
+    "Week",
+    "Semana"
+  ],
+  "Anterior": [
+    "Previous",
+    "Anterior"
+  ],
+  "Próximo": [
+    "Next",
+    "Siguiente"
+  ],
+  "Impressoras por destino": [
+    "Printer destinations",
+    "Destinos de impresión"
+  ],
+  "Distribua categorias entre impressoras de rede. Categorias sem destino usam a impressora principal.": [
+    "Route categories to network printers. Categories without a destination use the main printer.",
+    "Distribuya categorías entre impresoras de red. Las categorías sin destino usan la impresora principal."
+  ],
+  "Desativar destinos": [
+    "Disable destinations",
+    "Desactivar destinos"
+  ],
+  "Ativar destinos": [
+    "Enable destinations",
+    "Activar destinos"
+  ],
+  "Nome do destino": [
+    "Destination name",
+    "Nombre del destino"
+  ],
+  "Categorias deste destino": [
+    "Categories for this destination",
+    "Categorías de este destino"
+  ],
+  "✓ Recibos neste destino": [
+    "✓ Receipts at this destination",
+    "✓ Recibos en este destino"
+  ],
+  "Usar para recibos do cliente": [
+    "Use for customer receipts",
+    "Usar para recibos del cliente"
+  ],
+  "Testar destino": [
+    "Test destination",
+    "Probar destino"
+  ],
+  "Adicionar destino": [
+    "Add destination",
+    "Agregar destino"
+  ],
+  "Destino": [
+    "Destination",
+    "Destino"
+  ],
+  "Use Salvar configurações para confirmar os destinos neste tablet.": [
+    "Use Save settings to confirm destinations on this tablet.",
+    "Use Guardar configuración para confirmar los destinos en esta tablet."
+  ],
+  "Confira os destinos, categorias e endereços das impressoras.": [
+    "Check printer destinations, categories and addresses.",
+    "Revise los destinos, categorías y direcciones de las impresoras."
+  ],
+  "Impressora principal": [
+    "Main printer",
+    "Impresora principal"
+  ],
+  "Marcar disponível": [
+    "Mark available",
+    "Marcar disponible"
+  ],
+  "Marcar esgotado": [
+    "Mark sold out",
+    "Marcar agotado"
+  ],
+  "Remover favorito": [
+    "Remove favorite",
+    "Quitar favorito"
+  ],
+  "Marcar favorito": [
+    "Mark favorite",
+    "Marcar favorito"
+  ],
+  "Mostrar todos": [
+    "Show all",
+    "Mostrar todos"
+  ],
+  "Somente favoritos": [
+    "Favorites only",
+    "Solo favoritos"
+  ],
+  "Favoritos": [
+    "Favorites",
+    "Favoritos"
+  ],
+  "Esgotado": [
+    "Sold out",
+    "Agotado"
+  ],
+  "Buscar produto": [
+    "Search products",
+    "Buscar productos"
+  ],
+  "Produto esgotado": [
+    "Product sold out",
+    "Producto agotado"
+  ],
+  "Produto esgotado. Escolha outro produto.": [
+    "Product sold out. Choose another product.",
+    "Producto agotado. Elija otro producto."
+  ],
+  "PRODUCT_UNAVAILABLE": [
+    "Product sold out. Refresh the menu and choose another product.",
+    "Producto agotado. Actualice el menú y elija otro producto."
+  ],
+  "ACCESS_DENIED": [
+    "User is not authorized for this action.",
+    "Usuario sin permiso para esta acción."
+  ]
+});
+
+Object.assign(translations, {
+  'Pedidos recebidos, em preparo e prontos': ['Orders received, in preparation and ready', 'Pedidos recibidos, en preparación y listos'],
+  'Backup inválido.': ['Invalid backup.', 'Copia inválida.'],
+  'Backup não encontrado.': ['Backup not found.', 'Copia no encontrada.'],
 });
 
 export function translate(text: string, language: Language = 'pt'): string {

@@ -1,3 +1,4 @@
+const { loadTs } = require('./helpers/load-ts.cjs');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const crypto = require('node:crypto');
@@ -38,7 +39,7 @@ test('encrypted storage migrates local data, commits atomically and restores its
     'expo-secure-store': secure,
   }[name] || require(name)));
   assert.equal(await store.loadStoreId(), 'seabra-1');
-  const syncModule = compile('src/services/cloudSync.ts', (name) => name === '../../shared/cloud-validation.mjs' ? require('../shared/cloud-validation.mjs') : require(name));
+  const syncModule = loadTs('src/services/cloudSync.ts');
   const load = () => compile('src/services/cloudStorage.ts', (name) => ({
     '@react-native-async-storage/async-storage': asyncStorage,
     'expo-secure-store': secure,
@@ -98,6 +99,19 @@ test('encrypted storage migrates local data, commits atomically and restores its
   const damaged = JSON.parse(files.get(currentBackup)); damaged.tag = '00'.repeat(16);
   files.set(currentBackup, JSON.stringify(damaged)); files.set(currentPointer, JSON.stringify(damaged));
   assert.deepEqual(JSON.parse(await load().appStorage.getItem('@comandadigitalprint/orders')), restored);
+  const guided = load(); await guided.cloud.load();
+  files.set('file:///documents/comanda-local-backups/backup-20261004-' + String(Date.now() - 86400000).padStart(13, '0') + '-corrupt.json', 'invalid encrypted data');
+  const verified = await guided.listVerifiedBackups();
+  assert.ok(verified.some(backup => backup.valid && backup.orders === 2 && backup.pending >= 1));
+  assert.ok(verified.some(backup => !backup.valid));
+  const good = verified.find(backup => backup.valid);
+  const pendingBefore = guided.cloud.pending('order:' + fresh.id);
+  assert.equal(await guided.recoverLocalBackup(good.name), 0);
+  assert.equal(guided.cloud.identity(), tabletId);
+  assert.equal(guided.cloud.pending('order:' + fresh.id), pendingBefore);
+  assert.ok([...files.keys()].some(uri => uri.includes('/recovery-')));
+  assert.ok([...files.values()].every(data => !data.includes('Private Customer')));
+  await assert.rejects(guided.recoverLocalBackup('../wrong.json'));
   // Without the SecureStore key, encrypted backups must never be overwritten by a new key.
   asyncValues.delete('@comandadigitalprint/cloud-v1'); secretValues.delete('comandadigitalprint.cloud-key.v1');
   await assert.rejects(load().appStorage.getItem('@comandadigitalprint/orders'));
@@ -132,7 +146,7 @@ test('a newly bound store uses separate encrypted state, key and backups', async
   assert.equal(await store.bindStoreId('loja-2'), 'loja-2');
   await assert.rejects(store.bindStoreId('seabra-1'), /mismatch/);
   assert.equal(secrets.get('comandadigitalprint.store-id.v1'), 'loja-2');
-  const syncModule = compile('src/services/cloudSync.ts', (name) => name === '../../shared/cloud-validation.mjs' ? require('../shared/cloud-validation.mjs') : require(name));
+  const syncModule = loadTs('src/services/cloudSync.ts');
   const storage = compile('src/services/cloudStorage.ts', (name) => ({
     '@react-native-async-storage/async-storage': asyncStorage,
     'expo-secure-store': secure,
@@ -180,7 +194,7 @@ test('a newly bound store uses separate encrypted state, key and backups', async
 });
 
 test('legacy cache keeps pending orders during store migration and cannot be read as another store', async () => {
-  const syncModule = compile('src/services/cloudSync.ts', (name) => name === '../../shared/cloud-validation.mjs' ? require('../shared/cloud-validation.mjs') : require(name));
+  const syncModule = loadTs('src/services/cloudSync.ts');
   const values = new Map();
   const storage = { getItem: async (key) => values.get(key) ?? null, setItem: async (key, value) => { values.set(key, value); } };
   const order = { id: 'old-order', createdAt: new Date().toISOString(), plate: '1', customer: 'Saved offline', items: [{ id: 'a', name: 'Pizza', category: 'Pizzas', quantity: 1, note: '' }] };

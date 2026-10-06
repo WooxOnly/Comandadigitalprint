@@ -23,7 +23,7 @@ let binding: Promise<unknown> = Promise.resolve();
 async function hasLegacyData() {
   if (await AsyncStorage.getItem(LEGACY_STATE_KEY)) return true;
   const directory = new Directory(Paths.document, 'comanda-local-backups');
-  if (directory.exists && directory.list().some((entry) => entry instanceof File && /^backup-\d{8}-\d{13}-[\w-]+\.json$/.test(entry.name))) return true;
+  if (directory.exists && directory.list().some((entry) => entry instanceof File && /^(?:backup|recovery)-\d{8}-\d{13}-[\w-]+\.json$/.test(entry.name))) return true;
   const values = await Promise.all(LEGACY_KEYS.map((key) => AsyncStorage.getItem(key)));
   if (values.some((value) => value !== null)) return true;
   return (await SecureStore.getItemAsync('comandadigitalprint.credentials.v1')) !== null

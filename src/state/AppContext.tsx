@@ -1,3 +1,6 @@
+import { buildPrintPlan, dispatchPrintPlan } from '../services/printerRouting';
+import { useAuth } from './AuthContext';
+import { searchCatalog, isProductAvailable, type CatalogOptions, type ProductOption } from '../services/catalogOptions';
 import { logError } from '../services/diagnostics';
 import { printFailureMessage } from '../services/printJob';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -23,7 +26,12 @@ const MENU_KEY = '@comandadigitalprint/menu';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
 
 function useAppState() {
+  const { currentUser } = useAuth();
+  const allowed = (action: 'menu' | 'settings' | 'reprint') => cloud.allowed(action, currentUser);
+  function checkAccess(action: 'menu' | 'settings' | 'reprint') { if (!allowed(action)) throw new Error('Usuário sem permissão para esta ação.'); }
   const { t, language } = useLanguage();
+  const [productOptions, setProductOptions] = useState<CatalogOptions>({});
+  const [productSearch, setProductSearch] = useState(''), [favoritesOnly, setFavoritesOnly] = useState(false);
   const [category, setCategoryState] = useState('Todos');
   const [subcategory, setSubcategory] = useState('');
   function setCategory(value: string) { setCategoryState(value); setSubcategory(''); }
@@ -51,6 +59,9 @@ function useAppState() {
   const [printerSettings, setPrinterSettings] = useState<PrinterSettings>(DEFAULT_PRINTER_SETTINGS);
   const [feedback, setFeedback] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
   const [previewOrder, setPreviewOrder] = useState<SavedOrder | null>(null);
+  const [printedDestinations, setPrintedDestinations] = useState<string[]>([]);
+  const printCompleted = useRef(new Set<string>());
+  const previewNew = useRef(false);
   const [printing, setPrinting] = useState(false);
   const { width: windowWidth, fontScale } = useWindowDimensions();
   const isWide = windowWidth >= 760 && fontScale < 1.4;
@@ -98,14 +109,20 @@ function useAppState() {
     }).catch(error => logError('storage.refresh_failed', error));
   }), [isReady]);
 
+  useEffect(() => { const load = () => { void cloud.list('product-option:').then(values => setProductOptions(Object.fromEntries((values as ProductOption[]).map(value => [value.productId, value])))).catch(error => logError('catalog.load_failed', error)); }; load(); return cloud.subscribe(load); }, []);
+  async function updateProductOption(productId: string, change: Partial<ProductOption>) {
+    try { checkAccess('menu'); const previous = await cloud.get('product-option:' + productId) as ProductOption | undefined; await cloud.write({ ['product-option:' + productId]: { productId, available: true, favorite: false, ...previous, ...change } }); }
+    catch (error) { Alert.alert(t('Falha ao salvar'), t((error as { code?: string }).code === 'ACCESS_DENIED' ? 'Usuário sem permissão para esta ação.' : (error as Error).message)); }
+  }
   const subcategories = useMemo(() => category === 'Todos' ? [] : Array.from(new Set(menu.filter(item => item.category === category).map(item => item.subcategory).filter((value): value is string => !!value))), [category, menu]);
   const activeSubcategory = subcategories.includes(subcategory) ? subcategory : '';
-  const filteredMenu = useMemo(() => filterProducts(menu, category, activeSubcategory), [menu, category, activeSubcategory]);
+  const filteredMenu = useMemo(() => searchCatalog(filterProducts(menu, category, activeSubcategory), productOptions, productSearch, favoritesOnly), [menu, category, activeSubcategory, productOptions, productSearch, favoritesOnly]);
   const categories = useMemo(() => ['Todos', ...Array.from(new Set(menu.map((item) => item.category).filter(Boolean)))], [menu]);
-  const pizzaMenu = useMemo(() => menu.filter((item) => item.kind === 'pizza'), [menu]);
+  const pizzaMenu = useMemo(() => menu.filter((item) => item.kind === 'pizza' && isProductAvailable(item.id, productOptions)), [menu, productOptions]);
 
   function openProduct(product: Product) {
     if (submitter.busy) return;
+    if (!isProductAvailable(product.id, productOptions)) { Alert.alert(t('Produto esgotado'), product.name); return; }
     setSelectedProduct(product);
     setProductNote('');
     setPizzaMode(product.allowsExtras === false ? 'whole' : null);
@@ -117,6 +134,7 @@ function useAppState() {
   function addSelectedProduct() {
     if (!selectedProduct) return;
     try {
+      if (!isProductAvailable(selectedProduct.id, productOptions) || (secondFlavor && !isProductAvailable(secondFlavor.id, productOptions))) throw new Error('Produto esgotado. Escolha outro produto.');
       const item = createOrderItem(selectedProduct, productNote, pizzaMode, secondFlavor, extras);
       setItems((current) => [...current, item]);
       setSelectedProduct(null);
@@ -136,6 +154,7 @@ function useAppState() {
   }
 
   function updatePrinterSettings(change: Partial<PrinterSettings>) {
+    if (!allowed('settings')) return;
     printerDirty.current = true;
     setPrinterSettings((current) => ({ ...current, ...change }));
   }
@@ -150,6 +169,7 @@ function useAppState() {
     orderSettingsLock.current = true;
     setSavingOrderSettings(true);
     try {
+      checkAccess('settings');
       const next = { requireCustomer: required };
       await AsyncStorage.setItem(ORDER_SETTINGS_KEY, JSON.stringify(next));
       setOrderSettings(next);
@@ -164,6 +184,7 @@ function useAppState() {
   }
 
   async function chooseLogo() {
+    if (!allowed('settings')) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(t('Permissão necessária'), t('Permita o acesso às fotos para escolher o logotipo do restaurante.'));
@@ -182,17 +203,19 @@ function useAppState() {
   async function saveMenu(nextMenu = menu) {
     nextMenu = standardizeMenu(nextMenu);
     try {
+      checkAccess('menu');
       if (!isValidMenu(nextMenu)) throw new Error('Confira nomes, categorias e identificadores do cardápio.');
       await AsyncStorage.setItem(MENU_KEY, JSON.stringify(nextMenu));
       menuDirty.current = false; menuRef.current = nextMenu; setMenu(nextMenu);
       Alert.alert(t('Cardápio salvo'), t('Produtos salvos. Alterações sem conexão ficam pendentes de sincronização.'));
     } catch (error) {
       logError('menu.save_failed', error);
-      Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'));
+      Alert.alert(t('Falha ao salvar'), t((error as { code?: string }).code === 'MANAGER_REQUIRED' ? 'Somente gerentes e administradores podem alterar preços no cardápio.' : error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'));
     }
   }
 
   function addMenuProduct() {
+    if (!allowed('menu')) return '';
     menuDirty.current = true;
     const id = `item-${randomUUID()}`;
     setMenu((current) => [...current, { id, name: 'Novo produto', category: 'Lanches', price: 0 }]);
@@ -200,11 +223,13 @@ function useAppState() {
   }
 
   function updateMenuProduct(id: string, change: Partial<Product>) {
+    if (!allowed('menu')) return;
     menuDirty.current = true;
     setMenu((current) => current.map((product) => product.id === id ? { ...product, ...change } : product));
   }
 
   function removeMenuProduct(id: string) {
+    if (!allowed('menu')) return;
     menuDirty.current = true;
     setMenu((current) => current.filter((product) => product.id !== id));
   }
@@ -231,6 +256,8 @@ function useAppState() {
 
   async function savePrinterSettings() {
     try {
+      checkAccess('settings');
+      if (printerSettings.routing?.enabled) buildPrintPlan({ plate: '', customer: '', items: [], createdAt: new Date().toISOString() }, printerSettings);
       await persistSettings(AsyncStorage, printerSettings);
       printerDirty.current = false;
       Alert.alert(t('Configuração salva'), t('As preferências da impressora foram salvas neste aparelho.'));
@@ -245,7 +272,9 @@ function useAppState() {
     setTimeout(() => setFeedback(null), 4000);
   }
 
-  async function printSavedOrder(order: SavedOrder) {
+  async function printSavedOrder(order: SavedOrder, isNew = false) {
+    if (!isNew && !allowed('reprint')) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
+    printCompleted.current = new Set(); setPrintedDestinations([]); previewNew.current = isNew;
     setPreviewOrder(order);
   }
 
@@ -254,9 +283,13 @@ function useAppState() {
     const order = previewOrder;
     setPrinting(true);
     try {
-      await printOrder(order, printerSettings, language);
+      if (!previewNew.current) checkAccess('reprint');
+      const plan = buildPrintPlan(order, printerSettings);
+      await cloud.activity(previewNew.current ? 'print' : 'reprint', order.id, plan.map(job => job.label).join(', '));
+      await dispatchPrintPlan(plan, printCompleted.current, job => printOrder(job.order, job.settings, language), () => setPrintedDestinations([...printCompleted.current]));
       setPreviewOrder(null);
-      showFeedback('Impressão aberta', 'Confirme o envio na janela de impressão.', 'success');
+      const direct = plan.every(job => job.settings.connection === 'wifi');
+      showFeedback(direct ? 'Impressão enviada' : 'Impressão aberta', direct ? 'Comanda enviada à impressora pela rede. Confira a saída do papel.' : 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       logError('print.failed', error, order.id);
       showFeedback('Impressão indisponível', printFailureMessage(error), 'error');
@@ -267,8 +300,9 @@ function useAppState() {
 
   async function testPrinter() {
     try {
+      checkAccess('settings');
       await printPrinterTest(printerSettings, language);
-      showFeedback('Teste de impressão aberto', 'Selecione a impressora e confirme o envio na janela de impressão.', 'success');
+      showFeedback(printerSettings.connection === 'wifi' ? 'Impressão enviada' : 'Teste de impressão aberto', printerSettings.connection === 'wifi' ? 'Teste enviado à impressora pela rede. Confira a saída do papel.' : 'Selecione a impressora e confirme o envio na janela de impressão.', 'success');
     } catch (error) {
       logError('print_test.failed', error);
       showFeedback('Teste não iniciado', printFailureMessage(error), 'error');
@@ -291,6 +325,7 @@ function useAppState() {
       Alert.alert(t('Cliente obrigatório'), t(validation));
       return;
     }
+    if (items.some(item => (item.productId && !isProductAvailable(item.productId, productOptions)) || (item.secondProductId && !isProductAvailable(item.secondProductId, productOptions)))) { Alert.alert(t('Produto esgotado'), t('Revise os itens esgotados antes de enviar.')); return; }
     const tabletId = cloud.identity();
     const now = new Date();
     const numberDay = localOrderDay(now);
@@ -301,7 +336,7 @@ function useAppState() {
       await submitter.submit(order, historyRef.current, {
         persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
         onSaved: (next) => { historyRef.current = next; setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
-        print: printSavedOrder,
+        print: order => printSavedOrder(order, true),
         onBusy: setSending,
       });
     } catch (error) {
@@ -311,7 +346,7 @@ function useAppState() {
   }
 
 
-  return { subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { printedDestinations, productOptions, updateProductOption, productSearch, setProductSearch, favoritesOnly, setFavoritesOnly, subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

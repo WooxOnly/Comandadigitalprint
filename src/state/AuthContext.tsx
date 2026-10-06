@@ -30,7 +30,7 @@ function useAuthState() {
     catch { /* Offline or failed writes keep the last usable credential. */ }
   }, [service]);
   const logout = useCallback(() => {
-    service.logout(); void cloud.setSession(null); setCurrentUser(''); setSignedIn(false);
+    service.logout(); cloud.setOfflineActor(''); void cloud.setSession(null); setCurrentUser(''); setSignedIn(false);
   }, [service]);
   const load = useCallback(async () => {
     try {
@@ -85,11 +85,12 @@ function useAuthState() {
       const token = await storedSession(name);
       await cloud.setSession(token ? { username: name, token, storeId: cloud.storeId() } : null);
     }
-    setCurrentUser(name); setSignedIn(true); void cloud.sync();
+    cloud.setOfflineActor(name); setCurrentUser(name); setSignedIn(true); void cloud.sync();
   }
   async function recoverOffline(code: string, password: string, confirmation: string) {
     await service.recoverOffline(code, password, confirmation);
-    setExists(true); setCurrentUser('admin'); setSignedIn(true);
+    await cloud.setSession(null);
+    setExists(true); cloud.setOfflineActor('admin'); setCurrentUser('admin'); setSignedIn(true);
   }
   async function changeOwnPassword(currentPassword: string, password: string, confirmation: string) {
     await service.changeOwnPassword(currentPassword, password, confirmation);

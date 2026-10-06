@@ -20,6 +20,8 @@ Em um banco novo, aplique na ordem `schema.sql`, `cloud-schema.sql`, `diagnostic
 
 ## Cadastro de outra loja
 
+O cadastro e a edição pelo portal também permitem habilitar **Encomendas**, **Caixa (USD)**, **Cadastro de Clientes** e **Painel de preparo** separadamente para cada empresa. As opções começam desabilitadas e são recebidas pelos tablets na sincronização. Reaplique `store-schema.sql` antes de publicar essa versão para criar as tabelas dos módulos. Funcionamento e publicação em homologação estão em [MODULOS-ENCOMENDAS-CAIXA.md](../../MODULOS-ENCOMENDAS-CAIXA.md) e [MELHORIAS-OPERACIONAIS.md](../../MELHORIAS-OPERACIONAIS.md). A agenda fica vinculada a Encomendas. Permissões e atividade administrativa são configuradas/consultadas no mesmo portal.
+
 O proprietário entra uma única vez em `/admin`, sem informar loja no login. No menu **Lojas**, informa o nome da nova loja; o painel gera um ID estável e a cadastra no D1. O seletor no topo permite mudar de loja sem sair. A consulta e a rotação da senha semanal e os logs usam apenas a loja selecionada. A senha de entrada no painel é global; as senhas semanais usadas pelos administradores no app são diferentes por loja. Usuários comuns são cadastrados separadamente em cada loja. Uma loja nova começa com cardápio vazio.
 
 Como alternativa operacional, um responsável pelo D1 pode cadastrar a loja explicitamente com um ID novo e imutável. Exemplo:

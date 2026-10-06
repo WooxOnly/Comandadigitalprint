@@ -1,5 +1,10 @@
+import { storeAccess, requireAccess } from './operations.mjs';
 import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
-import { activeStore, DEFAULT_STORE_ID } from './stores.mjs';
+import { activeStore, DEFAULT_STORE_ID, storeModules } from './stores.mjs';
+import { customerHistoryResponse, requireCustomer } from './customer-api.mjs';
+import { cashResponse } from './cash-api.mjs';
+import { cashReportResponse } from './cash-reports.mjs';
+import { cashSettings, canManageCash } from './cash-settings.mjs';
 import { validCloudValue } from '../../shared/cloud-validation.mjs';
 import defaultMenu from '../menu.json' with { type: 'json' };
 
@@ -76,7 +81,9 @@ export async function cloudResponse(request, env) {
   try {
     if (url.pathname === '/cloud/store' && request.method === 'GET') {
       const store = await activeStore(env, url.searchParams.get('storeId'));
-      return reply({ storeId: store.id, name: store.name });
+      const modules = await storeModules(env, store.id);
+      // Older tablets validate exactly two module flags. New tablets opt in.
+      return reply({ storeId: store.id, name: store.name, modules: url.searchParams.get('moduleVersion') === '3' ? modules : url.searchParams.get('moduleVersion') === '2' ? { preorders: modules.preorders, cash: modules.cash, customers: modules.customers } : { preorders: modules.preorders, cash: modules.cash } });
     }
     if (url.pathname === '/cloud/login' && request.method === 'POST') return await login(request, env);
     if (url.pathname === '/cloud/provision' && request.method === 'POST') {
@@ -86,6 +93,10 @@ export async function cloudResponse(request, env) {
       return reply(result.stores ? { stores: result.stores } : { error: result.error }, result.status);
     }
     const actor = await session(request, env);
+    if (url.pathname === '/cloud/access' && request.method === 'GET') return reply(await storeAccess(env, actor.storeId));
+    if (url.pathname === '/cloud/customers/history') return await customerHistoryResponse(request, env, actor);
+    if (url.pathname === '/cloud/cash/report') return await cashReportResponse(request, env, actor);
+    if (url.pathname === '/cloud/cash') return await cashResponse(request, env, actor, request.method === 'POST' ? await body(request) : undefined);
     if (url.pathname === '/cloud/tablet-number' && request.method === 'POST') {
       const input = await body(request);
       if (!/^[a-f0-9-]{36}$/.test(input?.deviceId || '')) fail(400, 'INVALID_DATA');
@@ -114,13 +125,20 @@ export async function cloudResponse(request, env) {
       const cursor = Number(url.searchParams.get('after') || 0);
       if (!Number.isSafeInteger(cursor) || cursor < 0) fail(400, 'INVALID_DATA');
       const { results } = await env.DB.prepare('SELECT seq, key, data FROM store_events WHERE store_id = ? AND seq > ? ORDER BY seq LIMIT 50').bind(actor.storeId, cursor).all();
-      const changes = results.filter((row) => !row.key.startsWith('user:') || actor.username === 'admin' || row.key === 'user:' + actor.username).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
+      const changes = results.filter(row => (url.searchParams.get('features') === 'operations-v1' || !/^(product-option:|preparation:|activity:)/.test(row.key)) && (!row.key.startsWith('user:') || actor.username === 'admin' || row.key === 'user:' + actor.username)).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
       return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === 50 });
     }
     if (request.method === 'POST' && url.pathname === '/cloud/change') {
       const input = await body(request);
       if (input?.storeId && input.storeId !== actor.storeId) fail(403, 'STORE_FORBIDDEN');
       if (!input || !validCloudValue(input.key, input.value) || !/^[a-zA-Z0-9-]{16,80}$/.test(input.id || '') || !Number.isSafeInteger(input.base) || input.base < 0) fail(400, 'INVALID_DATA');
+      if (input.key.startsWith('customer:') && !(await storeModules(env, actor.storeId)).customers) fail(403, 'MODULE_DISABLED');
+      if (input.key.startsWith('preorder:') && !(await storeModules(env, actor.storeId)).preorders) fail(403, 'MODULE_DISABLED');
+      if (input.key === 'menu' && (await storeModules(env, actor.storeId)).cash && !canManageCash(actor, await cashSettings(env, actor.storeId))) {
+        const current = await env.DB.prepare("SELECT data FROM store_records WHERE store_id = ? AND key = 'menu'").bind(actor.storeId).first();
+        const menu = current ? JSON.parse(current.data) : [];
+        if (input.value.some(product => !menu.some(previous => previous.id === product.id && previous.price === product.price))) fail(403, 'MANAGER_REQUIRED');
+      }
       if (input.key.startsWith('user:') && actor.username !== 'admin') {
         if (input.key !== 'user:' + actor.username) fail(403, 'ADMIN_REQUIRED');
         const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
@@ -132,6 +150,28 @@ export async function cloudResponse(request, env) {
       if (prior) {
         if (prior.key !== input.key || prior.data !== data) fail(409, 'INVALID_RETRY');
         return reply({ revision: prior.seq });
+      }
+      if (input.key.startsWith('preorder:')) {
+        if (input.value.delivery && input.value.status === 'completed' && input.value.delivery.status !== 'delivered') fail(400, 'DELIVERY_NOT_COMPLETED');
+        const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        const previous = existing ? JSON.parse(existing.data) : null;
+        if (previous?.delivery?.status === 'delivered' && JSON.stringify(previous.delivery) !== JSON.stringify(input.value.delivery)) fail(409, 'DELIVERY_ALREADY_COMPLETED');
+        if (previous?.delivery?.status === 'out' && (!input.value.delivery || input.value.delivery.status === 'pending' || input.value.delivery.dispatchedAt !== previous.delivery.dispatchedAt)) fail(409, 'INVALID_DELIVERY_TRANSITION');
+      }
+      if (input.key.startsWith('preorder:') && input.value.customerId) {
+        const record = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        if (!record || JSON.parse(record.data).customerId !== input.value.customerId) await requireCustomer(env, actor.storeId, input.value.customerId);
+      }
+      if (input.key === 'menu' || input.key.startsWith('product-option:')) await requireAccess(env, actor, 'menu');
+      if (['printer', 'order-settings', 'logo'].includes(input.key) || input.key.startsWith('printer:')) await requireAccess(env, actor, 'settings');
+      if (input.key.startsWith('activity:') && ['reprint', 'restore'].includes(input.value.kind)) await requireAccess(env, actor, input.value.kind);
+      if (input.key.startsWith('preparation:')) {
+        if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
+        if (!await env.DB.prepare('SELECT key FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, 'order:' + input.value.orderId).first()) fail(400, 'ORDER_NOT_SYNCED');
+        const before = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        const current = before ? JSON.parse(before.data).status : 'received';
+        const stages = ['received', 'preparing', 'ready', 'completed'];
+        if ((!before || before.revision === input.base) && stages.indexOf(input.value.status) <= stages.indexOf(current)) fail(409, 'INVALID_PREPARATION_TRANSITION');
       }
       // CAS insertion plus the trigger is a single atomic SQLite statement.
       await env.DB.prepare(`INSERT INTO store_events(store_id, mutation, key, data, actor, created_at)

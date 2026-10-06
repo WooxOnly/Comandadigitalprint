@@ -17,7 +17,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const storeName = useStoreName();
   const path = usePathname();
   const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/'))) || TABS[0];
-  const screen = currentTab.screen;
+  const moduleTitle = path === '/backups' ? 'Recuperação de dados' : path === '/preparation' ? 'Painel de preparo' : path === '/customers' ? 'Cadastro de Clientes' : path === '/preorders' ? 'Encomendas' : path === '/cash' ? 'Caixa' : path === '/cash-reports' ? 'Relatórios do Caixa' : null;
+  const screen = moduleTitle ? null : currentTab.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -31,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Pressable>
             <View style={styles.headerTitle}>
               <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
-              <Text style={styles.title}>{t(path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title)}</Text>
+              <Text style={styles.title}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
             {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
           </View>

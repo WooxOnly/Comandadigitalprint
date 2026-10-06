@@ -1,12 +1,10 @@
+const { loadTs } = require('./helpers/load-ts.cjs');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { randomUUID, randomBytes, pbkdf2Sync } = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const fs = require('node:fs');
-const ts = require('typescript');
-const exportsTS = {};
-new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/cloudSync.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(exportsTS, (name) => name === '../../shared/cloud-validation.mjs' ? require('../shared/cloud-validation.mjs') : require(name));
-const { createCloudSync } = exportsTS;
+const { createCloudSync } = loadTs('src/services/cloudSync.ts');
 async function fixture() {
   const { cloudResponse } = await import('../server/cloudflare/cloud-api.mjs');
   const { weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');

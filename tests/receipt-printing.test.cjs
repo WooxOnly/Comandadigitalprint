@@ -1,3 +1,4 @@
+const { loadTs } = require('./helpers/load-ts.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,7 +7,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const { patchPrintModule } = require('../plugins/with-receipt-paper');
 
-function loadPrinter() {
+function loadPrinter(os = 'android', sendReceipt) {
   const calls = [];
   const files = [];
   const exports = {};
@@ -15,9 +16,13 @@ function loadPrinter() {
   vm.runInNewContext(compiled, {
     exports,
     require(name) {
+      if (name.endsWith('/printerRouting')) return loadTs('src/services/printerRouting.ts');
+      if (name.endsWith('/customerReceipt')) return loadTs('src/services/customerReceipt.ts');
+      if (name.endsWith('/escposReceipt')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/escposReceipt.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, require: key => { assert.ok(key.endsWith('/translations')); const translations = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: translations }); return translations; } }); return output; }
+      if (name.endsWith('/networkPrinter')) return { sendNetworkReceipt: sendReceipt || (async () => { throw Error('Unexpected network print'); }) };
       if (name.endsWith('/translations')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output }); return output; }
       if (name.endsWith('/printJob')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/printJob.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, setTimeout, clearTimeout }); return output; }
-      if (name === 'react-native') return { Platform: { OS: 'android' } };
+      if (name === 'react-native') return { Platform: { OS: os } };
       assert.equal(name, 'expo-print');
       return { printToFileAsync: async (options) => { files.push(options); return { uri: 'file:///test-receipt.pdf' }; }, printAsync: async (options) => { calls.push(options); } };
     },
@@ -40,6 +45,54 @@ test('all receipt languages preserve product names and extras, including reprint
     if (language !== 'pt') assert.doesNotMatch(html, /COZINHA|Plaquinha|Não informado|ª metade/);
   }
   assert.match(printer.buildOrderHtml({ ...order, serviceMode: 'dine_in' }, '58', 'en'), /Order type: For here/);
+});
+
+test('network test and order share saved IP/port and bypass the system dialog', async () => {
+  const jobs = [];
+  const printer = loadPrinter('android', async (bytes, settings) => jobs.push({ bytes: Buffer.from(bytes), settings }));
+  const settings = { connection: 'wifi', address: '192.168.1.50', port: '9100', paperWidth: '80' };
+  await printer.printPrinterTest(settings, 'en');
+  assert.ok(jobs[0].bytes.includes(Buffer.from('PRINT TEST')));
+  await printer.printOrder({ plate: '9', customer: 'Ana', dailyNumber: 8, tabletLabel: '2', createdAt: '2026-10-04T12:00:00Z', items: [{ name: 'Pizza', quantity: 2, note: 'Sem cebola' }] }, settings, 'en');
+  assert.equal(jobs.length, 2);
+  assert.equal(jobs[0].settings, settings);
+  assert.equal(jobs[1].settings, settings);
+  assert.ok(jobs[1].bytes.includes(Buffer.from('Table: 9')));
+  assert.ok(jobs[1].bytes.includes(Buffer.from('Order #: 2-008')));
+  assert.ok(jobs[1].bytes.includes(Buffer.from('No onion')));
+  assert.equal(printer.calls.length, 0);
+  assert.equal(printer.files.length, 0);
+});
+
+test('network send failures propagate to the existing diagnostics and feedback flow', async () => {
+  const printer = loadPrinter('android', async () => { throw Object.assign(Error('refused'), { code: 'PRINT_NETWORK_FAILED' }); });
+  await assert.rejects(printer.printPrinterTest({ connection: 'wifi', address: '192.168.1.50', port: '9100', paperWidth: '80' }), error => error.code === 'PRINT_NETWORK_FAILED');
+  assert.equal(printer.calls.length, 0);
+});
+
+test('customer receipts share the network transport while kitchen orders remain without prices', async () => {
+  const jobs = [];
+  const sentSettings = [];
+  const printer = loadPrinter('android', async (bytes, target) => { jobs.push(Buffer.from(bytes)); sentSettings.push(target); });
+  const settings = { connection: 'wifi', address: '192.168.1.50', port: '9100', paperWidth: '80' };
+  const receipt = { id: 'customer-receipt-123456', storeName: 'Bistro', currency: 'USD', createdAt: '2026-10-05T18:00:00Z', customer: 'Ana', items: [{ id: 'pizza', name: 'Pizza', category: 'Pizzas', quantity: 2, note: '', unitPriceCents: 1250 }], totalCents: 2500, method: 'cash', tenderedCents: 3000, changeCents: 500 };
+  await printer.printCustomerReceipt(receipt, settings, 'en');
+  assert.ok(jobs[0].includes(Buffer.from('NON-FISCAL RECEIPT')));
+  assert.ok(jobs[0].includes(Buffer.from('$25.00')));
+  assert.ok(jobs[0].includes(Buffer.from('Change: $5.00')));
+  const order = { plate: '7', customer: 'Ana', createdAt: receipt.createdAt, items: receipt.items };
+  await printer.printOrder(order, settings, 'en');
+  assert.ok(jobs[1].includes(Buffer.from('KITCHEN ORDER')));
+  assert.ok(!jobs[1].includes(Buffer.from('$25.00')));
+  assert.doesNotMatch(printer.buildOrderHtml(order, '80', 'en'), /12\.50|25\.00|Total|Payment/);
+  const routed = { ...settings, connection: 'system', routing: { enabled: true, receiptDestinationId: 'receipt', destinations: [{ id: 'receipt', name: 'Recibos', address: '192.168.1.51', port: '9101', paperWidth: '58', categories: [] }] } };
+  await printer.printCustomerReceipt(receipt, routed, 'en');
+  assert.equal(sentSettings.at(-1).address, '192.168.1.51');
+  assert.equal(sentSettings.at(-1).port, '9101');
+  assert.equal(sentSettings.at(-1).paperWidth, '58');
+  assert.ok(jobs.at(-1).includes(Buffer.from('NON-FISCAL RECEIPT')));
+  assert.equal(printer.calls.length, 0);
+  assert.equal(printer.files.length, 0);
 });
 
 for (const paperWidth of ['58', '80', '88']) {

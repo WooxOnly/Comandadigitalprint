@@ -1,3 +1,4 @@
+import { useStoreModules } from '../ui/useStoreModules';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../state/AuthContext';
 import { Text, useWindowDimensions, View } from 'react-native';
@@ -12,6 +13,7 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   const { width, fontScale } = useWindowDimensions();
   const { history, isWide } = useApp();
+  const modules = useStoreModules();
   return <ScreenFrame><View>
                   <View style={[styles.hero, isWide && styles.heroWide]}>
                     <Text style={styles.heroEyebrow}>{t("BOM ATENDIMENTO COMEÇA AQUI")}</Text>
@@ -31,6 +33,7 @@ export default function HomeScreen() {
                       </Pressable>
                     ))}
                   </View>
+                  {(modules.preorders || modules.cash || modules.customers || modules.preparation) && <View style={styles.mainMenu}>{([{ key: 'preparation', label: 'Painel de preparo', hint: 'Pedidos recebidos, em preparo e prontos', path: '/preparation' }, { key: 'customers', label: 'Cadastro de Clientes', hint: 'Contatos, endereços e histórico', path: '/customers' }, { key: 'preorders', label: 'Encomendas', hint: 'Retiradas e entregas agendadas', path: '/preorders' }, { key: 'cash', label: 'Caixa', hint: 'Abertura, recebimentos e fechamento', path: '/cash' }] as const).filter(module => modules[module.key]).map(module => <Pressable accessibilityRole="button" key={module.key} onPress={() => router.navigate(module.path)} style={styles.mainMenuButton}><Text style={styles.mainMenuTitle}>{t(module.label)}</Text><Text style={styles.mainMenuHint}>{t(module.hint)}</Text></Pressable>)}</View>}
                   <View style={styles.homeFooter}><Text style={styles.homeFooterText}>{t("Seu cardápio e seu histórico ficam salvos neste aparelho.")}</Text></View>
                   <Pressable style={styles.cancelButton} onPress={logout}><Text style={styles.cancelButtonText}>{t('Sair do sistema')}</Text></Pressable>
                 </View></ScreenFrame>;

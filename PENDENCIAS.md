@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Preparação da entrega em homologação — 06/10/2026
+
+- Solicitado commit/push e publicação integral das melhorias em homologação. Pacote consolidado na branch `homologacao`; 136 testes, lint e TypeScript passaram novamente neste ambiente.
+- Configurações confirmadas: Worker/D1 `seabra-cardapio-homologacao`, perfil EAS `homologacao`, projeto Expo `matheus-sampaio-homologacao` e pacote Android próprio. Produção permanece separada.
+- Este ambiente tem acesso ao GitHub, mas Wrangler e EAS reportaram ausência de autenticação. Aplicação do esquema D1, publicação do Worker e início do APK dependem de configurar Cloudflare/Expo aqui ou usar os logins do computador do responsável. Roteiro em `AMBIENTES.md` e `MELHORIAS-OPERACIONAIS.md`.
+
 ## Entrega de 29/09/2026
 
 - Dependências corrigidas para Expo SDK 57; Expo Doctor passou nas 21 verificações.
@@ -14,8 +20,18 @@ Worker publicado: b99f8578-d90f-470f-9447-8b207b3ec789. Migração de logs aplic
 
 ## Dependências de equipamento
 
+- Em 05/10/2026, melhorias operacionais implementadas localmente em `homologacao`: disponibilidade/esgotado, favoritos e busca; Painel de preparo como quarto módulo independente no portal (16 combinações); agenda diária/semanal vinculada a Encomendas; até oito destinos de impressão por categoria e destino de recibo; permissões por usuário e histórico de atividade no portal; verificação AES-GCM e recuperação guiada de registros ausentes/da nuvem. Complementos de comanda foram excluídos conforme confirmação. Novas tabelas `store_preparation_modules`, `store_access_settings`, `store_admin_activity`; metadados versão 3 e eventos operacionais filtrados para APKs antigos. Roteiro e limites em `MELHORIAS-OPERACIONAIS.md`. Nenhum commit/deploy/build EAS nesta etapa; pendem publicação em homologação, novo APK e testes com tablets/POS.
+
+- Em 05/10/2026, nova etapa implementada localmente em `homologacao`: Cadastro de Clientes como terceiro módulo independente no portal (oito combinações), busca/edição/endereços/arquivamento/histórico; seleção opcional somente em Caixa/Encomendas; taxa/responsável/despacho/entrega; pagamentos divididos dinheiro/cartão/Zelle, gorjeta voluntária sem tax e estornos sucessivos por itens/valor/saldo com autorização, motivo e proteção atômica de saldos. Recibos e relatórios/CSV discriminam gorjeta, entrega, parcelas e devoluções. Comanda de cozinha mantém seu fluxo. Esquema reaplicável adiciona `store_customer_modules`, `cash_refunds` e views; metadados mantêm o contrato de duas flags para APKs antigos, com opção de três no novo. Nada publicado/commitado nesta etapa. Roteiro e limites em `MODULOS-ENCOMENDAS-CAIXA.md`; pendem publicação, instalação do APK e testes físicos.
+
+- Em 05/10/2026, etapas adicionais implementadas localmente: gerentes selecionados no portal, descontos USD/percentuais, cancelamentos/estornos integrais com motivo/auditoria, proteção de preços, relatórios por período/dia/produto/pagamento/fechamento e CSV, sales tax configurável por empresa inicialmente desligado. Edição de encomendas foi pulada conforme solicitado. Novas tabelas `store_cash_settings` e `cash_adjustments` no mesmo esquema reaplicável; `expo-sharing` exige novo APK. Reaplicar o esquema de homologação e publicar Worker antes de instalar/testar; nenhum commit/deploy foi solicitado nesta etapa. Detalhes em `MODULOS-ENCOMENDAS-CAIXA.md`.
+
+- Em 05/10/2026, primeira etapa de Encomendas e Caixa implementada localmente em `homologacao`: habilitação independente por empresa no portal, agendamentos de retirada/entrega, abertura por tablet, recebimentos USD em dinheiro/cartão/Zelle, entradas/saídas, fechamento e recibo não fiscal. Preço aparece no cardápio somente com Caixa habilitado; comandas continuam independentes e sem preço na impressão. Roteiro, limites e publicação em `MODULOS-ENCOMENDAS-CAIXA.md`. Requer reaplicar o esquema D1 de homologação, publicar Worker e instalar novo APK antes de habilitar os módulos; nenhum deploy realizado nesta etapa.
+
+- Em 04/10/2026, impressão POS pela rede implementada na cópia de trabalho de `homologacao`, usando os campos existentes de IP/porta e ESC/POS. Teste e reimpressão compartilham o transporte, sem reenvio automático. É necessário gerar um novo APK para incluir o módulo TCP. Equipamento informado: Milestone POS de 80 mm com USB/rede, uso pela rede. Protocolo, acentos e corte ainda precisam de validação física; roteiro em `IMPRESSAO-REDE.md`.
+
 - Validar o APK atualizado em dois tablets, incluindo rotação da tela, login e impressão física em 58/80 mm.
-- Impressão direta Bluetooth/Wi-Fi/USB ainda depende da marca/modelo e protocolo da impressora. Informação solicitada ao proprietário. Atualmente é usada a janela do sistema; não afirmar envio físico apenas por abrir essa janela. Ao integrar o transporte direto, exibir “Impressão enviada” (PT/EN/ES) após confirmação do envio.
+- Impressão direta Bluetooth/USB continua pendente. Pela rede, o código agora envia ESC/POS; a opção de sistema continua usando o driver instalado. “Impressão enviada” (PT/EN/ES) aparece após confirmação de gravação dos bytes no socket; não afirmar impressão física sem conferir o equipamento.
 - Chave privada de recuperação fora do Git em .codex/private/seabra/recuperacao-offline.txt; instruções em ACESSO-E-IDIOMAS.md.
 
 ## Preferências permanentes

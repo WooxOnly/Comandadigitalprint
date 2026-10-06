@@ -1,3 +1,5 @@
+import { useStoreModules } from '../ui/useStoreModules';
+import { formatMoney } from '../services/business';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { describeExtra } from '../../orderItems';
@@ -9,13 +11,14 @@ import { OrderWorkspace } from '../ui/OrderWorkspace';
 import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
 
 export default function OrderScreen() {
-  const { t, language } = useLanguage();
+  const { t, language, locale } = useLanguage();
+  const modules = useStoreModules();
   const [editingIdentity, setEditingIdentity] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [serviceModeError, setServiceModeError] = useState(false);
   const [plateListWidth, setPlateListWidth] = useState(0);
   const plateWidth = plateListWidth ? (plateListWidth - 9 * 2) / 10 : undefined;
-  const { plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady, isWide } = useApp();
+  const { productOptions, productSearch, setProductSearch, favoritesOnly, setFavoritesOnly, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady, isWide } = useApp();
   const currentPlate = customPlate.trim() || plate;
   const itemCount = `${items.length} ${t(items.length === 1 ? 'item' : 'itens')}`;
   const serviceLabel = serviceMode === 'dine_in' ? 'Para comer aqui' : serviceMode === 'takeout' ? 'Para levar' : null;
@@ -81,11 +84,13 @@ export default function OrderScreen() {
   </View>;
 
   const products = <View>
+    <TextInput value={productSearch} onChangeText={setProductSearch} style={styles.input} maxLength={200} placeholder={t('Buscar produto')} accessibilityLabel={t('Buscar produto')} />
+    <Pressable style={styles.noteChip} accessibilityRole="checkbox" accessibilityState={{ checked: favoritesOnly }} onPress={() => setFavoritesOnly(!favoritesOnly)}><Text style={styles.noteChipText}>{t(favoritesOnly ? 'Mostrar todos' : 'Somente favoritos')}</Text></Pressable>
     <Text style={layout.productHeading}>{t('Escolha os produtos')}</Text>
     <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{categories.map((value) => <Pressable key={value} onPress={() => setCategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === category }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, value === category && styles.selectedCategoryText]}>{t(value)}</Text></Pressable>)}</ScrollView>
     {subcategories.length > 0 && <View><Text style={styles.fieldLabel}>{t('Subgrupos')}</Text><ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>{['', ...subcategories].map(value => <Pressable key={value || 'all'} onPress={() => setSubcategory(value)} accessibilityRole="tab" accessibilityState={{ selected: value === subcategory }} style={[styles.category, value === subcategory && styles.selectedCategory]}><Text style={[styles.categoryText, value === subcategory && styles.selectedCategoryText]}>{t(value || 'Todos')}</Text></Pressable>)}</ScrollView></View>}
     {filteredMenu.length === 0 && <Text style={styles.emptyText}>{t('Nenhum produto nesta categoria.')}</Text>}
-    {filteredMenu.map((product) => <Pressable key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t('Adicionar ') + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{product.name}</Text><Text style={styles.mutedText}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
+    {filteredMenu.map((product) => <Pressable disabled={productOptions[product.id]?.available === false} key={product.id} style={({ pressed }) => [styles.productCard, pressed && styles.pressed]} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={t('Adicionar ') + product.name}><View style={styles.productInfo}><Text style={styles.cardTitle}>{productOptions[product.id]?.favorite ? '★ ' : ''}{product.name}{productOptions[product.id]?.available === false ? ` · ${t('Esgotado')}` : ''}</Text><Text style={styles.mutedText}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{product.description && <Text style={styles.mutedText}>{product.description}</Text>}{modules.cash && <Text style={styles.cardTitle}>{formatMoney(Math.round(product.price * 100), locale)}</Text>}</View><View style={styles.productArrow}><Text style={styles.productArrowText}>+</Text></View></Pressable>)}
   </View>;
 
   const catalog = <View style={layout.catalogColumn}>{identity}{!isWide && order}{products}</View>;

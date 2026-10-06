@@ -1,5 +1,9 @@
+import { storeAccess, validAccessUsers } from './operations.mjs';
+import { validAccess } from '../../shared/operations-validation.mjs';
 import { loginPage, panelPage } from './admin-panel.mjs';
-import { activeStore, DEFAULT_STORE_ID, storeId } from './stores.mjs';
+import { activeStore, DEFAULT_STORE_ID, storeId, storeModules, validModules } from './stores.mjs';
+import { cashSettings, validateManagers } from './cash-settings.mjs';
+import { validCashSettings } from '../../shared/cash-pricing.mjs';
 
 // The secret stays on the server. Monday 00:00 UTC starts a new password week.
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -131,7 +135,7 @@ export async function provisionableStores(username, password, env, now = Date.no
 export async function adminResponse(request, env, now = Date.now()) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
@@ -172,6 +176,12 @@ export async function adminResponse(request, env, now = Date.now()) {
     const selectedStoreId = url.searchParams.get('storeId') || DEFAULT_STORE_ID;
     const selectedStore = stores.find((store) => store.id === selectedStoreId) || stores[0];
     if (!selectedStore) return json({ error: 'Nenhuma loja ativa.' }, 503);
+    for (const store of stores) {
+      store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id);
+      store.cashSettings = await cashSettings(env, store.id);
+      const { results } = await env.DB.prepare("SELECT SUBSTR(key, 6) AS username FROM store_records WHERE store_id = ? AND key LIKE 'user:%' AND json_extract(data, '$.active') = 1 ORDER BY key").bind(store.id).all();
+      store.cashUsers = results.map(row => row.username);
+    }
     return htmlResponse(panelPage(nonce, stores, selectedStore.id), nonce, 200, { 'Set-Cookie': await issueSession(env, now) });
   }
 
@@ -214,24 +224,44 @@ export async function adminResponse(request, env, now = Date.now()) {
     if (request.method === 'GET') {
       try {
         const { results } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
+        for (const store of results) { store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id); store.cashSettings = await cashSettings(env, store.id); }
         return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
       } catch { return json({ error: 'Não foi possível consultar as lojas.' }, 503); }
     }
     if (!sameOrigin) return json({ error: 'Origem inválida.' }, 403);
-    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 1024) return json({ error: 'Formulário inválido.' }, 400);
+    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 4096) return json({ error: 'Formulário inválido.' }, 400);
     try {
       const raw = await request.text();
-      if (encode(raw).length > 1024) return json({ error: 'Formulário muito grande.' }, 413);
+      if (encode(raw).length > 4096) return json({ error: 'Formulário muito grande.' }, 413);
       let body;
       try { body = JSON.parse(raw); } catch { return json({ error: 'Formulário inválido.' }, 400); }
       const name = typeof body?.name === 'string' ? body.name.trim() : '';
       if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return json({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
+      if (body.modules !== undefined && !validModules(body.modules)) return json({ error: 'Módulos inválidos.' }, 400);
+      if (body.access !== undefined && !validAccess(body.access)) return json({ error: 'Permissões inválidas.' }, 400);
+      if (body.cashSettings !== undefined && !validCashSettings(body.cashSettings)) return json({ error: 'Configuração de caixa inválida.' }, 400);
+      if (request.method === 'POST' && body.cashSettings?.managers.length) return json({ error: 'Cadastre os usuários da empresa antes de escolher gerentes.' }, 400);
+      if (request.method === 'POST' && body.access && Object.values(body.access).some(names => names?.length)) return json({ error: 'Cadastre usuários antes de conceder permissões.' }, 400);
+      const saveModules = async id => {
+        if (body.modules !== undefined) await env.DB.prepare('INSERT INTO store_modules(store_id, preorders, cash) VALUES(?, ?, ?) ON CONFLICT(store_id) DO UPDATE SET preorders = excluded.preorders, cash = excluded.cash').bind(id, Number(body.modules.preorders), Number(body.modules.cash)).run();
+        if (body.modules?.preparation !== undefined) await env.DB.prepare('INSERT INTO store_preparation_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.preparation)).run();
+        if (body.access !== undefined) await env.DB.prepare('INSERT INTO store_access_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.access)).run();
+        await env.DB.prepare('INSERT INTO store_admin_activity(store_id, created_at, actor, action) VALUES(?, ?, ?, ?)').bind(id, new Date().toISOString(), 'owner', 'Empresa, módulos e permissões atualizados pelo portal').run();
+        if (body.modules?.customers !== undefined) await env.DB.prepare('INSERT INTO store_customer_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.customers)).run();
+        if (body.cashSettings !== undefined) await env.DB.prepare('INSERT INTO store_cash_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.cashSettings)).run();
+      };
       if (request.method === 'PATCH') {
         if (typeof body?.id !== 'string') return json({ error: 'Identificador inválido.' }, 400);
         try { storeId(body.id); } catch { return json({ error: 'Identificador inválido.' }, 400); }
+        if (body.cashSettings !== undefined && !await validateManagers(env, body.id, body.cashSettings)) return json({ error: 'Escolha gerentes entre os usuários ativos desta empresa.' }, 400);
+        if (body.access && !await validAccessUsers(env, body.id, body.access)) return json({ error: 'Escolha usuários ativos desta empresa.' }, 400);
         const result = await env.DB.prepare('UPDATE stores SET name = ? WHERE id = ? AND active = 1').bind(name, body.id).run();
         if (result.meta?.changes !== 1) return json({ error: 'Loja não encontrada.' }, 404);
         const updated = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.id = ?').bind(body.id).first();
+        await saveModules(body.id);
+        if (body.modules !== undefined) updated.modules = await storeModules(env, body.id);
+        if (body.cashSettings !== undefined) updated.cashSettings = await cashSettings(env, body.id);
+        if (body.access !== undefined) updated.access = await storeAccess(env, body.id);
         return json(updated);
       }
       const stem = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36).replace(/-+$/g, '') || 'loja';
@@ -242,11 +272,33 @@ export async function adminResponse(request, env, now = Date.now()) {
         const result = await env.DB.prepare('INSERT OR IGNORE INTO stores(id, name, active) VALUES(?, ?, 1)').bind(id, name).run();
         if (result.meta?.changes === 1) {
           const created = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.id = ?').bind(id).first();
+          await saveModules(id);
+          if (body.modules !== undefined) created.modules = await storeModules(env, id);
+          if (body.cashSettings !== undefined) created.cashSettings = await cashSettings(env, id);
+          if (body.access !== undefined) created.access = await storeAccess(env, id);
           return json(created, 201, { 'Set-Cookie': await issueSession(env, now) });
         }
       }
       return json({ error: 'Não foi possível gerar um identificador único.' }, 409);
     } catch { return json({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
+  }
+
+  if (pathname === '/admin/activity' && request.method === 'GET') {
+    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    try {
+    const id = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
+    await activeStore(env, id);
+    const limit = 100, before = url.searchParams.get('before') || '9999', { results } = await env.DB.prepare(`SELECT seq, created_at, actor, CASE WHEN key LIKE 'activity:%' THEN json_extract(data, '$.kind') || ': ' || json_extract(data, '$.target') || ' · ' || json_extract(data, '$.details') WHEN key LIKE 'product-option:%' THEN key || ' · disponível=' || json_extract(data, '$.available') || ' · favorito=' || json_extract(data, '$.favorite') WHEN key LIKE 'preparation:%' THEN key || ': ' || json_extract(data, '$.status') ELSE key END AS action FROM store_events WHERE store_id = ? AND created_at < ? AND (key = 'menu' OR key = 'logo' OR key = 'order-settings' OR key LIKE 'printer:%' OR key LIKE 'product-option:%' OR key LIKE 'preparation:%' OR key LIKE 'activity:%')
+      UNION ALL SELECT seq, created_at, actor, action FROM store_admin_activity WHERE store_id = ? AND created_at < ? ORDER BY created_at DESC, seq DESC LIMIT 101`).bind(id, before, id, before).all();
+    // Include every event sharing the page boundary timestamp: pagination does
+    // not silently lose operations that occur in the same millisecond.
+    const boundary = results[limit - 1]?.created_at;
+    if (results.length > limit && boundary) {
+      const { results: ties } = await env.DB.prepare(`SELECT seq, created_at, actor, CASE WHEN key LIKE 'activity:%' THEN json_extract(data, '$.kind') || ': ' || json_extract(data, '$.target') || ' · ' || json_extract(data, '$.details') WHEN key LIKE 'product-option:%' THEN key || ' · disponível=' || json_extract(data, '$.available') || ' · favorito=' || json_extract(data, '$.favorite') WHEN key LIKE 'preparation:%' THEN key || ': ' || json_extract(data, '$.status') ELSE key END AS action FROM store_events WHERE store_id = ? AND created_at = ? AND (key = 'menu' OR key = 'logo' OR key = 'order-settings' OR key LIKE 'printer:%' OR key LIKE 'product-option:%' OR key LIKE 'preparation:%' OR key LIKE 'activity:%') UNION ALL SELECT seq, created_at, actor, action FROM store_admin_activity WHERE store_id = ? AND created_at = ? ORDER BY seq DESC`).bind(id, boundary, id, boundary).all();
+      return json({ events: [...results.filter(row => row.created_at > boundary), ...ties], before: boundary });
+    }
+    return json({ events: results, before: null });
+    } catch (error) { return json({ error: 'Não foi possível consultar o histórico.' }, error.status || 503); }
   }
 
   if (pathname === '/admin/logs' && request.method === 'GET') {

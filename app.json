@@ -10,6 +10,7 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "./plugins/with-receipt-paper",
+      "./plugins/with-network-printer",
       [
         "expo-image-picker",
         {
@@ -28,10 +29,14 @@
         }
       ],
       "expo-secure-store",
-      "react-native-quick-crypto"
+      "react-native-quick-crypto",
+      "expo-sharing"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "O BistroHub usa a rede local para enviar comandas à impressora configurada."
+      }
     },
     "android": {
       "package": "com.wooxonly.comandadigitalprint",
