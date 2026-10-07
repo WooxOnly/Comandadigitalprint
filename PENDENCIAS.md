@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Execução no computador com logins existentes — 07/10/2026
+
+- Usuário autorizou usar as sessões salvas no computador. O ambiente atual está em nuvem, sem disco do computador montado e sem sessão Wrangler/EAS. Nenhuma senha/token foi exibida ou copiada.
+- Comando `npm run publicar:homologacao` preparado para execução no computador autenticado: valida isolamento, confere ambos os logins, faz/verifica backup D1, aplica esquema, publica Worker, verifica saúde e solicita APK próprio sem aguardar build. Usa Node.js 24; instruções em `AMBIENTES.md`. A opção `-- --check` verifica a separação sem publicação.
+- Publicação remota e novo APK continuam pendentes de execução com os logins acessíveis. A validação GitHub do commit anterior terminou com sucesso.
+
 ## Preparação da entrega em homologação — 06/10/2026
 
 - Solicitado commit/push e publicação integral das melhorias em homologação. Pacote consolidado na branch `homologacao`; 136 testes, lint e TypeScript passaram novamente neste ambiente.
