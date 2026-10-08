@@ -19,3 +19,73 @@ jobs:
       - run: npx expo lint
       - run: npx tsc --noEmit
       - run: node --test tests/*.test.cjs tests/*.test.mjs
+
+  publish-homologacao:
+    name: Publicar homologação e solicitar APK
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-publish
+      cancel-in-progress: false
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Conferir autenticação configurada
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          node --input-type=module - <<'NODE'
+          const required = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'EXPO_TOKEN'];
+          const missing = required.filter(name => !process.env[name]?.trim());
+          if (missing.length) {
+            console.error('Cadastre estes GitHub Actions Secrets antes de publicar: ' + missing.join(', '));
+            process.exit(1);
+          }
+          console.log('As três credenciais estão configuradas; seus valores não serão exibidos.');
+          NODE
+      - run: npm ci
+      - name: Selecionar o commit validado e conferir destinos
+        run: |
+          git switch --force-create homologacao "$GITHUB_SHA"
+          npm run publicar:homologacao -- --check
+      - name: Registrar ponto de recuperação antes da migração
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json
+      - name: Publicar servidor e solicitar APK exclusivo
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npm run publicar:homologacao 2>&1 | tee "$RUNNER_TEMP/bistro-homologacao-delivery.log"
+      - name: Mostrar links da entrega
+        run: |
+          node --input-type=module - <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const output = readFileSync(process.env.RUNNER_TEMP + '/bistro-homologacao-delivery.log', 'utf8');
+          const builds = [...new Set(output.match(/https:\/\/expo\.dev\/accounts\/onlybeones-team\/projects\/matheus-sampaio-homologacao\/builds\/[a-f0-9-]{36}/g) || [])];
+          const base = 'https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev';
+          const lines = ['# Homologação', '', 'Commit: ' + process.env.GITHUB_SHA, '',
+            '- Administrativo: ' + base + '/admin', '- Cadastro de gestores: ' + base + '/admin/gestores',
+            '- Painel do Gestor: ' + base + '/gestor',
+            ...builds.map(url => '- Build do APK: ' + url), '',
+            'O servidor foi publicado e a build foi solicitada. O download do APK fica disponível quando o Expo concluir a build.'];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          NODE

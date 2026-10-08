@@ -3,8 +3,9 @@
 ## Entrega em homologação solicitada — 08/10/2026
 
 - Usuário autorizou registrar e enviar todas as melhorias para `homologacao`, publicar o Worker/D1 de homologação e gerar APK exclusivo para testar hoje. Essa autorização substitui, para esta entrega, a preferência anterior de apenas acumular as mudanças.
-- Pacote revisado com 194 testes aprovados, matriz de 432 combinações de telas/idiomas/dimensões e exportação Android exclusiva de homologação. Lint, TypeScript e validação dos destinos conferidos novamente antes do envio.
-- Entrega em andamento: GitHub acessível; autenticação de Cloudflare e Expo ainda precisa ser disponibilizada. Nunca registrar os valores das credenciais no Git ou na conversa. A conta, o Worker/D1 e o projeto Expo devem continuar exclusivos dos destinos já configurados para homologação.
+- Pacote enviado à branch `homologacao` no commit `27830026019fe05afd34213072d007553cffe16e`. GitHub Actions aprovou instalação, lint, tipos e testes. Inclui 194 testes, matriz de 432 combinações de telas/idiomas/dimensões e exportação Android exclusiva de homologação.
+- Entrega em andamento: autenticação de Cloudflare e Expo ainda precisa ser disponibilizada. Caminho em nuvem preparado no GitHub Actions, com três segredos e execução somente após push em `homologacao` e validações aprovadas. Instruções e alternativa pelo computador em `AMBIENTES.md`. Nunca registrar os valores das credenciais no Git ou na conversa.
+- A entrega usa o commit validado, registra recuperação D1, confere backup e destinos, publica o Worker de homologação e solicita APK no projeto Expo próprio. `main` e pull requests executam apenas validações; nenhuma entrega de produção foi iniciada.
 - O resultado de commit/push, validação remota, publicação e build será registrado ao concluir as etapas correspondentes. Os testes físicos de tablet/POS permanecem a cargo da validação desta versão entregue.
 
 ## Refinamento de idiomas e dimensões — 08/10/2026

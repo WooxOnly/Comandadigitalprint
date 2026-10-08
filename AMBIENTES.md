@@ -11,11 +11,31 @@ Os aplicativos podem coexistir no mesmo tablet e usam armazenamento local e serv
 
 Fluxo: desenvolver em `homologacao`, validar e publicar o Worker com `npx wrangler@4 deploy --config server/cloudflare/wrangler.homologacao.jsonc`; iniciar o APK com `npx eas-cli@latest build --platform android --profile homologacao --non-interactive --no-wait`. Após aprovação, mesclar a branch em `main`, validar, publicar o Worker com `npx wrangler@4 deploy --config server/cloudflare/wrangler.jsonc` e iniciar o APK de produção com o perfil `preview`. Aplicar novas migrações D1 separadamente em cada ambiente antes de publicar o Worker correspondente.
 
-O endereço do servidor é fixado em cada perfil de `eas.json`, sem segredo embutido no aplicativo. Os builds e deploys ainda são iniciados por comando; o GitHub Actions executa apenas validações. Uma automação futura de publicação precisa de credenciais próprias da Cloudflare e do Expo no GitHub Secrets.
+O endereço do servidor é fixado em cada perfil de `eas.json`, sem segredo embutido no aplicativo. O GitHub Actions valida ambas as branches. Após push em `homologacao` e validação aprovada, também pode publicar o servidor de homologação e solicitar o APK usando as credenciais abaixo. Em `main` e em pull requests, o fluxo executa somente as validações.
+
+## Autenticar e entregar pela nuvem do GitHub
+
+No [repositório](https://github.com/WooxOnly/Comandadigitalprint), abrir **Settings → Secrets and variables → Actions → New repository secret** e cadastrar:
+
+| Nome exato | Valor a cadastrar no GitHub |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Token da conta que contém o Worker/D1 de homologação. Usar o modelo **Edit Cloudflare Workers** e incluir **Account → D1 → Edit**, restrito à conta correta. |
+| `CLOUDFLARE_ACCOUNT_ID` | ID dessa conta Cloudflare, consultado no painel da conta. |
+| `EXPO_TOKEN` | Token de acesso de um usuário/robô autorizado no projeto `@onlybeones-team/matheus-sampaio-homologacao`. |
+
+Criar o token no [Cloudflare](https://dash.cloudflare.com/profile/api-tokens) e nas configurações de **Access tokens** do [Expo](https://expo.dev). As credenciais são inseridas no GitHub; não colocar seus valores no código, arquivos de configuração ou na conversa. Fontes: [Cloudflare/GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/), [permissões D1](https://developers.cloudflare.com/fundamentals/api/reference/permissions/) e [Expo/programmatic access](https://docs.expo.dev/accounts/programmatic-access/).
+
+O job **Publicar homologação e solicitar APK** usa exatamente o commit validado, confere os destinos, registra um bookmark do D1 Time Travel, verifica ambos os logins, exporta e confere o backup, aplica o esquema, publica/verifica o Worker e solicita a build no projeto de homologação. Entregas são serializadas. A ausência de segredos ou uma falha anterior impede as etapas seguintes; o job informa os nomes faltantes sem exibir valores.
+
+Quando os segredos forem cadastrados depois de uma tentativa, abrir **Actions → Validate app and server → execução de homologacao → Re-run failed jobs**. O resumo e os logs mostram os links do servidor e da build. O APK só fica disponível após a conclusão da build no Expo.
+
+O backup SQL exportado permanece apenas no runner temporário, fora do Git. Nenhum arquivo com dados da empresa é publicado como artifact neste repositório. Para recuperação, usar o bookmark registrado nos logs com o [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/), dentro da retenção da conta (7 dias no plano gratuito; 30 no pago). Uma restauração exige autenticação e deve considerar as operações posteriores ao ponto selecionado.
+
+Se o projeto Expo ainda não tiver credenciais de assinatura Android, uma primeira configuração interativa pode ser exigida: executar `npx eas-cli@latest build --platform android --profile homologacao --no-wait` em um computador autenticado, sempre conferindo o projeto de homologação. A [documentação de builds em CI](https://docs.expo.dev/build/building-on-ci/) exige essa configuração prévia para execuções não interativas.
 
 ## Publicar com os logins salvos no computador
 
-O ambiente em nuvem desta conversa não acessa automaticamente o disco ou as sessões do computador pessoal. Quando Wrangler e EAS já estiverem autenticados nesse computador, abrir o terminal na pasta do projeto e executar (Node.js 24 ou mais recente):
+O ambiente em nuvem desta conversa não acessa automaticamente o disco ou as sessões do computador pessoal. Como alternativa à entrega pelo GitHub, quando Wrangler e EAS já estiverem autenticados nesse computador, abrir o terminal na pasta do projeto e executar (Node.js 24 ou mais recente):
 
 ```sh
 git switch homologacao
