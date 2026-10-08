@@ -52,7 +52,7 @@ export default function PrinterScreen() {
                     <Text style={styles.settingsIntro}>{t("Escolha a conexão e a largura do papel para suas comandas.")}</Text>
                     <Text style={styles.label}>{t("Método de conexão")}</Text>
                     <View style={styles.connectionList}>
-                      {CONNECTIONS.map((option) => <Pressable key={option.value} disabled={!canSettings} onPress={() => updatePrinterSettings({ connection: option.value })} accessibilityRole="radio" accessibilityState={{ checked: option.value === printerSettings.connection }} style={[styles.connectionOption, option.value === printerSettings.connection && styles.selectedConnection]}>
+                      {CONNECTIONS.map((option) => <Pressable key={option.value} disabled={!canSettings} onPress={() => updatePrinterSettings({ connection: option.value, ...(option.value !== 'wifi' ? { automatic: false } : {}) })} accessibilityRole="radio" accessibilityState={{ checked: option.value === printerSettings.connection }} style={[styles.connectionOption, option.value === printerSettings.connection && styles.selectedConnection]}>
                         <Text style={[styles.connectionText, option.value === printerSettings.connection && styles.selectedConnectionText]}>{t(option.label)}</Text>
                         {option.value === printerSettings.connection && <Text style={styles.selectedConnectionText}>✓</Text>}
                       </Pressable>)}
@@ -67,6 +67,8 @@ export default function PrinterScreen() {
                     <Text style={styles.fieldLabel}>{t("Largura do papel")}</Text>
                     <View style={styles.paperOptions}>{(['58', '80', '88'] as const).map((width) => <Pressable key={width} disabled={!canSettings} onPress={() => updatePrinterSettings({ paperWidth: width })} accessibilityRole="radio" accessibilityState={{ checked: width === printerSettings.paperWidth }} style={[styles.paperOption, width === printerSettings.paperWidth && styles.selectedConnection]}><Text style={[styles.connectionText, width === printerSettings.paperWidth && styles.selectedConnectionText]}>{width} mm</Text></Pressable>)}</View>
                     <PrinterDestinations />
+                    <View style={styles.orderLine}><Text style={[styles.cardTitle, styles.productInfo]}>{t('Imprimir automaticamente ao enviar')}</Text><Switch value={printerSettings.automatic === true} disabled={!canSettings || printerSettings.connection !== 'wifi'} onValueChange={(automatic) => updatePrinterSettings({ automatic })} accessibilityLabel={t('Imprimir automaticamente ao enviar')} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
+                    <Text style={styles.helperText}>{t('Opcional por tablet, somente pela rede. Salve as configurações. O pedido é salvo antes da impressão; em falha, a prévia permite tentar novamente sem reenviar os destinos confirmados.')}</Text>
                     {!canSettings && <Text style={styles.helperText}>{t('Usuário sem permissão para esta ação.')}</Text>}
                     <Pressable disabled={!canSettings} style={styles.sendButton} onPress={savePrinterSettings}><Text style={styles.sendButtonText}>{t("Salvar configurações")}</Text></Pressable>
                     <Pressable disabled={!canSettings} style={styles.secondaryWideButton} onPress={testPrinter}><Text style={styles.secondaryButtonText}>{t("Testar impressora")}</Text></Pressable>

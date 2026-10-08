@@ -22,6 +22,14 @@ O IP é o da impressora, não o do servidor Cloudflare. Uma reserva DHCP no
 roteador evita que ele mude. Caso o envio falhe ou demore, conferir se o pedido
 saiu antes de reimprimir pelo histórico.
 
+## Impressão automática opcional — 08/10/2026
+
+Em **Ajustes → Impressora**, com Wi-Fi / rede configurada, habilitar **Imprimir automaticamente ao enviar** e salvar. Começa desligada por tablet. Só comandas novas usam o envio automático; teste, reimpressão e recibo de Caixa conservam suas ações próprias.
+
+A comanda é salva antes de imprimir. Um bloqueio cobre validação, atividade e todos os destinos, impedindo impressão duplicada por toques simultâneos. Com impressão automática em andamento, a próxima emissão aguarda e conserva o rascunho. Não há fila automática para reiniciar o app nem reenvio após falha. Em falha, a prévia abre para confirmação manual e pula os destinos já confirmados nessa tentativa. Uma reimpressão nova pelo histórico reinicia essa confirmação, como antes; confira o papel antes de repetir.
+
+Trocar para conexão do sistema/Bluetooth/USB desliga essa opção. A janela do driver nunca é acionada automaticamente. A opção não depende de Caixa, Encomendas, Clientes ou Preparo e não muda o fluxo das empresas que a deixam desligada.
+
 ## Protocolo e limites de verificação
 
 O usuário informou impressora POS Milestone, 80 mm, USB e rede, com uso pela

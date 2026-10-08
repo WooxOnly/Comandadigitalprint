@@ -3,6 +3,7 @@ import { adminResponse } from './admin-auth.mjs';
 import { cloudResponse } from './cloud-api.mjs';
 import { isValidMenu, MAX_BODY_BYTES } from '../../shared/menu-validation.mjs';
 import { activeStore, DEFAULT_STORE_ID } from './stores.mjs';
+import { managerResponse } from './manager-api.mjs';
 
 const headers = {
   'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store',
@@ -31,6 +32,8 @@ async function readBody(request) {
 
 export default {
   async fetch(request, env) {
+    const manager = await managerResponse(request, env);
+    if (manager) return manager;
     const cloud = await cloudResponse(request, env);
     if (cloud) return cloud;
     const authentication = await adminResponse(request, env);

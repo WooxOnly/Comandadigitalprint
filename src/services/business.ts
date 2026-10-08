@@ -43,4 +43,4 @@ export function businessTotal(items: BusinessItem[]) {
   return total;
 }
 
-export type Preparation = { orderId: string; status: 'received' | 'preparing' | 'ready' | 'completed'; updatedAt: string };
+export type Preparation = { orderId: string; status: 'received' | 'preparing' | 'ready' | 'completed'; updatedAt: string; startedAt?: string; readyAt?: string; completedAt?: string; startedBy?: string; readyBy?: string; completedBy?: string };

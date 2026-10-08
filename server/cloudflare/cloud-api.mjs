@@ -1,4 +1,5 @@
 import { storeAccess, requireAccess } from './operations.mjs';
+import { PREPARATION_TIMES, PREPARATION_ACTORS } from '../../shared/preparation-times.mjs';
 import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
 import { activeStore, DEFAULT_STORE_ID, storeModules } from './stores.mjs';
 import { customerHistoryResponse, requireCustomer } from './customer-api.mjs';
@@ -167,11 +168,22 @@ export async function cloudResponse(request, env) {
       if (input.key.startsWith('activity:') && ['reprint', 'restore'].includes(input.value.kind)) await requireAccess(env, actor, input.value.kind);
       if (input.key.startsWith('preparation:')) {
         if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
-        if (!await env.DB.prepare('SELECT key FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, 'order:' + input.value.orderId).first()) fail(400, 'ORDER_NOT_SYNCED');
+        const source = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, 'order:' + input.value.orderId).first();
+        if (!source) fail(400, 'ORDER_NOT_SYNCED');
+        if (Date.parse(input.value.updatedAt) < Date.parse(JSON.parse(source.data).createdAt) || PREPARATION_TIMES.some(field => input.value[field] && Date.parse(input.value[field]) < Date.parse(JSON.parse(source.data).createdAt))) fail(400, 'INVALID_PREPARATION_TIME');
         const before = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
         const current = before ? JSON.parse(before.data).status : 'received';
         const stages = ['received', 'preparing', 'ready', 'completed'];
         if ((!before || before.revision === input.base) && stages.indexOf(input.value.status) <= stages.indexOf(current)) fail(409, 'INVALID_PREPARATION_TRANSITION');
+        if (before && before.revision === input.base && Date.parse(input.value.updatedAt) < Date.parse(JSON.parse(before.data).updatedAt)) fail(409, 'INVALID_PREPARATION_TIME');
+        if (before && before.revision === input.base && PREPARATION_TIMES.some(field => JSON.parse(before.data)[field] && JSON.parse(before.data)[field] !== input.value[field])) fail(409, 'PREPARATION_TIME_CHANGED');
+        if (before && before.revision === input.base && PREPARATION_ACTORS.some(field => JSON.parse(before.data)[field] && JSON.parse(before.data)[field] !== input.value[field])) fail(409, 'PREPARATION_ACTOR_CHANGED');
+        if (before && before.revision === input.base && PREPARATION_ACTORS.some((field, index) => !JSON.parse(before.data)[field] && JSON.parse(before.data)[PREPARATION_TIMES[index]] && input.value[field])) fail(409, 'PREPARATION_ACTOR_CHANGED');
+        for (const username of new Set(PREPARATION_ACTORS.map(field => input.value[field]).filter(Boolean))) {
+          if (username === 'admin') continue;
+          const user = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, 'user:' + username).first();
+          if (!user) fail(400, 'INVALID_PREPARATION_ACTOR');
+        }
       }
       // CAS insertion plus the trigger is a single atomic SQLite statement.
       await env.DB.prepare(`INSERT INTO store_events(store_id, mutation, key, data, actor, created_at)

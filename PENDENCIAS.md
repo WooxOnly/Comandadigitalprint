@@ -1,5 +1,46 @@
 # Pendências e preferências
 
+## Entrega em homologação solicitada — 08/10/2026
+
+- Usuário autorizou registrar e enviar todas as melhorias para `homologacao`, publicar o Worker/D1 de homologação e gerar APK exclusivo para testar hoje. Essa autorização substitui, para esta entrega, a preferência anterior de apenas acumular as mudanças.
+- Pacote revisado com 194 testes aprovados, matriz de 432 combinações de telas/idiomas/dimensões e exportação Android exclusiva de homologação. Lint, TypeScript e validação dos destinos conferidos novamente antes do envio.
+- Entrega em andamento: GitHub acessível; autenticação de Cloudflare e Expo ainda precisa ser disponibilizada. Nunca registrar os valores das credenciais no Git ou na conversa. A conta, o Worker/D1 e o projeto Expo devem continuar exclusivos dos destinos já configurados para homologação.
+- O resultado de commit/push, validação remota, publicação e build será registrado ao concluir as etapas correspondentes. Os testes físicos de tablet/POS permanecem a cargo da validação desta versão entregue.
+
+## Refinamento de idiomas e dimensões — 08/10/2026
+
+- Regra permanente em `AGENTS.md`: todo recurso do administrativo, gestor e APK deve contemplar PT-BR/EN/ES, com revisão de escrita, acentuação, pontuação e verificação de retrato/paisagem.
+- Administrativo e cadastro de gestores traduzidos; idioma do proprietário persistente no D1, separado das preferências dos gestores/tablets. APK ganha escolha no login, mensagens faltantes, imposto/percentuais e acessibilidade localizados.
+- Corrigida largura com nomes longos de clientes; prévia de impressão comporta oito destinos roláveis e ações em telas baixas; cabeçalho administrativo adaptado a telas estreitas/baixas.
+- 194 testes aprovados (184 CJS e 10 MJS), lint/TypeScript e 432 combinações de telas, três idiomas e seis dimensões em Chromium. Componentes reais do APK renderizados por React Native Web com serviços sintéticos; teclado/fonte Android, som, impressão e autonomia aguardam equipamento físico.
+- Nova exportação Android local aprovada, áudio incluído, URL exclusiva de homologação verificada; Worker empacotado localmente em homologação. Sem commit/push/deploy/EAS nesta rodada.
+- Antes da entrega, reaplicar esquema com `manager_user_preferences` e `panel_preferences`, além dos módulos anteriores. Testes físicos e recomendação de tablet 10–11"/8 GB documentados em `REFINAMENTO-IDIOMAS-TABLETS.md`.
+
+## Conclusão do desenvolvimento combinado — 08/10/2026
+
+- Prioridade atual do usuário: código e telas do escopo combinado prontos até 09/10; publicação e teste com tablets/POS ficam para outra etapa. Continuar acumulando alterações em `homologacao`, sem commit/push nesta rodada.
+- Concluída a área Vendas e caixa no Painel do Gestor: indicadores financeiros, ticket médio, pagamentos, recortes por hora/semana/dia/mês, lojas, produtos/categorias, operadores e fechamentos. Usa os mesmos cálculos do tablet; só lojas autorizadas com Caixa habilitado entram.
+- Concluídos produtos/categorias mais pedidos e produtividade por operador no painel de produção. Tablet registra quem iniciou, marcou pronto e finalizou, inclusive offline; histórico sem operador/tempo continua identificado como desconhecido. Não altera os quatro módulos independentes.
+- Concluída impressão automática opcional por tablet, desligada por padrão e somente pela rede: salva antes de enviar, bloqueia duplicação, abre prévia em falha e permite repetição explícita sem reenviar destinos confirmados.
+- Concluídos PT/EN/ES no login e nas áreas de produção/vendas do Painel do Gestor, com preferência por conta persistente em outros navegadores, preservação de filtros e formatação local de datas/números/USD. Termos de restaurantes pesquisados e documentados em `IDIOMAS-PAINEL-GESTOR.md`, com intervalos das métricas explícitos.
+- Telas e fluxos já existentes de Caixa, Encomendas/agenda/entregas, Clientes, permissões, favoritos/esgotados e recuperação permanecem implementados. Inventário e limites em `DESENVOLVIMENTO-08-10.md` e `PREPARO-PAINEL-GESTOR.md`.
+- Verificação mais recente de 08/10: 194 testes, lint/TypeScript, fluxos reais em Chromium incluindo PT/EN/ES, persistência e troca de filtros, matriz de dimensões, nova exportação Android e empacotamento local do Worker aprovados. Detalhes da ampliação mais recente na seção anterior.
+- A ampliação de idiomas adiciona `manager_user_preferences` e `panel_preferences` ao esquema reaplicável já usado na entrega; deve ser aplicado antes do Worker atualizado. Não adiciona dependência nativa. Avisos com aplicativo fechado/em segundo plano e versão própria do gestor para celular permanecem fora da primeira versão combinada.
+
+## Métricas de TMA e volume — 07/10/2026
+
+- Painel do Gestor ampliado localmente com TMA por intervalo explícito (inicialmente emissão até finalização), gráficos/tabelas por hora, dia da semana, dia e mês, médias de volume, mês completo e consultas até 366 dias.
+- Fusos e horário de verão considerados, com dias de 23/25 horas e normalização por quantidade de dias no período. Pedidos sem horários não viram amostras de duração zero.
+- Totais agregados no D1 sem o limite anterior de 5.000 pedidos; detalhamento dos 100 mais recentes separado dos cálculos. Acesso continua limitado às lojas vinculadas e com Preparo habilitado.
+- 162 testes, lint/TypeScript e fluxos reais no navegador verificados. Detalhes em `PREPARO-PAINEL-GESTOR.md`. Alterações acumuladas sem commit/deploy; publicação e APK da etapa anterior continuam pendentes dos acessos Cloudflare/Expo.
+
+## Preparo e Painel do Gestor — 07/10/2026
+
+- Primeira etapa implementada localmente em `homologacao`: Preparo opcional liberado no administrativo existente, horários por etapa e aviso visual/som opcional no tablet, com consulta ativa a cada cinco segundos. Os quatro módulos continuam independentes.
+- Cadastro do cliente/grupo e dos usuários gestores exclusivamente no administrativo (`/admin/gestores`), com uma ou várias lojas autorizadas. Portal `/gestor` inicia pelas métricas de produção habilitadas por loja, com isolamento, médias baseadas nos tempos registrados e revogação de acesso.
+- Roteiro, limites e verificação em `PREPARO-PAINEL-GESTOR.md`. Migração adiciona tabelas de gestores; áudio exige APK novo em todos os tablets de preparo. Métricas de vendas, produtos/categorias e operadores estavam previstas e foram concluídas na ampliação de 08/10.
+- Alterações ainda sem commit/push/deploy/EAS nesta etapa, conforme a preferência de acumular até solicitar commit. Logins remotos continuam indisponíveis neste ambiente; publicação e teste com tablets/POS pendentes.
+
 ## Execução no computador com logins existentes — 07/10/2026
 
 - Usuário autorizou usar as sessões salvas no computador. O ambiente atual está em nuvem, sem disco do computador montado e sem sessão Wrangler/EAS. Nenhuma senha/token foi exibida ou copiada.
@@ -42,6 +83,8 @@ Worker publicado: b99f8578-d90f-470f-9447-8b207b3ec789. Migração de logs aplic
 
 ## Preferências permanentes
 
+- Equipamento inicial: priorizar custo menor. Os 8 GB de RAM sugeridos eram margem de desempenho, não requisito mínimo medido. Alternativa de início: Android de 10–11", 4 GB de RAM física/64 GB, com Galaxy Tab A9+ de caixa aberta como recomendação econômica, sujeito ao teste do APK e do turno completo. Opções e preços consultados em `REFINAMENTO-IDIOMAS-TABLETS.md`.
+- Sempre entregar PT-BR, inglês e espanhol no administrativo, gestor e APK, revisando escrita/acentuação/pontuação; validar dimensões e orientação e registrar o que ainda depende de aparelho físico.
 - Fazer apenas mudanças solicitadas, sem refatorações extras; executar verificações adequadas e não repeti-las sem razão concreta.
 - Ao solicitar commit: commit/push, nuvem aplicável e início do build Expo. Confirmar aceitação e fornecer links sem aguardar o build. Sem solicitação, acumular alterações locais.
 - Comunicar o andamento de forma curta e frequente.

@@ -1,3 +1,4 @@
+import { validPreparationTimes } from './preparation-times.mjs';
 const text = (value, max) => typeof value === 'string' && value.length <= max;
 export const ACCESS_ACTIONS = ['menu', 'settings', 'reprint', 'restore'];
 export const DEFAULT_ACCESS = Object.freeze({ menu: null, settings: null, reprint: null, restore: null });
@@ -11,7 +12,7 @@ export function validProductOption(value) {
   return value && text(value.productId, 120) && value.productId.trim() && typeof value.available === 'boolean' && typeof value.favorite === 'boolean';
 }
 export function validPreparation(value) {
-  return value && text(value.orderId, 160) && value.orderId.trim() && ['received', 'preparing', 'ready', 'completed'].includes(value.status) && text(value.updatedAt, 40) && Number.isFinite(Date.parse(value.updatedAt));
+  return value && text(value.orderId, 160) && value.orderId.trim() && ['received', 'preparing', 'ready', 'completed'].includes(value.status) && text(value.updatedAt, 40) && Number.isFinite(Date.parse(value.updatedAt)) && validPreparationTimes(value);
 }
 export function validActivity(value) {
   return value && text(value.id, 80) && /^[a-zA-Z0-9-]{16,80}$/.test(value.id) && ['print', 'reprint', 'restore', 'portal', 'preparation'].includes(value.kind) && text(value.target, 200) && text(value.details, 1000) && text(value.createdAt, 40) && Number.isFinite(Date.parse(value.createdAt));

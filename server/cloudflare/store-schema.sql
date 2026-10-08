@@ -22,6 +22,31 @@ CREATE TABLE IF NOT EXISTS store_customer_modules (
 CREATE TABLE IF NOT EXISTS store_preparation_modules (
   store_id TEXT PRIMARY KEY REFERENCES stores(id), enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1))
 );
+-- Manager accounts belong to clients/groups and are provisioned only by the
+-- owner's administrative panel. Revisions immediately revoke existing sessions.
+CREATE TABLE IF NOT EXISTS manager_clients (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL,
+  store_ids TEXT NOT NULL CHECK (json_valid(store_ids)),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  revision INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS manager_users (
+  id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES manager_clients(id),
+  username TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  salt TEXT NOT NULL, hash TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS manager_user_preferences (
+  user_id TEXT PRIMARY KEY REFERENCES manager_users(id) ON DELETE CASCADE,
+  language TEXT NOT NULL CHECK (language IN ('pt', 'en', 'es'))
+);
+CREATE TABLE IF NOT EXISTS panel_preferences (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  language TEXT NOT NULL CHECK (language IN ('pt', 'en', 'es'))
+);
+CREATE TABLE IF NOT EXISTS manager_login_limits (
+  key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, reset_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS store_access_settings (
   store_id TEXT PRIMARY KEY REFERENCES stores(id), data TEXT NOT NULL CHECK (json_valid(data))
 );

@@ -11,7 +11,8 @@ async function fixture(t) {
   for (const name of ['schema.sql', 'cloud-schema.sql', 'diagnostics-schema.sql', 'store-schema.sql']) db.exec(fs.readFileSync('server/cloudflare/' + name, 'utf8'));
   db.prepare("INSERT INTO stores(id, name, active) VALUES('seabra-2', 'Seabra 2', 1)").run();
   const statement = (sql, args = []) => ({ bind: (...values) => statement(sql, values), first: async () => db.prepare(sql).get(...args), all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => ({ meta: { changes: db.prepare(sql).run(...args).changes } }) });
-  const env = { DB: { prepare: statement }, ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-panel-password' };
+  const batch = async statements => { db.exec('BEGIN'); try { const results = []; for (const item of statements) results.push(await item.all()); db.exec('COMMIT'); return results; } catch (error) { db.exec('ROLLBACK'); throw error; } };
+  const env = { DB: { prepare: statement, batch }, ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-panel-password' };
   const call = (path, data, token) => cloudResponse(new Request('https://example.com/cloud' + path, { method: data === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), env);
   const session = async storeId => {
     const admin = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, storeId);

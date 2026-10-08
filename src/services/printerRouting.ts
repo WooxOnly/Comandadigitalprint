@@ -29,3 +29,28 @@ export function customerReceiptPrinter(settings: PrinterSettings) {
 export async function dispatchPrintPlan(plan: ReturnType<typeof buildPrintPlan>, completed: Set<string>, send: (job: ReturnType<typeof buildPrintPlan>[number]) => Promise<void>, onSent: (id: string) => void) {
   for (const job of plan) { if (completed.has(job.id)) continue; await send(job); completed.add(job.id); onSent(job.id); }
 }
+
+// One synchronous lock covers validation, audit and every destination, even
+// before React renders. Partial failures retain acknowledgments for explicit retry.
+export function createPrintDispatcher() {
+  let busy = false;
+  return {
+    get busy() { return busy; },
+    async run(order: PrintableOrder, settings: PrinterSettings, completed: Set<string>, actions: {
+      automatic: boolean;
+      onPlan: (plan: ReturnType<typeof buildPrintPlan>) => Promise<void>;
+      send: (job: ReturnType<typeof buildPrintPlan>[number]) => Promise<void>;
+      onSent: (id: string) => void;
+    }) {
+      if (busy) return null;
+      busy = true;
+      try {
+        const plan = buildPrintPlan(order, settings);
+        if (actions.automatic && (plan.length === 0 || plan.some(job => job.settings.connection !== 'wifi'))) throw new Error('Impressão automática exige impressoras de rede configuradas.');
+        await actions.onPlan(plan);
+        await dispatchPrintPlan(plan, completed, actions.send, actions.onSent);
+        return plan;
+      } finally { busy = false; }
+    },
+  };
+}

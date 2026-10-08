@@ -9,7 +9,7 @@ export const CONNECTIONS: { value: PrinterConnection; label: string }[] = [
   { value: 'wifi', label: 'Wi-Fi / rede' },
   { value: 'usb', label: 'USB / OTG' },
 ];
-export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = { connection: 'system', name: '', address: '', port: '9100', paperWidth: '80' };
+export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = { connection: 'system', name: '', address: '', port: '9100', paperWidth: '80', automatic: false };
 export const QUICK_NOTES = ['Sem cebola', 'Pouco sal', 'Bem passado'];
 
 export const TABS: { screen: AppScreen; label: string; title: string; icon: string; hint: string }[] = [
@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
   sectionTitleWide: { marginTop: 18, marginBottom: 10 },
   heroDescription: { color: '#DFEBE4', fontSize: 14, lineHeight: 22, marginTop: 12, maxWidth: 440 },
   heroButton: { backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 15, marginTop: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', maxWidth: 400 },
-  heroButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  heroButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', flexShrink: 1 },
   heroArrow: { color: '#FFFFFF', fontSize: 24 },
   sectionTitle: { color: COLORS.ink, fontSize: 20, fontWeight: '800', marginTop: 26, marginBottom: 14 },
   mainMenu: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -89,8 +89,8 @@ export const styles = StyleSheet.create({
   connectionList: { gap: 8 },
   connectionOption: { minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 14 },
   selectedConnection: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  connectionText: { color: COLORS.ink, fontSize: 14, fontWeight: '700' },
-  selectedConnectionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  connectionText: { color: COLORS.ink, fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  selectedConnectionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', flexShrink: 1 },
   paperOptions: { flexDirection: 'row', gap: 10 },
   paperOption: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, padding: 14 },
   menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
@@ -148,8 +148,8 @@ export const styles = StyleSheet.create({
   quantityText: { color: COLORS.green, fontSize: 22, fontWeight: '700' },
   quantity: { color: COLORS.ink, fontSize: 16, fontWeight: '800', minWidth: 22, textAlign: 'center' },
   quickNotes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  noteChip: { backgroundColor: COLORS.greenSoft, borderRadius: 12, minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
-  noteChipText: { color: COLORS.green, fontSize: 12, fontWeight: '600' },
+  noteChip: { backgroundColor: COLORS.greenSoft, borderRadius: 12, minHeight: 44, minWidth: 0, maxWidth: '100%', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  noteChipText: { color: COLORS.green, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   totalRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4 },
   totalLabel: { color: COLORS.muted, fontSize: 14 },
   totalText: { color: COLORS.ink, fontSize: 22, fontWeight: '800' },
@@ -169,7 +169,7 @@ export const styles = StyleSheet.create({
   addButtonText: { color: COLORS.green, fontSize: 13, fontWeight: '700' },
   navBackground: { backgroundColor: COLORS.surface, borderTopColor: COLORS.border, borderTopWidth: 1 },
   bottomNav: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingVertical: 8, width: '100%', maxWidth: 760, alignSelf: 'center' },
-  bottomNavButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 58, borderRadius: 14, paddingVertical: 7, paddingHorizontal: 2 },
+  bottomNavButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, minHeight: 58, borderRadius: 14, paddingVertical: 7, paddingHorizontal: 2 },
   activeBottomNavButton: { backgroundColor: COLORS.primarySoft },
   bottomNavIcon: { color: COLORS.muted, fontSize: 23, fontWeight: '600', marginBottom: 3 },
   bottomNavWide: { maxWidth: 640, paddingVertical: 4 },

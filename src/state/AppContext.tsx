@@ -1,4 +1,5 @@
-import { buildPrintPlan, dispatchPrintPlan } from '../services/printerRouting';
+import { buildPrintPlan, createPrintDispatcher } from '../services/printerRouting';
+import { getNetworkPrinterEndpoint } from '../services/networkPrintTransport';
 import { useAuth } from './AuthContext';
 import { searchCatalog, isProductAvailable, type CatalogOptions, type ProductOption } from '../services/catalogOptions';
 import { logError } from '../services/diagnostics';
@@ -63,6 +64,7 @@ function useAppState() {
   const printCompleted = useRef(new Set<string>());
   const previewNew = useRef(false);
   const [printing, setPrinting] = useState(false);
+  const [printDispatcher] = useState(createPrintDispatcher);
   const { width: windowWidth, fontScale } = useWindowDimensions();
   const isWide = windowWidth >= 760 && fontScale < 1.4;
   const [isReady, setIsReady] = useState(false);
@@ -258,6 +260,11 @@ function useAppState() {
     try {
       checkAccess('settings');
       if (printerSettings.routing?.enabled) buildPrintPlan({ plate: '', customer: '', items: [], createdAt: new Date().toISOString() }, printerSettings);
+      if (printerSettings.automatic) {
+        if (printerSettings.connection !== 'wifi') throw new Error('Impressão automática exige impressoras de rede configuradas.');
+        getNetworkPrinterEndpoint(printerSettings);
+        if (printerSettings.routing?.enabled) printerSettings.routing.destinations.forEach(getNetworkPrinterEndpoint);
+      }
       await persistSettings(AsyncStorage, printerSettings);
       printerDirty.current = false;
       Alert.alert(t('Configuração salva'), t('As preferências da impressora foram salvas neste aparelho.'));
@@ -274,23 +281,32 @@ function useAppState() {
 
   async function printSavedOrder(order: SavedOrder, isNew = false) {
     if (!isNew && !allowed('reprint')) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
+    if (printDispatcher.busy) { showFeedback('Impressão em andamento', 'Aguarde a impressão em andamento.', 'error'); return; }
     printCompleted.current = new Set(); setPrintedDestinations([]); previewNew.current = isNew;
-    setPreviewOrder(order);
+    if (isNew && printerSettings.automatic === true) await executePrint(order, true, true);
+    else setPreviewOrder(order);
   }
 
   async function confirmPrint() {
-    if (!previewOrder || printing) return;
-    const order = previewOrder;
+    if (!previewOrder) return;
+    await executePrint(previewOrder, previewNew.current);
+  }
+
+  async function executePrint(order: SavedOrder, isNew: boolean, automatic = false) {
+    if (printDispatcher.busy) return;
     setPrinting(true);
     try {
-      if (!previewNew.current) checkAccess('reprint');
-      const plan = buildPrintPlan(order, printerSettings);
-      await cloud.activity(previewNew.current ? 'print' : 'reprint', order.id, plan.map(job => job.label).join(', '));
-      await dispatchPrintPlan(plan, printCompleted.current, job => printOrder(job.order, job.settings, language), () => setPrintedDestinations([...printCompleted.current]));
+      const plan = await printDispatcher.run(order, printerSettings, printCompleted.current, {
+        automatic,
+        onPlan: async jobs => { if (!isNew) checkAccess('reprint'); await cloud.activity(isNew ? 'print' : 'reprint', order.id, jobs.map(job => job.label).join(', ')); },
+        send: job => printOrder(job.order, job.settings, language), onSent: () => setPrintedDestinations([...printCompleted.current]),
+      });
+      if (!plan) return;
       setPreviewOrder(null);
       const direct = plan.every(job => job.settings.connection === 'wifi');
       showFeedback(direct ? 'Impressão enviada' : 'Impressão aberta', direct ? 'Comanda enviada à impressora pela rede. Confira a saída do papel.' : 'Confirme o envio na janela de impressão.', 'success');
     } catch (error) {
+      setPreviewOrder(order);
       logError('print.failed', error, order.id);
       showFeedback('Impressão indisponível', printFailureMessage(error), 'error');
     } finally {
@@ -311,6 +327,7 @@ function useAppState() {
 
   async function sendOrder(onOrderSaved?: () => void) {
     if (!isReady || submitter.busy || orderSettingsLock.current) return;
+    if (printerSettings.automatic === true && printDispatcher.busy) { Alert.alert(t('Impressão em andamento'), t('Aguarde a impressão em andamento.')); return; }
     if (items.length === 0) {
       Alert.alert(t('Comanda vazia'), t('Adicione pelo menos um item antes de enviar.'));
       return;

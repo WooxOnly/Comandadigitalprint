@@ -30,7 +30,17 @@
       ],
       "expo-secure-store",
       "react-native-quick-crypto",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-asset",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,

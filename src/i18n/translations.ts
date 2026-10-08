@@ -1,6 +1,13 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  'Pendências': ['Pending items', 'Pendientes'],
+  'Fechar': ['Close', 'Cerrar'],
+  'Revise os itens esgotados antes de enviar.': ['Review sold-out items before sending.', 'Revisa los productos agotados antes de enviar.'],
+  'Sales tax': ['Sales tax', 'Impuesto sobre ventas'],
+  'Cardápio recebido inválido': ['The received menu is invalid.', 'El menú recibido no es válido.'],
+  'Informe um endereço HTTPS válido, sem usuário, senha ou fragmento.': ['Enter a valid HTTPS address without a username, password or fragment.', 'Introduce una dirección HTTPS válida, sin usuario, contraseña ni fragmento.'],
+  'Comanda não encontrada.': ['Kitchen ticket not found.', 'Comanda no encontrada.'],
   'Loja': ['Store', 'Tienda'],
   'Tipo de pedido': ['Order type', 'Tipo de pedido'],
   'Onde será consumido?': ['For here or to go?', '¿Para comer aquí o para llevar?'],
@@ -50,8 +57,8 @@ export const translations: Record<string, readonly [string, string]> = {
     "Dos sabores"
   ],
   "2. Qual é o outro sabor?": [
-    "2. Choose the other flavor",
-    "2. Elija el otro sabor"
+    "2. What is the other flavor?",
+    "2. ¿Cuál es el otro sabor?"
   ],
   "1ª metade:": [
     "1st half:",
@@ -912,6 +919,24 @@ export const translations: Record<string, readonly [string, string]> = {
 };
 
 Object.assign(translations, {
+  'Som de pedido novo: ligado': ['New order sound: on', 'Sonido de nuevo pedido: activado'],
+  'Som de pedido novo: desligado': ['New order sound: off', 'Sonido de nuevo pedido: desactivado'],
+  'Testar som': ['Test sound', 'Probar sonido'],
+  'Mantenha este painel aberto para receber avisos de novos pedidos.': ['Keep this panel open to receive new order alerts.', 'Mantenga este panel abierto para recibir avisos de nuevos pedidos.'],
+  'Novos pedidos': ['New orders', 'Nuevos pedidos'],
+  'Ver e confirmar recebimento': ['View and acknowledge', 'Ver y confirmar recepción'],
+  'Pedido novo': ['New order', 'Nuevo pedido'],
+  'Início do preparo': ['Preparation started', 'Inicio de preparación'],
+  'Tempo de preparo': ['Preparation time', 'Tiempo de preparación'],
+  'Imprimir automaticamente ao enviar': ['Print automatically when sending', 'Imprimir automáticamente al enviar'],
+  'Opcional por tablet, somente pela rede. Salve as configurações. O pedido é salvo antes da impressão; em falha, a prévia permite tentar novamente sem reenviar os destinos confirmados.': ['Optional per tablet, network printing only. Save the settings. The order is saved before printing; on failure, the preview allows a retry without resending to acknowledged destinations.', 'Opcional por tablet, solo por red. Guarda la configuración. El pedido se guarda antes de imprimir; si falla, la vista previa permite reintentar sin reenviar a los destinos confirmados.'],
+  'Impressão automática exige impressoras de rede configuradas.': ['Automatic printing requires configured network printers.', 'La impresión automática requiere impresoras de red configuradas.'],
+  'Impressão em andamento': ['Printing in progress', 'Impresión en curso'],
+  'Aguarde a impressão em andamento.': ['Wait for the current print job.', 'Espera a que termine la impresión actual.'],
+  'Entre novamente para registrar o operador do preparo.': ['Sign in again to record the preparation operator.', 'Inicia sesión de nuevo para registrar el operador de preparación.'],
+  'Tempo até pronto': ['Time until ready', 'Tiempo hasta estar listo'],
+  'Tempo não registrado': ['Time not recorded', 'Tiempo no registrado'],
+  'Confira a etapa e a data/hora do tablet antes de avançar o preparo.': ['Check the stage and tablet date/time before advancing preparation.', 'Revise la etapa y la fecha/hora de la tableta antes de avanzar la preparación.'],
   'Mostrando os dez primeiros clientes. Refine a busca.': ['Showing the first ten customers. Refine your search.', 'Se muestran los primeros diez clientes. Refine la búsqueda.'],
   'Mostrando os 100 primeiros clientes. Refine a busca para encontrar outros.': ['Showing the first 100 customers. Refine your search to find others.', 'Se muestran los primeros 100 clientes. Refine la búsqueda para encontrar otros.'],
   "Sincronizando…": [
@@ -1400,7 +1425,7 @@ Object.assign(translations, {
   ],
   "Gorjeta não entra no sales tax. A taxa de entrega usa a taxa configurada da empresa.": [
     "Tips are excluded from sales tax. Delivery fees use the company tax rate.",
-    "Las propinas no incluyen sales tax. La entrega usa la tasa de la empresa."
+    "Las propinas no están sujetas al impuesto sobre ventas. La tarifa de entrega utiliza la tasa configurada de la empresa."
   ],
   "Dividir pagamento": [
     "Split payment",
@@ -1854,8 +1879,8 @@ Object.assign(translations, {
 });
 
 export function translate(text: string, language: Language = 'pt'): string {
-  const source = translations[text] ? text : Object.keys(translations).find((key) => translations[key].includes(text)) || text;
-  return language === 'pt' ? source : translations[source]?.[language === 'en' ? 0 : 1] ?? text;
+  const source = Object.hasOwn(translations, text) ? text : Object.keys(translations).find((key) => translations[key].includes(text)) || text;
+  return language === 'pt' ? source : Object.hasOwn(translations, source) ? translations[source][language === 'en' ? 0 : 1] : text;
 }
 
 export function itemName(name: string, language: Language) {

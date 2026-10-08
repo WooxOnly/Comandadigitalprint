@@ -5,9 +5,12 @@ import { useStoreModules } from '../ui/useStoreModules';
 import type { Preorder, Customer, Delivery, Preparation } from '../services/business';
 import { useApp } from './AppContext';
 import { isProductAvailable } from '../services/catalogOptions';
+import { nextPreparation } from '../../shared/preparation-times.mjs';
 import { logError } from '../services/diagnostics';
+import { useAuth } from './AuthContext';
 
 function useBusinessState() {
+  const { currentUser } = useAuth();
   const { productOptions } = useApp();
   const modules = useStoreModules();
   const overview = useSyncExternalStore(cloud.subscribe, cloud.cashOverview);
@@ -73,7 +76,16 @@ function useBusinessState() {
         ...(delivery.status === 'delivered' ? { deliveredAt: now } : {}) } } });
     });
   }
-  async function advancePreparation(orderId: string, status: Preparation['status']) { return run(async () => { if (!modules.preparation) throw new Error('Módulo não habilitado para esta empresa.'); const id = randomUUID(); await cloud.write({ ['preparation:' + orderId]: { orderId, status, updatedAt: new Date().toISOString() }, ['activity:' + id]: { id, kind: 'preparation', target: orderId, details: status, createdAt: new Date().toISOString() } }); }); }
+  async function advancePreparation(orderId: string, status: Preparation['status']) {
+    return run(async () => {
+      if (!modules.preparation) throw new Error('Módulo não habilitado para esta empresa.');
+      const order = await cloud.get('order:' + orderId) as { id: string; createdAt: string } | undefined;
+      if (!order) throw new Error('Comanda não encontrada.');
+      const previous = await cloud.get('preparation:' + orderId) as Preparation | undefined;
+      const now = new Date().toISOString(), record = nextPreparation(previous, order, status, now, currentUser), id = randomUUID();
+      await cloud.write({ ['preparation:' + orderId]: record, ['activity:' + id]: { id, kind: 'preparation', target: orderId, details: status, createdAt: now } });
+    });
+  }
   async function cashCommand(input: Record<string, unknown>) {
     return run(async () => {
       try { return await cloud.cashCommand(input); }

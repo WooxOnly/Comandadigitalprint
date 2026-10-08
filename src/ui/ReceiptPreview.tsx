@@ -1,6 +1,6 @@
 import { buildPrintPlan } from '../services/printerRouting';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
@@ -17,7 +17,8 @@ export function ReceiptPreview() {
 function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string } }) {
   const { t, language } = useLanguage();
   const { printedDestinations, setPreviewOrder, printerSettings, printing, confirmPrint } = useApp();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const shortScreen = height < 500;
   const webView = useRef<WebView>(null);
   const [destinationId, setDestinationId] = useState('default');
   const [zoom, setZoom] = useState(100);
@@ -42,8 +43,10 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
       <View style={{ flex: 1, alignItems: 'center', paddingBottom: 8 }}>
         <WebView ref={webView} originWhitelist={['*']} source={{ html }} onLoadEnd={() => webView.current?.injectJavaScript(`document.documentElement.style.zoom = '${zoom}%'; true;`)} style={{ width: paperWidth, flex: 1, backgroundColor: '#fff' }} />
       </View>
-      <View style={{ padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 12 }}>
-        {destinations.map(destination => <Pressable key={destination.id} style={styles.noteChip} onPress={() => setDestinationId(destination.id)}><Text style={styles.helperText}>{printedDestinations.includes(destination.id) ? '✓ ' : ''}{destination.label} · {destination.order.items.length} {t('itens')}</Text></Pressable>)}
+      <View style={{ padding: shortScreen ? 8 : 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: shortScreen ? 8 : 12 }}>
+        <ScrollView style={{ maxHeight: Math.min(160, height * 0.2) }} contentContainerStyle={{ gap: 6 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+          {destinations.map(destination => <Pressable key={destination.id} style={styles.noteChip} onPress={() => setDestinationId(destination.id)}><Text style={styles.helperText}>{printedDestinations.includes(destination.id) ? '✓ ' : ''}{destination.id === 'default' && !printerSettings.name ? t('Impressora principal') : destination.label} · {destination.order.items.length} {t(destination.order.items.length === 1 ? 'item' : 'itens')}</Text></Pressable>)}
+        </ScrollView>
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('Reduzir zoom')} disabled={zoom <= 25} onPress={() => setZoom(value => Math.max(25, value - 25))} style={styles.previewControl}><Text style={styles.previewControlText}>−</Text></Pressable>
           <Text style={styles.previewZoom}>{zoom}%</Text>

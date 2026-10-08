@@ -4,6 +4,9 @@ import { loginPage, panelPage } from './admin-panel.mjs';
 import { activeStore, DEFAULT_STORE_ID, storeId, storeModules, validModules } from './stores.mjs';
 import { cashSettings, validateManagers } from './cash-settings.mjs';
 import { validCashSettings } from '../../shared/cash-pricing.mjs';
+import { managerAdminResponse } from './manager-admin.mjs';
+import { requestLanguage, translate, validLanguage } from './manager-i18n.mjs';
+import { cookie, readBody } from './manager-auth.mjs';
 
 // The secret stays on the server. Monday 00:00 UTC starts a new password week.
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -12,6 +15,8 @@ const IDLE_MS = 60 * 60 * 1000;
 const PANEL_ITERATIONS = 100000;
 const COOKIE = '__Host-comanda_panel';
 const CSRF_COOKIE = '__Host-comanda_csrf';
+const LANGUAGE_COOKIE = '__Host-bistro_admin_language';
+const LANGUAGE_CHOICE_COOKIE = '__Host-bistro_admin_language_choice';
 const encode = (value) => new TextEncoder().encode(value);
 const hex = (value) => Array.from(new Uint8Array(value), (byte) => byte.toString(16).padStart(2, '0')).join('');
 const unhex = (value) => Uint8Array.from(value.match(/../g) || [], (part) => parseInt(part, 16));
@@ -105,9 +110,17 @@ function htmlResponse(content, nonce, status = 200, extra = {}) {
   } });
 }
 
-function loginResponse(nonce, message = '', status = 200) {
+function loginResponse(nonce, message = '', status = 200, language = 'pt') {
   const csrf = crypto.randomUUID();
-  return htmlResponse(loginPage(nonce, message, csrf), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf) });
+  return htmlResponse(loginPage(nonce, translate(language, message), csrf, language), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf), 'Content-Language': language });
+}
+
+async function panelLanguage(env) {
+  const preference = env.DB ? await env.DB.prepare('SELECT language FROM panel_preferences WHERE id = 1').first() : null;
+  return validLanguage(preference?.language) ? preference.language : null;
+}
+async function savePanelLanguage(env, language) {
+  await env.DB.prepare('INSERT INTO panel_preferences(id, language) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET language = excluded.language').bind(language).run();
 }
 
 async function loginLimit(env, now) {
@@ -135,113 +148,137 @@ export async function provisionableStores(username, password, env, now = Date.no
 export async function adminResponse(request, env, now = Date.now()) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = ['/admin/gestores', '/admin/manager-clients', '/admin/manager-users', '/admin/language'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
   const origin = request.headers.get('Origin');
   const sameOrigin = origin === url.origin;
   const nonce = crypto.randomUUID();
+  let language = requestLanguage(request, readCookie, LANGUAGE_COOKIE, 'pt');
+  if (browserLogin) language = await panelLanguage(env) || language;
+  const reply = (value, status = 200, extra = {}) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status, extra);
+  if (pathname === '/admin/language' && request.method === 'POST') {
+    if (!sameOrigin || !request.headers.get('Content-Type')?.startsWith('application/json')) return reply({ error: 'Acesso não permitido.' }, 403);
+    try {
+      let input; try { input = JSON.parse(await readBody(request, 512)); } catch (error) { if (error.status) throw error; return reply({ error: 'Idioma inválido.' }, 400); }
+      if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 || !validLanguage(input.language)) return reply({ error: 'Idioma inválido.' }, 400);
+      if (browserLogin) await savePanelLanguage(env, input.language);
+      const response = reply({ language: input.language, savedToAccount: !!browserLogin });
+      response.headers.append('Set-Cookie', cookie(LANGUAGE_COOKIE, input.language, 31536000));
+      response.headers.append('Set-Cookie', cookie(LANGUAGE_CHOICE_COOKIE, browserLogin ? '' : input.language, browserLogin ? 0 : 3600));
+      return response;
+    } catch (error) { return reply({ error: error.status ? error.message : 'Serviço temporariamente indisponível.' }, error.status || 503); }
+  }
+  const managerAdmin = await managerAdminResponse(request, env, { browserLogin, sameOrigin, nonce, language });
+  if (managerAdmin) return managerAdmin;
 
   if (pathname === '/admin/login' && request.method === 'POST') {
     try {
-      if (!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded') || Number(request.headers.get('Content-Length')) > 4096) return loginResponse(nonce, 'Formulário inválido. Tente novamente.', 400);
+      if (!request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded') || Number(request.headers.get('Content-Length')) > 4096) return loginResponse(nonce, 'Formulário inválido. Tente novamente.', 400, language);
       const form = await request.formData();
       const csrf = readCookie(request, CSRF_COOKIE);
-      if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return loginResponse(nonce, 'A sessão de login expirou. Tente novamente.', 403);
+      if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return loginResponse(nonce, 'A sessão de login expirou. Tente novamente.', 403, language);
       const blockedUntil = await loginLimit(env, now);
-      if (blockedUntil) return loginResponse(nonce, 'Muitas tentativas. Aguarde 15 minutos.', 429);
+      if (blockedUntil) return loginResponse(nonce, 'Muitas tentativas. Aguarde 15 minutos.', 429, language);
       const username = String(form.get('username') || '');
       const password = String(form.get('password') || '');
       const valid = await credentialsMatch(username, password, env);
       await recordLogin(env, valid, now);
-      if (!valid) return loginResponse(nonce, 'Usuário ou senha incorretos.', 401);
-      return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
-    } catch { return loginResponse(nonce, 'Login temporariamente indisponível.', 503); }
+      if (!valid) return loginResponse(nonce, 'Usuário ou senha incorretos.', 401, language);
+      const choice = readCookie(request, LANGUAGE_CHOICE_COOKIE);
+      language = validLanguage(choice) ? choice : await panelLanguage(env) || language;
+      await savePanelLanguage(env, language);
+      const headers = new Headers({ Location: '/admin', 'Cache-Control': 'no-store' });
+      headers.append('Set-Cookie', await issueSession(env, now));
+      headers.append('Set-Cookie', cookie(LANGUAGE_COOKIE, language, 31536000));
+      headers.append('Set-Cookie', cookie(LANGUAGE_CHOICE_COOKIE, '', 0));
+      return new Response(null, { status: 303, headers });
+    } catch { return loginResponse(nonce, 'Login temporariamente indisponível.', 503, language); }
   }
 
   if (pathname === '/admin/login' && request.method === 'GET') return new Response(null, { status: 303, headers: { Location: '/admin', 'Cache-Control': 'no-store' } });
 
   if (pathname === '/admin/logout' && request.method === 'POST') {
-    if (!sameOrigin) return json({ error: 'Forbidden' }, 403);
+    if (!sameOrigin) return reply({ error: 'Acesso não permitido.' }, 403);
     return new Response(null, { status: 204, headers: { 'Set-Cookie': cookieHeader('', 0), 'Cache-Control': 'no-store' } });
   }
 
   if (pathname === '/admin' && request.method === 'GET') {
     if (!browserLogin) {
       const message = url.searchParams.has('changed') ? 'Senha do painel alterada. Entre novamente.' : url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
-      return loginResponse(nonce, message);
+      return loginResponse(nonce, message, 200, language);
     }
     const { results: stores } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
     const selectedStoreId = url.searchParams.get('storeId') || DEFAULT_STORE_ID;
     const selectedStore = stores.find((store) => store.id === selectedStoreId) || stores[0];
-    if (!selectedStore) return json({ error: 'Nenhuma loja ativa.' }, 503);
+    if (!selectedStore) return reply({ error: 'Nenhuma loja ativa.' }, 503);
     for (const store of stores) {
       store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id);
       store.cashSettings = await cashSettings(env, store.id);
       const { results } = await env.DB.prepare("SELECT SUBSTR(key, 6) AS username FROM store_records WHERE store_id = ? AND key LIKE 'user:%' AND json_extract(data, '$.active') = 1 ORDER BY key").bind(store.id).all();
       store.cashUsers = results.map(row => row.username);
     }
-    return htmlResponse(panelPage(nonce, stores, selectedStore.id), nonce, 200, { 'Set-Cookie': await issueSession(env, now) });
+    return htmlResponse(panelPage(nonce, stores, selectedStore.id, language), nonce, 200, { 'Set-Cookie': await issueSession(env, now), 'Content-Language': language });
   }
 
   if (pathname === '/admin/session' && request.method === 'GET') {
-    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
     return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
   }
 
   if (pathname === '/admin/change-password' && request.method === 'POST') {
-    if (!browserLogin) return json({ error: 'Sessão expirada. Entre novamente.' }, 401);
-    if (!sameOrigin) return json({ error: 'Origem inválida.' }, 403);
-    if (!env.DB) return json({ error: 'Serviço temporariamente indisponível.' }, 503);
-    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 4096) return json({ error: 'Formulário inválido.' }, 400);
+    if (!browserLogin) return reply({ error: 'Sessão expirada. Entre novamente.' }, 401);
+    if (!sameOrigin) return reply({ error: 'Origem inválida.' }, 403);
+    if (!env.DB) return reply({ error: 'Serviço temporariamente indisponível.' }, 503);
+    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 4096) return reply({ error: 'Formulário inválido.' }, 400);
     try {
       const raw = await request.text();
-      if (encode(raw).length > 4096) return json({ error: 'Formulário muito grande.' }, 413);
+      if (encode(raw).length > 4096) return reply({ error: 'Formulário muito grande.' }, 413);
       let body;
-      try { body = JSON.parse(raw); } catch { return json({ error: 'Formulário inválido.' }, 400); }
+      try { body = JSON.parse(raw); } catch { return reply({ error: 'Formulário inválido.' }, 400); }
       const current = body?.currentPassword;
       const next = body?.newPassword;
-      if (typeof current !== 'string' || typeof next !== 'string' || typeof body?.confirmPassword !== 'string' || current.length > 256 || next.length > 256) return json({ error: 'Formulário inválido.' }, 400);
-      if (next !== body.confirmPassword) return json({ error: 'A confirmação não corresponde à nova senha.' }, 400);
-      if (next.length < 12) return json({ error: 'A nova senha deve ter pelo menos 12 caracteres.' }, 400);
-      if (next === current) return json({ error: 'Escolha uma senha diferente da atual.' }, 400);
-      if (!await credentialsMatch(env.ADMIN_PANEL_USER || 'admin', current, env)) return json({ error: 'Senha atual incorreta.' }, 403);
+      if (typeof current !== 'string' || typeof next !== 'string' || typeof body?.confirmPassword !== 'string' || current.length > 256 || next.length > 256) return reply({ error: 'Formulário inválido.' }, 400);
+      if (next !== body.confirmPassword) return reply({ error: 'A confirmação não corresponde à nova senha.' }, 400);
+      if (next.length < 12) return reply({ error: 'A nova senha deve ter pelo menos 12 caracteres.' }, 400);
+      if (next === current) return reply({ error: 'Escolha uma senha diferente da atual.' }, 400);
+      if (!await credentialsMatch(env.ADMIN_PANEL_USER || 'admin', current, env)) return reply({ error: 'Senha atual incorreta.' }, 403);
       const previous = await panelPasswordState(env);
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
       const hash = await passwordDigest(next, salt, PANEL_ITERATIONS);
       const result = previous
         ? await env.DB.prepare('UPDATE panel_password SET salt = ?, hash = ?, iterations = ?, revision = revision + 1 WHERE id = 1 AND revision = ?').bind(salt, hash, PANEL_ITERATIONS, previous.revision).run()
         : await env.DB.prepare('INSERT OR IGNORE INTO panel_password (id, salt, hash, iterations, revision) VALUES (1, ?, ?, ?, 1)').bind(salt, hash, PANEL_ITERATIONS).run();
-      if (result.meta?.changes !== 1) return json({ error: 'A senha mudou em outra sessão. Entre novamente.' }, 409);
-      return json({ ok: true }, 200, { 'Set-Cookie': cookieHeader('', 0) });
-    } catch { return json({ error: 'Não foi possível alterar a senha agora.' }, 503); }
+      if (result.meta?.changes !== 1) return reply({ error: 'A senha mudou em outra sessão. Entre novamente.' }, 409);
+      return reply({ ok: true }, 200, { 'Set-Cookie': cookieHeader('', 0) });
+    } catch { return reply({ error: 'Não foi possível alterar a senha agora.' }, 503); }
   }
 
   if (pathname === '/admin/stores' && (request.method === 'GET' || request.method === 'POST' || request.method === 'PATCH')) {
-    if (!browserLogin) return json({ error: 'Sessão expirada. Entre novamente.' }, 401);
-    if (!env.DB) return json({ error: 'Serviço temporariamente indisponível.' }, 503);
+    if (!browserLogin) return reply({ error: 'Sessão expirada. Entre novamente.' }, 401);
+    if (!env.DB) return reply({ error: 'Serviço temporariamente indisponível.' }, 503);
     if (request.method === 'GET') {
       try {
         const { results } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
         for (const store of results) { store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id); store.cashSettings = await cashSettings(env, store.id); }
-        return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
-      } catch { return json({ error: 'Não foi possível consultar as lojas.' }, 503); }
+        return reply(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+      } catch { return reply({ error: 'Não foi possível consultar as lojas.' }, 503); }
     }
-    if (!sameOrigin) return json({ error: 'Origem inválida.' }, 403);
-    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 4096) return json({ error: 'Formulário inválido.' }, 400);
+    if (!sameOrigin) return reply({ error: 'Origem inválida.' }, 403);
+    if (!request.headers.get('Content-Type')?.startsWith('application/json') || Number(request.headers.get('Content-Length')) > 4096) return reply({ error: 'Formulário inválido.' }, 400);
     try {
       const raw = await request.text();
-      if (encode(raw).length > 4096) return json({ error: 'Formulário muito grande.' }, 413);
+      if (encode(raw).length > 4096) return reply({ error: 'Formulário muito grande.' }, 413);
       let body;
-      try { body = JSON.parse(raw); } catch { return json({ error: 'Formulário inválido.' }, 400); }
+      try { body = JSON.parse(raw); } catch { return reply({ error: 'Formulário inválido.' }, 400); }
       const name = typeof body?.name === 'string' ? body.name.trim() : '';
-      if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return json({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
-      if (body.modules !== undefined && !validModules(body.modules)) return json({ error: 'Módulos inválidos.' }, 400);
-      if (body.access !== undefined && !validAccess(body.access)) return json({ error: 'Permissões inválidas.' }, 400);
-      if (body.cashSettings !== undefined && !validCashSettings(body.cashSettings)) return json({ error: 'Configuração de caixa inválida.' }, 400);
-      if (request.method === 'POST' && body.cashSettings?.managers.length) return json({ error: 'Cadastre os usuários da empresa antes de escolher gerentes.' }, 400);
-      if (request.method === 'POST' && body.access && Object.values(body.access).some(names => names?.length)) return json({ error: 'Cadastre usuários antes de conceder permissões.' }, 400);
+      if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return reply({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
+      if (body.modules !== undefined && !validModules(body.modules)) return reply({ error: 'Módulos inválidos.' }, 400);
+      if (body.access !== undefined && !validAccess(body.access)) return reply({ error: 'Permissões inválidas.' }, 400);
+      if (body.cashSettings !== undefined && !validCashSettings(body.cashSettings)) return reply({ error: 'Configuração de caixa inválida.' }, 400);
+      if (request.method === 'POST' && body.cashSettings?.managers.length) return reply({ error: 'Cadastre os usuários da empresa antes de escolher gerentes.' }, 400);
+      if (request.method === 'POST' && body.access && Object.values(body.access).some(names => names?.length)) return reply({ error: 'Cadastre usuários antes de conceder permissões.' }, 400);
       const saveModules = async id => {
         if (body.modules !== undefined) await env.DB.prepare('INSERT INTO store_modules(store_id, preorders, cash) VALUES(?, ?, ?) ON CONFLICT(store_id) DO UPDATE SET preorders = excluded.preorders, cash = excluded.cash').bind(id, Number(body.modules.preorders), Number(body.modules.cash)).run();
         if (body.modules?.preparation !== undefined) await env.DB.prepare('INSERT INTO store_preparation_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.preparation)).run();
@@ -251,18 +288,18 @@ export async function adminResponse(request, env, now = Date.now()) {
         if (body.cashSettings !== undefined) await env.DB.prepare('INSERT INTO store_cash_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.cashSettings)).run();
       };
       if (request.method === 'PATCH') {
-        if (typeof body?.id !== 'string') return json({ error: 'Identificador inválido.' }, 400);
-        try { storeId(body.id); } catch { return json({ error: 'Identificador inválido.' }, 400); }
-        if (body.cashSettings !== undefined && !await validateManagers(env, body.id, body.cashSettings)) return json({ error: 'Escolha gerentes entre os usuários ativos desta empresa.' }, 400);
-        if (body.access && !await validAccessUsers(env, body.id, body.access)) return json({ error: 'Escolha usuários ativos desta empresa.' }, 400);
+        if (typeof body?.id !== 'string') return reply({ error: 'Identificador inválido.' }, 400);
+        try { storeId(body.id); } catch { return reply({ error: 'Identificador inválido.' }, 400); }
+        if (body.cashSettings !== undefined && !await validateManagers(env, body.id, body.cashSettings)) return reply({ error: 'Escolha gerentes entre os usuários ativos desta empresa.' }, 400);
+        if (body.access && !await validAccessUsers(env, body.id, body.access)) return reply({ error: 'Escolha usuários ativos desta empresa.' }, 400);
         const result = await env.DB.prepare('UPDATE stores SET name = ? WHERE id = ? AND active = 1').bind(name, body.id).run();
-        if (result.meta?.changes !== 1) return json({ error: 'Loja não encontrada.' }, 404);
+        if (result.meta?.changes !== 1) return reply({ error: 'Loja não encontrada.' }, 404);
         const updated = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.id = ?').bind(body.id).first();
         await saveModules(body.id);
         if (body.modules !== undefined) updated.modules = await storeModules(env, body.id);
         if (body.cashSettings !== undefined) updated.cashSettings = await cashSettings(env, body.id);
         if (body.access !== undefined) updated.access = await storeAccess(env, body.id);
-        return json(updated);
+        return reply(updated);
       }
       const stem = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36).replace(/-+$/g, '') || 'loja';
       const base = stem.length < 3 ? `loja-${stem}` : stem;
@@ -276,15 +313,15 @@ export async function adminResponse(request, env, now = Date.now()) {
           if (body.modules !== undefined) created.modules = await storeModules(env, id);
           if (body.cashSettings !== undefined) created.cashSettings = await cashSettings(env, id);
           if (body.access !== undefined) created.access = await storeAccess(env, id);
-          return json(created, 201, { 'Set-Cookie': await issueSession(env, now) });
+          return reply(created, 201, { 'Set-Cookie': await issueSession(env, now) });
         }
       }
-      return json({ error: 'Não foi possível gerar um identificador único.' }, 409);
-    } catch { return json({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
+      return reply({ error: 'Não foi possível gerar um identificador único.' }, 409);
+    } catch { return reply({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
   }
 
   if (pathname === '/admin/activity' && request.method === 'GET') {
-    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
     try {
     const id = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
     await activeStore(env, id);
@@ -295,31 +332,31 @@ export async function adminResponse(request, env, now = Date.now()) {
     const boundary = results[limit - 1]?.created_at;
     if (results.length > limit && boundary) {
       const { results: ties } = await env.DB.prepare(`SELECT seq, created_at, actor, CASE WHEN key LIKE 'activity:%' THEN json_extract(data, '$.kind') || ': ' || json_extract(data, '$.target') || ' · ' || json_extract(data, '$.details') WHEN key LIKE 'product-option:%' THEN key || ' · disponível=' || json_extract(data, '$.available') || ' · favorito=' || json_extract(data, '$.favorite') WHEN key LIKE 'preparation:%' THEN key || ': ' || json_extract(data, '$.status') ELSE key END AS action FROM store_events WHERE store_id = ? AND created_at = ? AND (key = 'menu' OR key = 'logo' OR key = 'order-settings' OR key LIKE 'printer:%' OR key LIKE 'product-option:%' OR key LIKE 'preparation:%' OR key LIKE 'activity:%') UNION ALL SELECT seq, created_at, actor, action FROM store_admin_activity WHERE store_id = ? AND created_at = ? ORDER BY seq DESC`).bind(id, boundary, id, boundary).all();
-      return json({ events: [...results.filter(row => row.created_at > boundary), ...ties], before: boundary });
+      return reply({ events: [...results.filter(row => row.created_at > boundary), ...ties], before: boundary });
     }
-    return json({ events: results, before: null });
-    } catch (error) { return json({ error: 'Não foi possível consultar o histórico.' }, error.status || 503); }
+    return reply({ events: results, before: null });
+    } catch (error) { return reply({ error: 'Não foi possível consultar o histórico.' }, error.status || 503); }
   }
 
   if (pathname === '/admin/logs' && request.method === 'GET') {
     if (request.headers.get('Accept')?.includes('text/html')) return new Response(null, { status: 303, headers: { Location: '/admin#errors', 'Cache-Control': 'no-store' } });
-    if (!browserLogin) return json({ error: 'Unauthorized' }, 401);
+    if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
     try {
       const kind = url.searchParams.get('kind');
-      if (kind !== 'errors' && kind !== 'printing') return json({ error: 'Invalid log category' }, 400);
+      if (kind !== 'errors' && kind !== 'printing') return reply({ error: 'Categoria de registro inválida.' }, 400);
       const condition = kind === 'printing' ? "event IN ('print.failed', 'print_test.failed')" : "event NOT LIKE 'print.%' AND event NOT LIKE 'print_test.%' AND (event LIKE '%.failed' OR event IN ('runtime.error', 'runtime.fatal'))";
       const selectedStoreId = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
       await activeStore(env, selectedStoreId);
       const { results } = await env.DB.prepare(`SELECT device_id, created_at, event, code, order_id FROM store_diagnostics WHERE store_id = ? AND ${condition} ORDER BY received_at DESC LIMIT 100`).bind(selectedStoreId).all();
-      return json(results, 200, { 'Set-Cookie': await issueSession(env, now) });
-    } catch (error) { return json({ error: 'Logs unavailable' }, error.status || 503); }
+      return reply(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+    } catch (error) { return reply({ error: 'Registros temporariamente indisponíveis.' }, error.status || 503); }
   }
 
-  if (panelRoute) return json({ error: 'Method not allowed' }, 405);
+  if (panelRoute) return reply({ error: 'Método não permitido.' }, 405);
   const privateRoute = pathname === '/auth/admin/password';
-  if (request.method !== 'GET' && !(privateRoute && request.method === 'POST')) return json({ error: 'Method not allowed' }, 405);
-  if (privateRoute && !browserLogin && !tokenLogin) return json({ error: 'Unauthorized' }, 401);
-  if (privateRoute && request.method === 'POST' && browserLogin && !tokenLogin && !sameOrigin) return json({ error: 'Forbidden' }, 403);
+  if (request.method !== 'GET' && !(privateRoute && request.method === 'POST')) return reply({ error: 'Método não permitido.' }, 405);
+  if (privateRoute && !browserLogin && !tokenLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
+  if (privateRoute && request.method === 'POST' && browserLogin && !tokenLogin && !sameOrigin) return reply({ error: 'Acesso não permitido.' }, 403);
   try {
     const selectedStoreId = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
     if (env.DB) await activeStore(env, selectedStoreId);
@@ -333,6 +370,6 @@ export async function adminResponse(request, env, now = Date.now()) {
     if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid rotation state');
     const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, revision, selectedStoreId);
     const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now) } : {};
-    return json(privateRoute ? { storeId: selectedStoreId, username: credential.username, password, nextRotation: credential.nextRotation } : credential, 200, extra);
-  } catch (error) { return json({ error: 'Admin service unavailable' }, error.status || 503); }
+    return reply(privateRoute ? { storeId: selectedStoreId, username: credential.username, password, nextRotation: credential.nextRotation } : credential, 200, extra);
+  } catch (error) { return reply({ error: 'Serviço temporariamente indisponível.' }, error.status || 503); }
 }

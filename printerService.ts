@@ -10,7 +10,7 @@ import type { CustomerReceipt } from './src/services/business';
 const runPrintJob = createPrintJob();
 
 export type PrinterConnection = 'system' | 'bluetooth' | 'wifi' | 'usb';
-export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88'; routing?: PrinterRouting };
+export type PrinterSettings = { connection: PrinterConnection; name: string; address: string; port: string; paperWidth: '58' | '80' | '88'; routing?: PrinterRouting; automatic?: boolean };
 export type ServiceMode = 'dine_in' | 'takeout';
 export type PrintableOrderItem = { name: string; quantity: number; note: string; flavors?: string[]; extras?: { name: string; placement: 'whole' | 'first' | 'second' }[] };
 export type PrintableOrder = { plate: string; customer: string; serviceMode?: ServiceMode; items: (PrintableOrderItem & { category?: string })[]; createdAt: string; tabletLabel?: string; dailyNumber?: number };
