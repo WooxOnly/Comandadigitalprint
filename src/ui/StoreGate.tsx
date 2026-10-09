@@ -111,6 +111,7 @@ export function StoreGate({ children }: { children: ReactNode }) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <View style={[styles.panel, { width: '100%', maxWidth: 460 }]}>
+          {mode === 'select' && <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />}
           <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', borderRadius: 16, marginBottom: 12 }} />
           <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 18 }]}>BistroHub</Text>
           {mode === 'loading' ? <ActivityIndicator color={COLORS.green} /> : mode === 'error' ? <>
@@ -119,7 +120,6 @@ export function StoreGate({ children }: { children: ReactNode }) {
           </> : <>
             <Text style={styles.panelTitle}>{words.title}</Text>
             <Text style={styles.settingsIntro}>{words.hint}</Text>
-            <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />
             {stores ? <>
               <Text style={styles.fieldLabel}>{words.choose}</Text>
               {stores.map((store) => <Pressable key={store.id} onPress={() => { setSelectedId(store.id); setMessage(''); }} accessibilityRole="radio" accessibilityState={{ checked: selectedId === store.id }} style={[styles.noteChip, { marginBottom: 8, alignSelf: 'stretch' }, selectedId === store.id && styles.selectedCategory]}><Text style={[styles.noteChipText, selectedId === store.id && styles.selectedCategoryText]}>{String(store.code).padStart(3, '0')} · {store.name}</Text></Pressable>)}

@@ -14,7 +14,7 @@ export function LanguageSelector({ language, onChange, disabled = false }: {
   onChange: (language: Language) => void;
   disabled?: boolean;
 }) {
-  return <View style={styles.quickNotes}>
+  return <View style={flagStyles.row}>
     {choices.map(({ value, label, flag }) => <Pressable
       key={value}
       disabled={disabled}
@@ -32,7 +32,8 @@ export function LanguageSelector({ language, onChange, disabled = false }: {
 }
 
 const flagStyles = StyleSheet.create({
-  button: { minWidth: 64, minHeight: 48, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 2, borderColor: 'transparent', backgroundColor: COLORS.greenSoft },
-  selected: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  image: { width: 32, height: 24, borderRadius: 3 },
+  row: { flexDirection: 'row', gap: 4, alignSelf: 'flex-end' },
+  button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' },
+  selected: { backgroundColor: COLORS.greenSoft, borderColor: COLORS.green },
+  image: { width: 20, height: 15, borderRadius: 2 },
 });

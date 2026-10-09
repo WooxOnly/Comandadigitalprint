@@ -18,7 +18,7 @@ export default function PrinterScreen() {
   const canSettings = useAccess('settings');
   const modules = useStoreModules();
   const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, savingOrderSettings } = useApp();
-  return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
+  return <ScreenFrame><LanguageSettings compact /><View style={[styles.columns, isWide && styles.columnsWide]}>
                   <View style={[styles.column, isWide && styles.columnWide, { gap: 12 }]}>
                     <UserSettings />
                     {canRestore && <Pressable style={styles.secondaryWideButton} onPress={() => router.navigate('/backups')}><Text style={styles.secondaryButtonText}>{t('Recuperação de dados')}</Text></Pressable>}
@@ -41,7 +41,6 @@ export default function PrinterScreen() {
                     {modules.customers && <Pressable style={styles.secondaryWideButton} onPress={() => router.navigate('/customers')}><Text style={styles.secondaryButtonText}>{t('Cadastro de Clientes')}</Text></Pressable>}
                     {modules.preorders && <Pressable style={styles.secondaryWideButton} onPress={() => router.navigate('/preorders')}><Text style={styles.secondaryButtonText}>{t('Encomendas')}</Text></Pressable>}
                     {modules.cash && <Pressable style={styles.secondaryWideButton} onPress={() => router.navigate('/cash')}><Text style={styles.secondaryButtonText}>{t('Caixa')}</Text></Pressable>}
-                    <LanguageSettings />
                     <Text style={styles.panelTitle}>{t("Pedidos")}</Text>
                     <View style={styles.orderLine}>
                       <Text style={[styles.cardTitle, styles.productInfo]}>{t("Obrigar informar cliente")}</Text>

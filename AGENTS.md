@@ -4,7 +4,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 - Every user-facing feature must ship in Brazilian Portuguese, English and Spanish in the administrative portal, Manager Dashboard and APK. Use the existing translation catalogs, including validation, errors, accessibility labels and receipts. Preserve user-entered names and notes.
 - Review spelling, accents, punctuation and restaurant terminology in all three languages. Keep sources in UTF-8. New translation keys require both English and Spanish values; run the language coverage tests.
-- Language selectors use bundled flag images for Brazil (Portuguese), the United States (English), and Spain (Spanish). Keep the language names as accessibility labels and expose the selected state; do not depend on emoji rendering.
+- Language selectors use bundled flag images for Brazil (Portuguese), the United States (English), and Spain (Spanish). Keep the language names as accessibility labels and expose the selected state; do not depend on emoji rendering. Keep the selector at the upper right, with discreet 20 × 15 flag images, 44 × 44 touch targets and a light selected background with a thin green border.
 - Verify tablet portrait and landscape layouts, including rotation with a draft, large fonts, long names, keyboard access, forms, navigation and receipt dialogs. Run the responsive browser checks; distinguish browser/emulated evidence from Android device validation.
 
 - Web portal account passwords require at least 8 characters; user-chosen tablet passwords may use any nonempty length up to the existing 128-character input limit. Keep confirmation, hashing and authorization. API signing secrets are separate.

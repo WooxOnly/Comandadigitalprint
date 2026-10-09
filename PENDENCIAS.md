@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Bandeiras compactas no canto superior direito — 09/10/2026
+
+- Administrativo, cadastro de grupos/gestores, Painel do Gestor e telas do APK com seleção de idioma usam bandeiras **20 × 15**, reduzidas de32 ×24, no canto superior direito. Botões **44 ×44** conservam a área de toque; fundo transparente e seleção verde clara com borda fina substituem os blocos grandes/escuros. Nomes acessíveis, foco, seleção e preferência salva preservados.
+- No tablet, o seletor fica no início do vínculo/login e dos Ajustes; no site, antes do conteúdo do formulário e no canto direito do cabeçalho administrativo. Não usa posicionamento absoluto sobre campos ou menus.
+- Lint, TypeScript,15 testes de idioma/login e480 verificações de telas/idiomas/dimensões em Chromium aprovados. Prévias de login administrativo e gestor em390 ×844 e600 ×960 conferidas com botões44 ×44, bandeiras20 ×15 e foco visível. Android físico permanece no roteiro de teste.
+- Atualização destinada apenas à homologação. Publicação e nova build serão registradas após confirmação dos serviços.
+
 ## Entrega das correções em homologação — 09/10/2026
 
 - Código commitado e enviado: `7c5e617cac2a61c3651cf95e51393ab29faa9f02`, branch `homologacao`. Inclui bandeiras, espera progressiva no login/vínculo, fluxo **grupo → cliente/loja**, senhas web de mínimo 8 caracteres e senhas escolhidas no app de 1 a 128 caracteres. Grupos e lojas existentes preservados; nenhuma senha foi redefinida durante a publicação.

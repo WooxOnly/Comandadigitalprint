@@ -5,7 +5,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { type Language } from '../i18n/translations';
 import { styles } from './theme';
 
-export function LanguageSettings() {
+export function LanguageSettings({ compact = false }: { compact?: boolean }) {
   const { language, setLanguage, t } = useLanguage();
   const [busy, setBusy] = useState(false);
   async function change(value: Language) {
@@ -14,5 +14,5 @@ export function LanguageSettings() {
     catch { Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar a configuração.')); }
     finally { setBusy(false); }
   }
-  return <View><Text style={styles.panelTitle}>{t('Idioma')}</Text><LanguageSelector language={language} disabled={busy} onChange={(value) => void change(value)} /></View>;
+  return <View>{!compact && <Text style={styles.panelTitle}>{t('Idioma')}</Text>}<LanguageSelector language={language} disabled={busy} onChange={(value) => void change(value)} /></View>;
 }
