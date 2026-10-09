@@ -9,6 +9,8 @@ const database = 'seabra-cardapio-homologacao';
 const api = 'https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev';
 const projectId = '2cffbcaa-f4d7-423c-85c7-81131ca55310';
 
+export const redactPrivateLinks = output => output.replace(/https?:\/\/[^\s"'<>]*[?&](?:X-Amz-|X-Goog-)[^\s"'<>]*/g, '[link privado omitido]');
+
 export function validateTargets(profile, worker, productionWorker, config, productionConfig) {
   const db = worker.d1_databases?.find(binding => binding.binding === 'DB');
   const productionDb = productionWorker.d1_databases?.find(binding => binding.binding === 'DB');
@@ -25,7 +27,8 @@ export async function publish(run, checkHealth, verifyBackup, backup) {
   // Authentication is checked before any remote modification or financial data export.
   run('wrangler', ['whoami', '--json'], { capture: true });
   run('eas', ['whoami'], { capture: true });
-  run('wrangler', ['d1', 'export', database, '--remote', '--config', workerConfig, '--output', backup, '--skip-confirmation']);
+  // Wrangler prints a signed URL to the complete SQL export; keep it out of public CI logs.
+  run('wrangler', ['d1', 'export', database, '--remote', '--config', workerConfig, '--output', backup, '--skip-confirmation'], { capture: true });
   verifyBackup(backup);
   run('wrangler', ['d1', 'execute', database, '--remote', '--config', workerConfig, '--file', 'server/cloudflare/store-schema.sql', '--yes']);
   run('wrangler', ['deploy', '--config', workerConfig]);
@@ -45,7 +48,7 @@ async function main() {
   const execute = (command, arguments_, capture = false) => {
     const result = spawnSync(command, arguments_, { cwd: root, env, encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' });
     if (result.error || result.status !== 0) {
-      if (capture && result.stderr) process.stderr.write(result.stderr);
+      if (capture && result.stderr) process.stderr.write(redactPrivateLinks(result.stderr));
       throw new Error(`Falha em ${command === 'git' ? 'git' : arguments_.includes('wrangler') ? 'Cloudflare/Wrangler' : arguments_.includes('eas') ? 'Expo/EAS' : 'configuração'}. Confira o login e a mensagem do comando; a próxima etapa não foi executada.`);
     }
     return result.stdout;

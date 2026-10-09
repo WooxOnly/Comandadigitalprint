@@ -1,5 +1,15 @@
 # Pendências e preferências
 
+## Autenticação e entrega em homologação — 09/10/2026
+
+- Cloudflare e Expo autenticados nesta sessão por autorização de dispositivo nas páginas oficiais; Expo conectado à conta `onlybeone`, com acesso a `onlybeones-team`. Senhas e tokens não foram solicitados ou registrados no Git.
+- Ponto D1 Time Travel registrado antes da migração: `00000004-00000002-000050ff-c80b4807b88a48b300ed0c70ab8d6b71`. Backup SQL conferido em `.wrangler/backups/homologacao-2026-10-09T22-26-20-819Z.sql`, fora do Git/APK; esquema reaplicado com 46 consultas.
+- Worker `seabra-cardapio-homologacao` publicado com versão `bb2a071c-e52e-4df8-85da-ed999bcc81fd`, a partir do commit `930ed6bd6a718ed7a9daebef6dce02118cff4bd2`. `/health` respondeu 200/`ok: true`; páginas `/admin`, `/admin/gestores` e `/gestor` responderam 200 e passaram em nove verificações de idioma PT-BR/EN/ES no serviço publicado.
+- APK solicitado e aceito: [build `1292af19-22dc-47ff-962f-a89712cad14f`](https://expo.dev/accounts/onlybeones-team/projects/matheus-sampaio-homologacao/builds/1292af19-22dc-47ff-962f-a89712cad14f), commit `930ed6b`, perfil `homologacao`, pacote `com.wooxonly.comandadigitalprint.homologacao`, projeto `2cffbcaa-f4d7-423c-85c7-81131ca55310`. Estado conferido: `IN_PROGRESS` na compilação Android. O link disponibiliza o APK quando o Expo finalizar; confirmação de solicitação não significa compilação concluída.
+- A entrega foi executada diretamente pelos CLIs autenticados desta sessão. A automação do GitHub ainda precisa dos três segredos descritos em `AMBIENTES.md`; o login por dispositivo não os cadastra automaticamente. Nenhuma entrega de produção foi iniciada.
+- Publicador corrigido para capturar a saída do backup e remover links assinados privados de erros, impedindo sua exposição nos logs públicos do GitHub. Quatro testes do publicador, lint, tipos e validação do workflow aprovados. O commit de automação/documentação usa `[skip deployment]`: validação GitHub continua e evita uma segunda build do mesmo aplicativo.
+- Expo Doctor da build informou 20/21 verificações aprovadas; a ressalva é a ausência de certificação de `react-native-tcp-socket` para New Architecture no React Native Directory. A compilação continuou. Impressão ESC/POS, acentos/corte, som, teclado/fontes, rotação, sincronização entre aparelhos e uso durante o turno ainda exigem teste nos tablets/POS. Instalar o APK novo antes de habilitar os módulos opcionais.
+
 ## Entrega em homologação solicitada — 08/10/2026
 
 - Usuário autorizou registrar e enviar todas as melhorias para `homologacao`, publicar o Worker/D1 de homologação e gerar APK exclusivo para testar hoje. Essa autorização substitui, para esta entrega, a preferência anterior de apenas acumular as mudanças.

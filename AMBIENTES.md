@@ -29,7 +29,22 @@ O job **Publicar homologação e solicitar APK** usa exatamente o commit validad
 
 Quando os segredos forem cadastrados depois de uma tentativa, abrir **Actions → Validate app and server → execução de homologacao → Re-run failed jobs**. O resumo e os logs mostram os links do servidor e da build. O APK só fica disponível após a conclusão da build no Expo.
 
-O backup SQL exportado permanece apenas no runner temporário, fora do Git. Nenhum arquivo com dados da empresa é publicado como artifact neste repositório. Para recuperação, usar o bookmark registrado nos logs com o [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/), dentro da retenção da conta (7 dias no plano gratuito; 30 no pago). Uma restauração exige autenticação e deve considerar as operações posteriores ao ponto selecionado.
+O backup SQL exportado permanece apenas no runner temporário, fora do Git. A saída da exportação é capturada para não publicar seu link assinado de download; links privados também são removidos de mensagens de erro. Nenhum arquivo com dados da empresa é publicado como artifact neste repositório. Para recuperação, usar o bookmark registrado nos logs com o [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/), dentro da retenção da conta (7 dias no plano gratuito; 30 no pago). Uma restauração exige autenticação e deve considerar as operações posteriores ao ponto selecionado.
+
+Em alterações exclusivas de documentação ou automação que não precisam de nova entrega, incluir `[skip deployment]` na mensagem do commit de push: as validações continuam e somente a publicação/build é omitida. Isso evita gerar outro APK ao registrar uma entrega já realizada.
+
+## Autenticar diretamente nesta sessão por dispositivo
+
+Wrangler e EAS atuais permitem autorizar o ambiente da conversa usando o navegador do próprio computador ou celular:
+
+```sh
+npx wrangler@4 login --device --browser=false
+npx eas-cli@latest login --device --non-interactive
+```
+
+O Wrangler informa uma página oficial e código com validade curta. O EAS informa seu link/código e um identificador para retomar a solicitação. Após o usuário autorizar no navegador, concluir a solicitação Expo com `npx eas-cli@latest login --device --non-interactive --resume IDENTIFICADOR --match NUMERO`, usando o número que o usuário viu na página oficial (omitir `--match` quando não houver número). Senhas ficam nas páginas oficiais; códigos de dispositivo não são registrados no repositório.
+
+Conferir os logins com `npx wrangler@4 whoami --json` e `npx eas-cli@latest whoami`, registrar o ponto D1 Time Travel e executar `npm run publicar:homologacao`. Essa autorização conecta os CLIs desta sessão; ela não cadastra automaticamente os segredos do GitHub Actions. A entrega direta continua disponível mesmo quando a automação do GitHub ainda aguarda esses segredos.
 
 Se o projeto Expo ainda não tiver credenciais de assinatura Android, uma primeira configuração interativa pode ser exigida: executar `npx eas-cli@latest build --platform android --profile homologacao --no-wait` em um computador autenticado, sempre conferindo o projeto de homologação. A [documentação de builds em CI](https://docs.expo.dev/build/building-on-ci/) exige essa configuração prévia para execuções não interativas.
 

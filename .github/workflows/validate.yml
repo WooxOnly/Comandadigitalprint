@@ -23,7 +23,7 @@ jobs:
   publish-homologacao:
     name: Publicar homologação e solicitar APK
     needs: checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/homologacao'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/homologacao' && !contains(github.event.head_commit.message, '[skip deployment]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
