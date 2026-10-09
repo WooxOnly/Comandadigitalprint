@@ -91,7 +91,9 @@ export async function cloudResponse(request, env) {
       const input = await body(request);
       if (typeof input?.username !== 'string' || typeof input?.password !== 'string' || input.username.length > 120 || input.password.length > 256) fail(400, 'INVALID_DATA');
       const result = await provisionableStores(input.username.trim(), input.password, env);
-      return reply(result.stores ? { stores: result.stores } : { error: result.error }, result.status);
+      const response = reply(result.stores ? { stores: result.stores } : { error: result.error, ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}) }, result.status);
+      if (result.retryAfterSeconds) response.headers.set('Retry-After', String(result.retryAfterSeconds));
+      return response;
     }
     const actor = await session(request, env);
     if (url.pathname === '/cloud/access' && request.method === 'GET') return reply(await storeAccess(env, actor.storeId));

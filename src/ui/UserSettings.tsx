@@ -51,7 +51,7 @@ export function UserSettings() {
     <PasswordField label={t('Senha atual')} value={currentPassword} onChangeText={setCurrentPassword} />
     <PasswordField label={t('Nova senha')} value={password} onChangeText={setPassword} />
     <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />
-    <Text style={styles.helperText}>{t('Use uma senha de 4 a 6 caracteres e confirme a mesma senha.')}</Text>
+    <Text style={styles.helperText}>{t('Informe uma senha e confirme a mesma senha.')}</Text>
     <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={saveOwnPassword}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar nova senha')}</Text></Pressable>
   </View>;
   return <View style={styles.panel}>
@@ -72,7 +72,7 @@ export function UserSettings() {
     <TextInput accessibilityLabel={t('Usuário')} placeholder={t('Usuário')} placeholderTextColor={COLORS.placeholder} value={username} onChangeText={setUsername} editable={!editing && !busy} autoCapitalize="none" autoCorrect={false} maxLength={24} style={styles.input} />
     <PasswordField label={t('Senha')} value={password} onChangeText={setPassword} />
     <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />
-    <Text style={styles.helperText}>{t('Use uma senha de 4 a 6 caracteres e confirme a mesma senha.')}</Text>
+    <Text style={styles.helperText}>{t('Informe uma senha e confirme a mesma senha.')}</Text>
     <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={() => change(() => editing ? service.updateUser(editing, users.find((u) => u.username === editing)!.active, password, confirmation) : service.createUser(username, password, confirmation))}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar usuário')}</Text></Pressable>
     {editing && <Pressable disabled={busy} style={styles.cancelButton} onPress={() => { setEditing(null); setUsername(''); setPassword(''); setConfirmation(''); }}><Text style={styles.cancelButtonText}>{t('Cancelar')}</Text></Pressable>}
     </View>}

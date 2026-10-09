@@ -9,8 +9,8 @@ type Digest = { salt: string; hash: string; iterations?: number };
 type Credentials = { version: 1; username: string; login: Digest; attempts: number; blockedUntil: number; week?: number; revision?: number };
 type Storage = { getItemAsync: (key: string) => Promise<string | null>; setItemAsync: (key: string, value: string) => Promise<void> };
 export const AUTH_STORAGE_ERROR = 'Não foi possível acessar o armazenamento seguro. Tente novamente.';
-export const PASSWORD_ERROR = 'Use uma senha de 4 a 6 caracteres e confirme a mesma senha.';
-export function validPasswords(password: string, confirmation: string) { return password.length >= 4 && password.length <= 6 && password === confirmation; }
+export const PASSWORD_ERROR = 'Informe uma senha e confirme a mesma senha.';
+export function validPasswords(password: string, confirmation: string) { return password.length > 0 && password.length <= 128 && password === confirmation; }
 async function digest(password: string, salt: string, iterations = ITERATIONS) {
   return bytesToHex(await pbkdf2Async(sha256, password, hexToBytes(salt), { c: iterations, dkLen: 32, asyncTick: 10 }));
 }

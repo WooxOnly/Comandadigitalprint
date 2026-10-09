@@ -46,7 +46,7 @@ test('owner portal configures tax and managers per company and rejects inactive 
   assert.equal((await patch({ tax: { enabled: true, rateBps: 10001 }, managers: [] })).status, 400);
   const response = await f.adminResponse(new Request('https://example.com/admin/stores', { headers: { Cookie: cookie } }), f.env), stores = await response.json();
   assert.deepEqual(stores.find(s => s.id === 'seabra-2').cashSettings, { tax: { enabled: false, rateBps: 0 }, managers: [] });
-  const html = await (await f.adminResponse(new Request('https://example.com/admin', { headers: { Cookie: cookie } }), f.env)).text();
+  const html = await (await f.adminResponse(new Request('https://example.com/admin?storeId=seabra-1', { headers: { Cookie: cookie } }), f.env)).text();
   assert.match(html, /name="taxRate"/); assert.match(html, /name="cashManager" value="manager" checked/);
   for (const match of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) new Script(match[1]);
   f.db.exec(fs.readFileSync('server/cloudflare/store-schema.sql', 'utf8'));

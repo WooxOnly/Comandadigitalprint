@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
-import { KeyboardPressable as Pressable } from './KeyboardControls';
+import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '../i18n/LanguageContext';
 import { type Language } from '../i18n/translations';
 import { styles } from './theme';
@@ -14,7 +14,5 @@ export function LanguageSettings() {
     catch { Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar a configuração.')); }
     finally { setBusy(false); }
   }
-  return <View><Text style={styles.panelTitle}>{t('Idioma')}</Text><View style={styles.quickNotes}>
-    {([['pt', 'Português'], ['en', 'English'], ['es', 'Español']] as const).map(([value, label]) => <Pressable key={value} disabled={busy} accessibilityRole="radio" accessibilityState={{ checked: language === value, disabled: busy }} onPress={() => change(value)} style={[styles.noteChip, language === value && styles.selectedCategory]}><Text style={[styles.noteChipText, language === value && styles.selectedCategoryText]}>{label}</Text></Pressable>)}
-  </View></View>;
+  return <View><Text style={styles.panelTitle}>{t('Idioma')}</Text><LanguageSelector language={language} disabled={busy} onChange={(value) => void change(value)} /></View>;
 }

@@ -4,9 +4,9 @@ Implementação local na branch `homologacao`, em 07/10/2026. O módulo **Prepar
 
 ## Liberação e cadastro
 
-1. No administrativo existente (`/admin`), selecionar a loja e habilitar **Painel de preparo** no cadastro/edição da empresa.
-2. Pelo novo link **Painel do Gestor**, abrir `/admin/gestores` e cadastrar o cliente/grupo, selecionando uma ou mais lojas autorizadas.
-3. Cadastrar um usuário gestor vinculado ao cliente/grupo, com nome, usuário único e senha inicial de pelo menos 12 caracteres. O mesmo cliente pode ter vários usuários. Entregar a senha diretamente ao responsável.
+1. No administrativo existente (`/admin`), selecionar o grupo, depois o cliente ou loja e habilitar **Painel de preparo** no cadastro/edição da empresa.
+2. Pelo link **Grupos e usuários**, abrir `/admin/gestores` e cadastrar o grupo, vinculando até 100 lojas. O grupo pode começar sem lojas; depois, **Cadastrar cliente ou loja** dentro do grupo cria e vincula a primeira unidade.
+3. Cadastrar um usuário gestor vinculado ao cliente/grupo, com nome, usuário único e senha inicial de pelo menos 8 caracteres. O mesmo cliente pode ter vários usuários. Entregar a senha diretamente ao responsável.
 4. O cliente entra em `/gestor` e consulta uma loja ou o conjunto de lojas vinculadas. Não existe cadastro público de gestores. O cadastro web não habilita automaticamente nenhum módulo.
 
 O administrativo permite editar vínculos, ativar/desativar clientes e usuários e redefinir a senha. Essas alterações encerram as sessões anteriores. A desativação de uma loja e as mudanças na liberação de preparo valem na próxima consulta. O login de gestor possui sessão própria e não concede acesso ao administrativo nem ao login do tablet. Gerentes de Caixa e usuários do portal continuam com seus cadastros correspondentes.

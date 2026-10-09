@@ -91,7 +91,7 @@ test('only the owner browser session provisions clients and manager users; passw
 
 test('administrative validation rejects missing stores, duplicate logins, short passwords and stale client edits', async t => {
   const f = await setup(t);
-  for (const ids of [[], [f.a.storeId, f.a.storeId], ['does-not-exist']]) assert.ok((await f.admin('/admin/manager-clients', { name: 'Bad', active: true, storeIds: ids })).status >= 400);
+  for (const ids of [[f.a.storeId, f.a.storeId], ['does-not-exist']]) assert.ok((await f.admin('/admin/manager-clients', { name: 'Bad', active: true, storeIds: ids })).status >= 400);
   const data = { clientId: f.client.id, name: 'Another', username: 'another', password: 'short', active: true };
   assert.equal((await f.admin('/admin/manager-users', data)).status, 400);
   assert.equal((await f.admin('/admin/manager-users', { ...data, username: 'manager', password })).status, 409);

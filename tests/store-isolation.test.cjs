@@ -113,7 +113,7 @@ test('one panel session selects stores inside the portal for logs and weekly pas
   assert.equal(login.status, 303);
   const cookie = login.headers.get('Set-Cookie').split(';')[0];
   const request = (path, method = 'GET') => adminResponse(new Request('https://example.com' + path, { method, headers: { Cookie: cookie, Origin: 'https://example.com' } }), env);
-  const panel = await (await request('/admin?storeId=seabra-2')).text(); assert.match(panel, /option value="seabra-2" selected/);
+  const panel = await (await request('/admin?storeId=seabra-2')).text(); assert.match(panel, /selectedGroupId="unassigned",hasStore=true/);
   const logs = await (await request('/admin/logs?kind=errors&storeId=seabra-2')).json(); assert.deepEqual(logs.map((item) => item.code), ['SECOND']);
   assert.deepEqual((await (await request('/admin/logs?kind=errors&storeId=seabra-1')).json()).map((item) => item.code), ['FIRST']);
   assert.equal((await request('/auth/admin/password?storeId=seabra-1')).status, 200);

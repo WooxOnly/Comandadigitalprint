@@ -78,7 +78,7 @@ test('panel requires a session, ignores cached Basic auth and rejects cross-orig
   assert.ok((await panel.text()).includes('BistroHub'));
   const loginHtml = await (await adminResponse(new Request('https://example.com/admin'), env, now)).text();
   assert.ok(!loginHtml.includes('Identificador da loja'));
-  const password = await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
+  const password = await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-1', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
   assert.equal(password.status, 200);
   assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: cookie } }), env, now + 61 * 60000)).status, 401);
   const renewed = panel.headers.get('Set-Cookie').split(';')[0];
@@ -159,7 +159,7 @@ test('offline recovery survives cleared storage, persists lockout and resumes we
   const salt = randomBytes(16).toString('hex');
   const recovery = { salt, hash: pbkdf2Sync(code, Buffer.from(salt, 'hex'), 600000, 32, 'sha256').toString('hex'), iterations: 600000 };
   const f = fixture(recovery), fresh = f.create(); await fresh.load();
-  await assert.rejects(fresh.recoverOffline(code, '1234567', '1234567'));
+  await assert.rejects(fresh.recoverOffline(code, '', ''));
   for (let i = 0; i < 5; i++) await assert.rejects(fresh.recoverOffline('wrong', '123456', '123456'), /incorreta/);
   const restarted = f.create(); await restarted.load();
   await assert.rejects(restarted.recoverOffline(code, '123456', '123456'), /minuto/);
@@ -190,7 +190,7 @@ test('local users survive restart, require unlocked settings and support disable
   await assert.rejects(auth.createUser('staff', '123456', '123456'));
   await auth.verify('settings', '2066');
   await assert.rejects(auth.createUser('admin', '123456', '123456'));
-  await assert.rejects(auth.createUser('staff', '1234567', '1234567'));
+  await assert.rejects(auth.createUser('staff', '', ''));
   await auth.createUser('Staff', '123456', '123456');
   await assert.rejects(auth.createUser('staff', '123456', '123456'));
   assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
@@ -406,4 +406,14 @@ test('admin rotation is weekly; offline, invalid responses and failed writes ret
   const restarted = f.create(); await restarted.load();
   await assert.rejects(restarted.verify('login', week2.password, 'admin'), /minuto/);
   f.time.value += 60001; await restarted.verify('login', week2.password, 'admin');
+});
+
+test('app passwords support the chosen length through creation, restart, reset and self-service change', async () => {
+  const f = fixture(), auth = f.create(); await auth.load(); await auth.setup('admin', 'a', 'a'); await auth.verify('settings', '2066');
+  await assert.rejects(auth.createUser('staff', '', '')); await assert.rejects(auth.createUser('staff', 'chosen', 'mismatch'));
+  await auth.createUser('staff', 'x', 'x');
+  const restarted = f.create(); await restarted.load(); await restarted.verify('login', 'x', 'staff'); await restarted.verify('settings', '2066');
+  await restarted.changeOwnPassword('x', 'password8', 'password8'); restarted.logout(); await restarted.verify('login', 'password8', 'staff');
+  await auth.verify('settings', '2066'); const long = 'Senha com acentuação · '.repeat(4); await auth.updateUser('staff', true, long, long);
+  const final = f.create(); await final.load(); await final.verify('login', long, 'staff');
 });

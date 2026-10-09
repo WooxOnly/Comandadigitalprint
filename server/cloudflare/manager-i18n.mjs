@@ -1,3 +1,4 @@
+import { LANGUAGE_FLAGS } from './language-flags.mjs';
 export const LANGUAGES = Object.freeze({ pt: 'pt-BR', en: 'en-US', es: 'es-ES' });
 export const LANGUAGE_COOKIE = '__Host-bistro_manager_language';
 export const LANGUAGE_CHOICE_COOKIE = '__Host-bistro_manager_language_choice';
@@ -98,6 +99,8 @@ export const TRANSLATIONS = {
   'Idioma inválido.': ['Invalid language.', 'Idioma no válido.'], 'Portal indisponível.': ['Dashboard unavailable.', 'Panel no disponible.'],
   'Formulário inválido. Entre novamente.': ['Invalid form. Sign in again.', 'Formulario no válido. Inicia sesión de nuevo.'], 'Sessão de login expirada. Entre novamente.': ['The sign-in session expired. Sign in again.', 'La sesión de acceso ha caducado. Inicia sesión de nuevo.'],
   'Usuário ou senha incorretos.': ['Incorrect username or password.', 'Usuario o contraseña incorrectos.'], 'Muitas tentativas. Aguarde 15 minutos.': ['Too many attempts. Wait 15 minutes.', 'Demasiados intentos. Espera 15 minutos.'],
+  'Muitas tentativas. Tente novamente em {count} segundos.': ['Too many attempts. Try again in {count} seconds.', 'Demasiados intentos. Inténtalo de nuevo en {count} segundos.'],
+  'Você já pode tentar novamente.': ['You can try again now.', 'Ya puedes volver a intentarlo.'],
   'Método indisponível.': ['Method not available.', 'Método no disponible.'], 'Recurso indisponível.': ['Resource not available.', 'Recurso no disponible.'], 'Loja não autorizada.': ['Location not authorized.', 'Local no autorizado.'],
   'Intervalo do TMA inválido.': ['Invalid average time metric.', 'Intervalo del tiempo medio no válido.'], 'Portal temporariamente indisponível.': ['Dashboard temporarily unavailable.', 'Panel temporalmente no disponible.'],
   'Fuso horário inválido.': ['Invalid time zone.', 'Zona horaria no válida.'], 'Informe datas válidas.': ['Enter valid dates.', 'Introduce fechas válidas.'], 'Selecione um período de até 12 meses (366 dias).': ['Select a period of up to 12 months (366 days).', 'Selecciona un período de hasta 12 meses (366 días).'],
@@ -107,6 +110,7 @@ export const TRANSLATIONS = {
 };
 
 export const SINGULAR_TRANSLATIONS = {
+  'Muitas tentativas. Tente novamente em {count} segundos.': ['Muitas tentativas. Tente novamente em {count} segundo.', 'Too many attempts. Try again in {count} second.', 'Demasiados intentos. Inténtalo de nuevo en {count} segundo.'],
   '{count} registros': ['{count} registro', '{count} record', '{count} registro'],
   '{count} pedidos com tempo registrado': ['{count} pedido com tempo registrado', '{count} order with recorded times', '{count} pedido con tiempos registrados'],
   '{count} pedidos no período': ['{count} pedido no período', '{count} order in period', '{count} pedido del período'],
@@ -146,19 +150,23 @@ export function localizeMarkup(content, language) {
   }).replace(/(aria-label|title|placeholder)=(["'])([^"']*)\2/g, (match, attribute, quote, text) => Object.hasOwn(TRANSLATIONS, text) ? `${attribute}=${quote}${translate(language, text)}${quote}` : match);
 }
 export function languageSelector(language) {
-  return `<label class='language-picker'>${translate(language, 'Idioma')}<select id='language' aria-label='${translate(language, 'Idioma')}'><option value='pt'${language === 'pt' ? ' selected' : ''}>Português</option><option value='en'${language === 'en' ? ' selected' : ''}>English</option><option value='es'${language === 'es' ? ' selected' : ''}>Español</option></select></label><p id='language-message' role='status'></p>`;
+  const choices = [['pt', 'Português'], ['en', 'English'], ['es', 'Español']];
+  return `<div id='language' class='language-picker' role='group' aria-label='${translate(language, 'Idioma')}'>${choices.map(([value, label]) => `<button type='button' class='language-button' data-language='${value}' aria-label='${label}' title='${label}' aria-pressed='${language === value}'>${LANGUAGE_FLAGS[value]}</button>`).join('')}</div><p id='language-message' role='status' aria-live='polite'></p>`;
 }
+export const languageSelectorCss = `.language-picker{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.language-picker .language-button{display:flex;align-items:center;justify-content:center;flex:none;width:auto;min-width:64px;min-height:48px;margin:0;padding:10px 14px;border:2px solid transparent;border-radius:12px;background:#e8f1ec;cursor:pointer}.language-picker .language-button[aria-pressed=true]{background:#214b40;border-color:#214b40}.language-picker .language-button:focus-visible{outline:3px solid #ae4328;outline-offset:2px}.language-picker .language-button:disabled{opacity:.55;cursor:wait}.language-button svg{display:block;width:32px;height:24px;border-radius:3px;pointer-events:none}#language-message:empty{display:none}#language-message{color:#a22828}`;
 export function languageScript(language, userId = '', scope = 'manager', signIn = false) {
   const index = language === 'en' ? 0 : language === 'es' ? 1 : -1;
-  const entries = signIn ? [['Não foi possível salvar o idioma. Tente novamente.', TRANSLATIONS['Não foi possível salvar o idioma. Tente novamente.']]] : Object.entries(TRANSLATIONS);
+  const signInKeys = ['Não foi possível salvar o idioma. Tente novamente.', 'Muitas tentativas. Tente novamente em {count} segundos.', 'Você já pode tentar novamente.'];
+  const entries = signIn ? signInKeys.map(key => [key, TRANSLATIONS[key]]) : Object.entries(TRANSLATIONS);
   const translations = Object.fromEntries(entries.map(([key, values]) => [key, index < 0 ? key : values[index]]));
   const serialized = JSON.stringify(translations).replace(/</g, '\\u003c');
-  const singular = JSON.stringify(Object.fromEntries((signIn ? [] : Object.entries(SINGULAR_TRANSLATIONS)).map(([key, values]) => [key, values[index + 1]]))).replace(/</g, '\\u003c');
+  const singular = JSON.stringify(Object.fromEntries(Object.entries(SINGULAR_TRANSLATIONS).filter(([key]) => !signIn || signInKeys.includes(key)).map(([key, values]) => [key, values[index + 1]]))).replace(/</g, '\\u003c');
   return `const language=${JSON.stringify(language)},locale=${JSON.stringify(LANGUAGES[language])},translations=${serialized},singularTranslations=${singular},viewKey=${JSON.stringify('bistro-manager-view:' + userId)};
 function tr(source,values={}){const text=String(values.count)==='1'&&Object.hasOwn(singularTranslations,source)?singularTranslations[source]:Object.hasOwn(translations,source)?translations[source]:source;return text.replace(/\\{(\\w+)\\}/g,(match,key)=>String(values[key]??match))}
 function tmaLabel(basis){return tr(basis==='preparation'?'TMA de preparo':basis==='ready'?'TMA até pronto':'TMA')}
 function saveView(){if(!document.querySelector('#filters'))return;try{const view={};for(const id of ['store','from','to','zone','tma-basis','month','breakdown','chart-metric','sales-breakdown','sales-chart-metric'])view[id]=document.querySelector('#'+id).value;view.area=activeArea;sessionStorage.setItem(viewKey,JSON.stringify(view))}catch{}}
-document.querySelector('#language').onchange=async event=>{const select=event.target;select.disabled=true;try{const response=await fetch(${JSON.stringify(scope === 'admin' ? '/admin/language' : '/gestor/language')},{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:select.value})});if(!response.ok)throw Error();saveView();location.reload()}catch{select.value=language;document.querySelector('#language-message').textContent=tr('Não foi possível salvar o idioma. Tente novamente.');select.disabled=false}};
+const languageButtons=document.querySelectorAll('#language [data-language]');let savingLanguage=false;
+for(const button of languageButtons)button.addEventListener('click',async()=>{if(savingLanguage||button.dataset.language===language)return;savingLanguage=true;for(const choice of languageButtons)choice.disabled=true;document.querySelector('#language-message').textContent='';try{const response=await fetch(${JSON.stringify(scope === 'admin' ? '/admin/language' : '/gestor/language')},{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:button.dataset.language})});if(!response.ok)throw Error();saveView();location.reload()}catch{document.querySelector('#language-message').textContent=tr('Não foi possível salvar o idioma. Tente novamente.');savingLanguage=false;for(const choice of languageButtons)choice.disabled=false}});
 `;
 }
 import { ADMIN_TRANSLATIONS } from './admin-i18n.mjs';

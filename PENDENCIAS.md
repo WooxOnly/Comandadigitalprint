@@ -1,5 +1,28 @@
 # Pendências e preferências
 
+## Administrativo por grupos e regras de senhas — 09/10/2026
+
+- Proprietário entra em **Grupos**, escolhe o grupo e depois o cliente ou loja. Não há seleção automática de Hunters Creek ou outra unidade. Grupos existentes reaproveitados; lojas sem vínculo aparecem em **Lojas sem grupo**, inclusive inativas, sem reativação automática. Métricas continuam no portal separado `/gestor`.
+- Cadastro de grupos pode começar vazio; cadastro de loja no grupo vincula a nova unidade em transação, sem anexar lojas existentes quando o nome/ID colide. O administrativo consulta logs e histórico globais, do grupo ou da unidade selecionada. Senha semanal exige seleção explícita de loja.
+- Senhas de contas dos sites: mínimo de **8 caracteres**, tanto no formulário quanto na API, para troca do proprietário e criação/redefinição de gestores. Senhas escolhidas no app: qualquer tamanho não vazio, até o limite de entrada existente de 128 caracteres, com confirmação, proteção e verificador preservados. Senha semanal gerada e código de Ajustes mantêm suas regras. Segredos de assinatura e tokens da API continuam separados.
+- Lint, TypeScript e **210 testes** aprovados; **480 combinações** de telas, idiomas e dimensões em Chromium, sem erros de JavaScript. Inclui fluxo de grupo/loja, lojas inativas e sem grupo, vínculo atômico, logs por escopo, mínimo de 8 no site e senhas curtas/longas no app. Evidência de navegador; validação no Android físico permanece no roteiro.
+- Entrega solicitada expressamente pelo proprietário: comitar, enviar à branch `homologacao`, publicar Worker e iniciar APK exclusivo. Status e links da entrega serão registrados após confirmação dos serviços.
+
+## Espera progressiva no acesso administrativo — 09/10/2026
+
+- Vínculo inicial do tablet e login do administrativo agora bloqueiam por 30 segundos após três erros, 60 após seis, 90 após nove e mais 30 segundos por grupo de três. O total de erros persiste após a espera e zera ao entrar corretamente. Pedidos durante o bloqueio não contam erros nem prorrogam o prazo; atualizações do contador/deadline são atômicas no D1.
+- API retorna `Retry-After` e `retryAfterSeconds`. Tablet e administrativo mostram contagem regressiva em PT-BR/EN/ES, tratam o singular de um segundo, impedem nova submissão durante a espera e liberam a ação ao terminar. A tela não tenta entrar automaticamente. Reabertura do administrativo consulta novamente o prazo real; retorno do tablet ao primeiro plano atualiza seu relógio.
+- Bloqueios legados da regra de cinco erros/15 minutos são removidos uma vez durante a transição, preservando o contador. Não exige migração de esquema nem troca de credenciais.
+- Lint, TypeScript, 202 testes e 444 combinações de telas/idiomas/dimensões em Chromium aprovados. Inclui limites de 30/60/90/120 segundos, fim exato da espera, contador compartilhado, concorrência, legado, login correto, contagem regressiva e ausência de reenvio automático. Verificação física em Android permanece separada.
+- Implementação validada antes da entrega; publicação desta rodada registrada na seção mais recente. A nova regra depende da próxima publicação do Worker; a contagem regressiva no tablet requer o APK atualizado.
+
+## Bandeiras nos seletores de idioma — 09/10/2026
+
+- Substituídos os nomes visíveis dos idiomas por bandeiras do Brasil, Estados Unidos e Espanha no vínculo inicial do tablet, login, Ajustes, administrativo, cadastro de gestores e Painel do Gestor. O idioma selecionado continua destacado e a preferência salva mantém o comportamento existente.
+- Imagens incluídas no APK e SVGs incorporados ao HTML, sem depender de internet para carregar as bandeiras ou de fontes de emojis. Nomes dos idiomas preservados para acessibilidade; botões com área mínima de 64 × 48 e estado de seleção exposto.
+- Lint, TypeScript, 195 testes existentes e 432 combinações de telas/idiomas/dimensões em Chromium aprovados. Bandeiras carregadas, preferência entre páginas/navegadores e prévias em retrato/paisagem conferidas. A validação usa componentes reais do APK via React Native Web; aparelho Android continua necessário para a verificação física.
+- Implementação validada antes da entrega; publicação desta rodada registrada na seção mais recente. Para aparecer no aplicativo instalado e nos portais online, incluir a alteração na próxima entrega.
+
 ## Autenticação e entrega em homologação — 09/10/2026
 
 - Cloudflare e Expo autenticados nesta sessão por autorização de dispositivo nas páginas oficiais; Expo conectado à conta `onlybeone`, com acesso a `onlybeones-team`. Senhas e tokens não foram solicitados ou registrados no Git.
