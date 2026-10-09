@@ -52,14 +52,18 @@ test('four independent owner flags support every combination, legacy metadata an
 test('sold-out metadata syncs offline and detects conflicts without mutating or preventing old kitchen orders', async t => {
   const f = await fixture(t), a = f.tablet(), b = f.tablet();
   for (const tablet of [a, b]) { await tablet.cloud.setSession(f.a); await tablet.cloud.sync(); }
-  const order = kitchen(); a.offline = true; await a.cloud.write({ ['order:' + order.id]: order });
+  const order = kitchen(); a.offline = true; await a.cloud.write({ ['order:' + order.id]: order }); await a.cloud.sync();
   await b.cloud.write({ 'product-option:pizza': { productId: 'pizza', available: false, favorite: true } }); await b.cloud.sync();
   a.offline = false; await a.cloud.sync(); assert.equal(a.cloud.pending('order:' + order.id), false);
   assert.equal((await a.cloud.get('product-option:pizza')).available, false);
   const base = f.db.prepare('SELECT revision FROM store_records WHERE store_id = ? AND key = ?').get(f.a.storeId, 'order:' + order.id).revision;
   assert.equal((await write(f, 'order:' + order.id, { ...order, plate: '8' }, base)).status, 409);
-  for (const tablet of [a, b]) { tablet.offline = true; await tablet.cloud.write({ 'product-option:pizza': { productId: 'pizza', available: true, favorite: tablet === a } }); tablet.offline = false; }
-  await a.cloud.sync(); await b.cloud.sync(); assert.equal(b.cloud.status().status, 'CONFLICT');
+  // write() starts synchronization automatically. Drain that attempt while
+  // offline so the explicit reconnection order determines which tablet wins.
+  for (const tablet of [a, b]) { tablet.offline = true; await tablet.cloud.write({ 'product-option:pizza': { productId: 'pizza', available: true, favorite: tablet === a } }); await tablet.cloud.sync(); }
+  a.offline = false; await a.cloud.sync(); b.offline = false; await b.cloud.sync();
+  assert.equal(a.cloud.status().status, 'SYNCED'); assert.equal(b.cloud.status().status, 'CONFLICT');
+  assert.equal(b.cloud.pending('product-option:pizza'), true);
   const old = await (await f.call('/changes', undefined, f.a.token)).json(); assert.ok(!old.changes.some(row => row.key.startsWith('product-option:')));
   assert.ok((await (await f.call('/changes?features=operations-v1', undefined, f.a.token)).json()).changes.some(row => row.key.startsWith('product-option:')));
 });
