@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Entrega das correções em homologação — 09/10/2026
+
+- Código commitado e enviado: `7c5e617cac2a61c3651cf95e51393ab29faa9f02`, branch `homologacao`. Inclui bandeiras, espera progressiva no login/vínculo, fluxo **grupo → cliente/loja**, senhas web de mínimo 8 caracteres e senhas escolhidas no app de 1 a 128 caracteres. Grupos e lojas existentes preservados; nenhuma senha foi redefinida durante a publicação.
+- Worker publicado: versão `8eed4dd2-f149-497f-8338-451a71cf290e`. Administrativo: https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev/admin ; grupos/usuários: `/admin/gestores`; gestor: `/gestor`. Saúde HTTP 200/`ok:true`; entradas dos dois portais conferidas online em PT-BR/EN/ES, com três bandeiras.
+- **APK novo aceito e em compilação (`IN_PROGRESS`)** no Expo: https://expo.dev/accounts/onlybeones-team/projects/matheus-sampaio-homologacao/builds/395b6ba1-41cd-4626-a6b7-0f601fabe662 . Perfil `homologacao`, Android, commit `7c5e617cac2a61c3651cf95e51393ab29faa9f02`, aplicativo **BistroHub Homologação**, pacote `com.wooxonly.comandadigitalprint.homologacao`. O download aparece nessa página após o término. Conforme preferência permanente, entrega confirmada ao aceitar a build, sem esperar a compilação e sem confundir com o APK anterior.
+- Lint, TypeScript, **210 testes** e **480 verificações de telas/idiomas/dimensões em Chromium** aprovados. GitHub Actions do código também aprovado: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/38004876116 . Publicação executada diretamente com Cloudflare/Expo autenticados; `[skip deployment]` evita publicação automática duplicada enquanto os três Actions Secrets ainda não estão configurados.
+- Backup privado antes da reaplicação do esquema: `.wrangler/backups/homologacao-2026-10-09T23-32-05-942Z.sql` (10.230 bytes; fora do Git). Bookmark D1: `0000000a-00000000-000050ff-d54f4c8f92189238b395261d983a48af`.
+- Produção não recebeu esta entrega: branch `main` permanece em `25f0aa41abc449b57169ac1142deb781d2435ad2`. Pendências para uso: término da build no Expo, instalação do APK novo e teste em tablet/impressora físicos. Não é necessário aguardar a compilação para testar os portais.
+
 ## Administrativo por grupos e regras de senhas — 09/10/2026
 
 - Proprietário entra em **Grupos**, escolhe o grupo e depois o cliente ou loja. Não há seleção automática de Hunters Creek ou outra unidade. Grupos existentes reaproveitados; lojas sem vínculo aparecem em **Lojas sem grupo**, inclusive inativas, sem reativação automática. Métricas continuam no portal separado `/gestor`.
