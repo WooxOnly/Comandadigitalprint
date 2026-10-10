@@ -31,12 +31,12 @@ async function readBody(request) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const manager = await managerResponse(request, env);
     if (manager) return manager;
     const cloud = await cloudResponse(request, env);
     if (cloud) return cloud;
-    const authentication = await adminResponse(request, env);
+    const authentication = await adminResponse(request, env, Date.now(), context);
     if (authentication) return authentication;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const pathname = new URL(request.url).pathname;

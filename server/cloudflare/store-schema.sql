@@ -44,6 +44,20 @@ CREATE TABLE IF NOT EXISTS panel_preferences (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   language TEXT NOT NULL CHECK (language IN ('pt', 'en', 'es'))
 );
+-- Only token digests are stored. A password revision invalidates earlier links.
+CREATE TABLE IF NOT EXISTS panel_password_recovery (
+  token_hash TEXT PRIMARY KEY,
+  password_revision INTEGER NOT NULL CHECK (password_revision >= 0),
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS panel_password_recovery_expiry ON panel_password_recovery(expires_at);
+CREATE TABLE IF NOT EXISTS panel_recovery_limits (
+  key TEXT PRIMARY KEY,
+  attempts INTEGER NOT NULL,
+  reset_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS panel_recovery_limits_expiry ON panel_recovery_limits(reset_at);
 -- Give the new policy five fresh failures once, without touching credentials.
 -- The version change and counter reset are atomic; schema reapplication must
 -- preserve attempts recorded after this transition.

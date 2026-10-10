@@ -1,6 +1,7 @@
 import { storeAccess, validAccessUsers } from './operations.mjs';
 import { validAccess } from '../../shared/operations-validation.mjs';
-import { loginPage, panelPage } from './admin-panel.mjs';
+import { loginPage, panelPage, recoveryPage } from './admin-panel.mjs';
+import { recoveryReady, requestRecovery, recoveryTokenValid, resetPassword } from './password-recovery.mjs';
 import { activeStore, DEFAULT_STORE_ID, storeId, storeModules, validModules } from './stores.mjs';
 import { cashSettings, validateManagers } from './cash-settings.mjs';
 import { validCashSettings } from '../../shared/cash-pricing.mjs';
@@ -89,14 +90,16 @@ async function validSession(request, env, now) {
 
 async function credentialsMatch(username, password, env) {
   if (!env.ADMIN_VIEW_TOKEN || username.length > 120 || password.length > 256) return false;
-  if (username !== (env.ADMIN_PANEL_USER || 'admin')) return false;
+  const owner = env.ADMIN_PANEL_USER || 'admin';
+  const recoveryEmail = env.ADMIN_RECOVERY_EMAIL;
+  if (username !== owner && !(typeof recoveryEmail === 'string' && recoveryEmail.includes('@') && username.trim().toLowerCase() === recoveryEmail.toLowerCase())) return false;
   const state = await panelPasswordState(env);
   if (state) {
     if (!/^[0-9a-f]{32}$/.test(state.salt) || !/^[0-9a-f]{64}$/.test(state.hash) || !Number.isSafeInteger(state.iterations) || state.iterations < 100000 || state.iterations > 1000000) throw new Error('Invalid panel password state');
     return equalHex(await passwordDigest(password, state.salt, state.iterations), state.hash);
   }
-  const expected = encode((env.ADMIN_PANEL_USER || 'admin') + '\0' + env.ADMIN_VIEW_TOKEN);
-  const provided = encode(username + '\0' + password);
+  const expected = encode(owner + '\0' + env.ADMIN_VIEW_TOKEN);
+  const provided = encode(owner + '\0' + password);
   const [a, b] = await Promise.all([crypto.subtle.digest('SHA-256', expected), crypto.subtle.digest('SHA-256', provided)]);
   const left = new Uint8Array(a), right = new Uint8Array(b);
   let difference = 0;
@@ -114,6 +117,16 @@ function htmlResponse(content, nonce, status = 200, extra = {}) {
 function loginResponse(nonce, message = '', status = 200, language = 'pt', retryAfterSeconds = 0) {
   const csrf = crypto.randomUUID();
   return htmlResponse(loginPage(nonce, translate(language, message, { count: retryAfterSeconds }), csrf, language, retryAfterSeconds), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf), 'Content-Language': language, ...(retryAfterSeconds ? { 'Retry-After': String(retryAfterSeconds) } : {}) });
+}
+
+function recoveryResponse(nonce, language, options = {}, status = 200) {
+  const csrf = crypto.randomUUID();
+  return htmlResponse(recoveryPage(nonce, csrf, language, { ...options, message: translate(language, options.message || '') }), nonce, status, {
+    'Set-Cookie': csrfCookieHeader(csrf), 'Content-Language': language,
+    // Preserve same-origin form Origin while keeping reset URLs out of external
+    // referrers. CSP permits no third-party scripts, assets or connections.
+    'Referrer-Policy': 'same-origin',
+  });
 }
 
 const blockedMessage = 'Muitas tentativas. Tente novamente em {count} segundos.';
@@ -158,10 +171,10 @@ export async function provisionableStores(username, password, env, now = Date.no
   return { stores, status: 200 };
 }
 
-export async function adminResponse(request, env, now = Date.now()) {
+export async function adminResponse(request, env, now = Date.now(), context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = ['/admin/gestores', '/admin/manager-clients', '/admin/manager-users', '/admin/language'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = ['/admin/gestores', '/admin/manager-clients', '/admin/manager-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
@@ -171,6 +184,43 @@ export async function adminResponse(request, env, now = Date.now()) {
   let language = requestLanguage(request, readCookie, LANGUAGE_COOKIE, 'pt');
   if (browserLogin) language = await panelLanguage(env) || language;
   const reply = (value, status = 200, extra = {}) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status, extra);
+  if (pathname === '/admin/recover' || pathname === '/admin/reset-password') {
+    const reset = pathname === '/admin/reset-password';
+    const unavailable = !recoveryReady(env);
+    const render = (options = {}, status = 200) => recoveryResponse(nonce, language, { unavailable, ...options }, status);
+    if (request.method === 'GET') {
+      if (!reset) return render(unavailable ? { message: 'A recuperação por e-mail ainda não está disponível. Tente novamente mais tarde.' } : {});
+      try {
+        const token = url.searchParams.get('token');
+        return await recoveryTokenValid(env, token, now) ? render({ mode: 'reset', token })
+          : render({ message: 'Link de recuperação inválido ou expirado. Solicite um novo link.' }, 400);
+      } catch { return render({ message: 'Não foi possível processar a recuperação agora. Tente novamente mais tarde.' }, 503); }
+    }
+    if (request.method !== 'POST') return render({ message: 'Formulário inválido.' }, 405);
+    if (!sameOrigin) return render({ message: 'Origem inválida.' }, 403);
+    try {
+      if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/x-www-form-urlencoded') return render({ message: 'Formulário inválido.' }, 400);
+      const form = new URLSearchParams(await readBody(request, 4096));
+      const csrf = readCookie(request, CSRF_COOKIE);
+      if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return render({ message: 'A sessão de login expirou. Tente novamente.' }, 403);
+      const keys = reset ? ['csrf', 'token', 'newPassword', 'confirmPassword'] : ['csrf', 'username'];
+      if ([...form.keys()].length !== keys.length || keys.some(key => form.getAll(key).length !== 1)) return render({ message: 'Formulário inválido.' }, 400);
+      if (!reset) {
+        const username = form.get('username').trim();
+        if (!username || username.length > 120 || /[\u0000-\u001f\u007f]/.test(username)) return render({ message: 'Formulário inválido.' }, 400);
+        const result = await requestRecovery(request, env, username, language, now, context);
+        return render(result, result.status);
+      }
+      const token = form.get('token'), password = form.get('newPassword'), confirmation = form.get('confirmPassword');
+      const options = { mode: 'reset', token: /^[a-f0-9]{64}$/.test(token) ? token : '' };
+      if (password.length > 256 || confirmation.length > 256) return render({ ...options, message: 'Formulário inválido.' }, 400);
+      if (password.length < 8) return render({ ...options, message: 'A nova senha deve ter pelo menos 8 caracteres.' }, 400);
+      if (password !== confirmation) return render({ ...options, message: 'A confirmação não corresponde à nova senha.' }, 400);
+      const result = await resetPassword(request, env, token, password, now);
+      if (result.status !== 303) return render({ ...options, message: result.message }, result.status);
+      return new Response(null, { status: 303, headers: { Location: '/admin?changed=1', 'Cache-Control': 'no-store', 'Set-Cookie': cookieHeader('', 0) } });
+    } catch (error) { return render({ message: error.status ? error.message : 'Não foi possível processar a recuperação agora. Tente novamente mais tarde.' }, error.status || 503); }
+  }
   if (pathname === '/admin/language' && request.method === 'POST') {
     if (!sameOrigin || !request.headers.get('Content-Type')?.startsWith('application/json')) return reply({ error: 'Acesso não permitido.' }, 403);
     try {

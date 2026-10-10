@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Esqueceu a senha? no administrativo — 10/10/2026
+
+- Proprietário solicitou o botão no login e escolheu recuperação por link de e-mail. Implementados `/admin/recover` e `/admin/reset-password`, com PT-BR/EN/ES, bandeiras compactas, retorno à entrada e nova senha de mínimo 8 caracteres.
+- Links aleatórios de 256 bits, digest no D1, validade de 15 minutos e uso único. Senha, consumo do link e limpeza de tentativas são transacionais; revisão revoga as sessões e outros links antigos. CSRF, mesma origem, corpo limitado e limites próprios de envio/redefinição. GET não consome o link. Senha semanal, lojas e contas de gestores preservadas.
+- O endereço de recuperação escolhido pelo proprietário também serve de identificador no login/vínculo, com a mesma senha da conta administrativa; usuário original e identidade das sessões mantidos. Destinatário e remetente de teste configurados como segredos somente no Worker de homologação. O endereço não é copiado para o Git.
+- **229 testes aprovados**, lint e TypeScript aprovados; **498 verificações existentes de telas/idiomas/dimensões** mais **18 fluxos reais de recuperação e 57 verificações responsivas** em Chromium, PT-BR/EN/ES. Transporte Resend exclusivamente simulado nos testes; nenhuma redefinição da conta real foi feita. Evidência em `/tmp/bistro-password-recovery` e `/tmp/bistro-password-recovery-7priPW`.
+- **Pendente para ativar o envio real:** criar conta Resend com o e-mail de recuperação e adicionar `RESEND_API_KEY` como segredo no Cloudflare Worker `seabra-cardapio-homologacao`. Sem a chave, a tela informa indisponibilidade e desabilita envio; não afirma que enviou. Roteiro completo em `RECUPERACAO-SENHA-PAINEL.md`.
+- Correção limitada ao site/API; o APK de homologação entregue continua atual. Publicação/versão do Worker serão registradas após confirmação, preservando produção e sem gerar build Android redundante.
+
 ## Bandeiras no APK como no portal — 09/10/2026
 
 - Entrada, vínculo inicial, acesso protegido dos Ajustes e Ajustes abertos usam o seletor compacto no canto superior direito, com bandeiras 20 × 15, botões 44 × 44 e seleção verde clara com borda fina. A seleção recebe o mesmo espaço de 12 pixels antes do conteúdo usado no portal.

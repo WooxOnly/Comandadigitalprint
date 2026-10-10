@@ -3,6 +3,9 @@
   "main": "worker.mjs",
   "compatibility_date": "2026-09-25",
   "workers_dev": true,
+  "vars": {
+    "PASSWORD_RESET_ORIGIN": "https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev"
+  },
   "d1_databases": [
     {
       "binding": "DB",
