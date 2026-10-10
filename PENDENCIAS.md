@@ -8,6 +8,8 @@
 - Estabilizado o relógio da matriz de telas: pausa um minuto após a instalação para evitar `Cannot fast-forward to the past` quando navegadores executam em paralelo. Essa alteração é exclusiva do teste; a regra de bloqueio do aplicativo continua igual.
 - Evidências: `/tmp/bistro-language-navigation`, `/tmp/bistro-language-navigation-chromium.log`, `/tmp/bistro-language-navigation-firefox.log`, `/tmp/bistro-layout-0SRTyO` e `/tmp/bistro-password-recovery-bdYEt3`. Novo roteiro automatizado em `tests/browser/verify-language-navigation.cjs`.
 - Correção exclusiva dos portais web compartilhados; o APK atual permanece válido. Publicação autorizada somente em homologação. A chave Resend para ativar envio real de recuperação continua pendente conforme a seção abaixo.
+- Código enviado à branch `homologacao`: `3421b36da209ec9002043b38af719c35f7d63fe0`. Worker publicado com versão `a18ce48d-49e8-4ab4-bf3e-d885144ffa5d`. `/admin`, `/gestor` e `/admin/recover` responderam HTTP 200 em PT-BR/EN/ES com a navegação corrigida; `/health` HTTP 200/`ok:true`. Conferência remota exclusivamente por GET, sem afetar tentativas da conta real. Banco e produção não foram alterados. Para substituir uma página POST antiga já aberta, cancelar o aviso e abrir novamente o endereço `/admin`, em vez de recarregar o formulário antigo.
+- GitHub Actions do código aprovado (lint, TypeScript e 229 testes): https://github.com/WooxOnly/Comandadigitalprint/actions/runs/38050341726 . Entrega concluída em homologação; o registro posterior modifica somente esta documentação e não exige outra publicação.
 
 ## Esqueceu a senha? no administrativo — 10/10/2026
 
