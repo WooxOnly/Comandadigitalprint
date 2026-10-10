@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Bandeiras no APK como no portal — 09/10/2026
+
+- Entrada, vínculo inicial, acesso protegido dos Ajustes e Ajustes abertos usam o seletor compacto no canto superior direito, com bandeiras 20 × 15, botões 44 × 44 e seleção verde clara com borda fina. A seleção recebe o mesmo espaço de 12 pixels antes do conteúdo usado no portal.
+- Na tela que pede a senha dos Ajustes, o idioma pode ser alterado sem desbloquear configurações; a proteção continua ativa. A preferência salva e os nomes acessíveis Português/English/Español são preservados.
+- Prévia em navegador passa a incluir o `SettingsGate` real na rota de acesso protegido, além das telas de login, vínculo e Ajustes. Lint, TypeScript, 20 testes de idioma/autenticação e **498 verificações de telas/idiomas/dimensões** aprovados; trocar o idioma preserva a senha em digitação e mantém os Ajustes bloqueados. Capturas da entrada e dos Ajustes em 600 × 960 e 960 × 600 conferidas. Evidência em Chromium/React Native Web; teste físico Android permanece no roteiro.
+- Destinos exclusivos de homologação conferidos pelo publicador. A alteração do APK requer nova build; identificação e link serão registrados após o Expo aceitá-la. O Worker da regra de cinco erros já está publicado e não foi alterado nesta rodada.
+
 ## Cinco erros sem espera antes do bloqueio — 09/10/2026
 
 - Administrativo e vínculo inicial do tablet permitem os primeiros cinco erros sem espera. O 6º erro bloqueia por 30 segundos, o 9º por 60, o 12º por 90 e o 15º por 120. Após a espera, erros adicionais continuam a sequência; um login correto zera o contador. Pedidos durante o bloqueio não somam erros nem prorrogam o prazo.

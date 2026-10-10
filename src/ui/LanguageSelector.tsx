@@ -32,7 +32,7 @@ export function LanguageSelector({ language, onChange, disabled = false }: {
 }
 
 const flagStyles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 4, alignSelf: 'flex-end' },
+  row: { flexDirection: 'row', gap: 4, alignSelf: 'flex-end', marginBottom: 12 },
   button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' },
   selected: { backgroundColor: COLORS.greenSoft, borderColor: COLORS.green },
   image: { width: 20, height: 15, borderRadius: 2 },

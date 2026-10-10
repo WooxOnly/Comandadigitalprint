@@ -34,7 +34,8 @@ export function Fixture({children}){
  return <Route.Provider value={route}><Language.Provider value={{language,locale:LOCALES[language],t:text=>translate(text,language),setLanguage:async value=>{localStorage.setItem('qa-language',value);setLanguage(value)},ready:true}}><App.Provider value={value}>{children}</App.Provider></Language.Provider></Route.Provider>;
 }
 export function useApp(){const app=useContext(App),{width,fontScale}=useWindowDimensions();return {...app,isWide:width>=760&&fontScale<1.4}}
-export const useLanguage=()=>useContext(Language),usePathname=()=>useContext(Route),useLocalSearchParams=()=>({id:order.id});
+export const useLanguage=()=>useContext(Language),usePreviewRoute=()=>useContext(Route),useLocalSearchParams=()=>({id:order.id});
+export function usePathname(){const route=usePreviewRoute();return route==='/settings-access'?'/printer':route}
 export const router={navigate:target=>location.hash=typeof target==='string'?target:target.pathname,push:target=>location.hash=typeof target==='string'?target:target.pathname,replace:target=>location.hash=target};
 export function useFocusEffect(effect){useEffect(effect,[effect])}
 const service={loginUsers:()=>['admin','chef'],listUsers:()=>[{username:'admin',active:true},{username:'chef',active:true}],subscribe:sub,load:asyncNoop,lockSettings:noop};
@@ -45,11 +46,11 @@ export const StatusBar=()=>null,randomUUID=()=>crypto.randomUUID(),printAsync=as
 `;
   const entry = `
 import React from 'react';import {createRoot} from 'react-dom/client';
-import {Fixture,usePathname} from 'qa:stubs';
-import {AppShell} from '${root}/src/ui/AppShell';import {LoginGate} from '${root}/src/ui/AccessGate';
+import {Fixture,usePreviewRoute} from 'qa:stubs';
+import {AppShell} from '${root}/src/ui/AppShell';import {LoginGate,SettingsGate} from '${root}/src/ui/AccessGate';
 import {StoreGate} from '${root}/src/ui/StoreGate';
 ${['Home','Order','Menu','History','HistoryDetail','Printer','Preparation','Customers','Preorders','Cash','CashReports','Backups'].map(name=>`import ${name} from '${root}/src/screens/${name}Screen';`).join('\n')}
-function Screens(){const route=usePathname();if(route==='/link')return <StoreGate><div>Linked fixture</div></StoreGate>;const components={'/':Home,'/order':Order,'/menu':Menu,'/history':History,'/history/detail':HistoryDetail,'/printer':Printer,'/preparation':Preparation,'/customers':Customers,'/preorders':Preorders,'/cash':Cash,'/cash-reports':CashReports,'/backups':Backups};const Component=components[route]||Home;return <LoginGate><AppShell><Component/></AppShell></LoginGate>}
+function Screens(){const route=usePreviewRoute();if(route==='/link')return <StoreGate><div>Linked fixture</div></StoreGate>;const components={'/':Home,'/order':Order,'/menu':Menu,'/history':History,'/history/detail':HistoryDetail,'/printer':Printer,'/settings-access':Printer,'/preparation':Preparation,'/customers':Customers,'/preorders':Preorders,'/cash':Cash,'/cash-reports':CashReports,'/backups':Backups};const Component=components[route]||Home;return <LoginGate><AppShell>{route==='/settings-access'?<SettingsGate><Component/></SettingsGate>:<Component/>}</AppShell></LoginGate>}
 createRoot(document.getElementById('root')).render(<Fixture><Screens/></Fixture>);
 `;
   const intercept = /(?:^expo-router$|^expo-status-bar$|^expo-crypto$|^expo-print$|\/state\/(?:AppContext|AuthContext|BusinessContext)$|\/i18n\/LanguageContext$|\/services\/(?:cloudStorage|diagnostics)$|\/config\/store$|\/ui\/useKitchenAlerts$|\.\/useKitchenAlerts$)/;

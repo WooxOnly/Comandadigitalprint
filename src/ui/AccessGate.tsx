@@ -42,7 +42,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
       <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
-        {!settings && <LanguageSettings compact />}
+        <LanguageSettings compact />
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
         {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {storeName}</Text>}
