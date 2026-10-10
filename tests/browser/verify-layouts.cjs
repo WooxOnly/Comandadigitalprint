@@ -35,7 +35,9 @@ async function verifyLoginCooldowns(browser, base, errors, directory) {
       const page = await context.newPage();
       page.on('pageerror', error => errors.push(error.message));
       const time = new Date();
-      await page.clock.install({ time }); await page.clock.pauseAt(time);
+      // pauseAt advances the installed clock; pausing at the install timestamp
+      // can already be in the past when another browser check is running.
+      await page.clock.install({ time }); await page.clock.pauseAt(new Date(time.getTime() + 60000));
       let requests = 0;
       await page.route('**/cloud/provision', route => {
         requests++;

@@ -165,8 +165,19 @@ export function languageScript(language, userId = '', scope = 'manager', signIn 
 function tr(source,values={}){const text=String(values.count)==='1'&&Object.hasOwn(singularTranslations,source)?singularTranslations[source]:Object.hasOwn(translations,source)?translations[source]:source;return text.replace(/\\{(\\w+)\\}/g,(match,key)=>String(values[key]??match))}
 function tmaLabel(basis){return tr(basis==='preparation'?'TMA de preparo':basis==='ready'?'TMA até pronto':'TMA')}
 function saveView(){if(!document.querySelector('#filters'))return;try{const view={};for(const id of ['store','from','to','zone','tma-basis','month','breakdown','chart-metric','sales-breakdown','sales-chart-metric'])view[id]=document.querySelector('#'+id).value;view.area=activeArea;sessionStorage.setItem(viewKey,JSON.stringify(view))}catch{}}
+function languageTarget(nextLanguage){
+const target=new URL(location.href);
+if(target.pathname==='/admin/login')target.pathname='/admin';
+if(target.pathname==='/gestor/login')target.pathname='/gestor';
+if(target.pathname==='/admin/reset-password'&&!target.searchParams.has('token')){const input=document.querySelector('form[action="/admin/reset-password"] input[name="token"]');if(input&&/^[a-f0-9]{64}$/.test(input.value))target.searchParams.set('token',input.value)}
+// A different search also forces a document GET when the current URL has a hash.
+// Explicit navigation replaces POST history without submitting a form again.
+target.searchParams.set('_language',nextLanguage);
+if(target.pathname===location.pathname&&target.search===location.search)target.searchParams.set('_language',nextLanguage+'-'+crypto.randomUUID());
+return target.href;
+}
 const languageButtons=document.querySelectorAll('#language [data-language]');let savingLanguage=false;
-for(const button of languageButtons)button.addEventListener('click',async()=>{if(savingLanguage||button.dataset.language===language)return;savingLanguage=true;for(const choice of languageButtons)choice.disabled=true;document.querySelector('#language-message').textContent='';try{const response=await fetch(${JSON.stringify(scope === 'admin' ? '/admin/language' : '/gestor/language')},{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:button.dataset.language})});if(!response.ok)throw Error();saveView();location.reload()}catch{document.querySelector('#language-message').textContent=tr('Não foi possível salvar o idioma. Tente novamente.');savingLanguage=false;for(const choice of languageButtons)choice.disabled=false}});
+for(const button of languageButtons)button.addEventListener('click',async()=>{if(savingLanguage||button.dataset.language===language)return;savingLanguage=true;for(const choice of languageButtons)choice.disabled=true;document.querySelector('#language-message').textContent='';try{const response=await fetch(${JSON.stringify(scope === 'admin' ? '/admin/language' : '/gestor/language')},{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:button.dataset.language})});if(!response.ok)throw Error();saveView();location.replace(languageTarget(button.dataset.language))}catch{document.querySelector('#language-message').textContent=tr('Não foi possível salvar o idioma. Tente novamente.');savingLanguage=false;for(const choice of languageButtons)choice.disabled=false}});
 `;
 }
 import { ADMIN_TRANSLATIONS } from './admin-i18n.mjs';

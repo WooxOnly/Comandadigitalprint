@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Troca de idioma sem reenvio de formulário — 10/10/2026
+
+- Corrigido o aviso nativo de reenvio no Firefox ao trocar o idioma depois de um POST de login. O seletor salva a preferência e navega explicitamente por GET; erros em `/admin/login` e `/gestor/login` retornam à entrada correspondente, com CSRF novo. A navegação substitui a entrada POST do histórico e força um documento novo mesmo com fragmento ou marcador de idioma já igual.
+- Preservados PT-BR/EN/ES, preferência por conta/cookie, grupo, loja, parâmetros, fragmento e filtros do Painel do Gestor. Recuperação não repete o envio e redefinição preserva o token válido sem consumir o link, alterar a senha ou guardar credenciais no navegador. A troca não soma falhas nem prorroga bloqueios.
+- **229 testes**, lint, TypeScript e empacotamento do Worker aprovados. Chromium e Firefox 157 aprovados: **96 cenários e 380 trocas de idioma**, nos três idiomas, em retrato e paisagem, com métodos das requisições e estado D1 conferidos. Também aprovadas **498 verificações de telas/idiomas/dimensões** e **18 fluxos/57 verificações responsivas de recuperação**. Nenhuma tentativa inválida, mensagem real ou redefinição foi enviada à conta do proprietário.
+- Estabilizado o relógio da matriz de telas: pausa um minuto após a instalação para evitar `Cannot fast-forward to the past` quando navegadores executam em paralelo. Essa alteração é exclusiva do teste; a regra de bloqueio do aplicativo continua igual.
+- Evidências: `/tmp/bistro-language-navigation`, `/tmp/bistro-language-navigation-chromium.log`, `/tmp/bistro-language-navigation-firefox.log`, `/tmp/bistro-layout-0SRTyO` e `/tmp/bistro-password-recovery-bdYEt3`. Novo roteiro automatizado em `tests/browser/verify-language-navigation.cjs`.
+- Correção exclusiva dos portais web compartilhados; o APK atual permanece válido. Publicação autorizada somente em homologação. A chave Resend para ativar envio real de recuperação continua pendente conforme a seção abaixo.
+
 ## Esqueceu a senha? no administrativo — 10/10/2026
 
 - Proprietário solicitou o botão no login e escolheu recuperação por link de e-mail. Implementados `/admin/recover` e `/admin/reset-password`, com PT-BR/EN/ES, bandeiras compactas, retorno à entrada e nova senha de mínimo 8 caracteres.
