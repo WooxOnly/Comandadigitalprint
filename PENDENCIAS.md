@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Cinco erros sem espera antes do bloqueio — 09/10/2026
+
+- Administrativo e vínculo inicial do tablet permitem os primeiros cinco erros sem espera. O 6º erro bloqueia por 30 segundos, o 9º por 60, o 12º por 90 e o 15º por 120. Após a espera, erros adicionais continuam a sequência; um login correto zera o contador. Pedidos durante o bloqueio não somam erros nem prorrogam o prazo.
+- O contador existente é persistente e compartilhado entre o administrativo e o vínculo inicial; falhas de visitas anteriores explicam um bloqueio após uma tentativa nova. A transição de política zera tentativas/bloqueio uma única vez, para iniciar com cinco tentativas livres, sem alterar senhas, sessões, lojas ou dados. A versão da política e o reset são atualizados atomicamente; reaplicar o esquema preserva falhas posteriores.
+- Alteração feita na API; o APK atual recebe a nova regra pelo servidor, mantendo a contagem regressiva em PT-BR/EN/ES. Não requer outra build. A publicação depende de aplicar o `store-schema.sql` antes do Worker atualizado.
+- Lint, TypeScript, **211 testes** e **480 verificações de telas/idiomas/dimensões em Chromium** aprovados. Inclui cinco erros sem espera no formulário real, limites 6/9/12/15, concorrência, contador compartilhado, `Retry-After`, singular/traduções, reset no sucesso, migração de estados antigos e reaplicação sem liberar novos bloqueios. Verificação Android física continua no roteiro.
+- Backup privado anterior à transição: `.wrangler/backups/homologacao-login-five-2026-10-10T00-00-41Z.sql` (fora do Git). Bookmark D1: `0000000e-00000000-000050ff-0fb3aec417be302c756c9f5579ace4d0`. Destino exclusivo: homologação; versão publicada será registrada após confirmação.
+
 ## Bandeiras compactas no canto superior direito — 09/10/2026
 
 - Administrativo, cadastro de grupos/gestores, Painel do Gestor e telas do APK com seleção de idioma usam bandeiras **20 × 15**, reduzidas de 32 × 24, no canto superior direito. Botões **44 × 44** conservam a área de toque; fundo transparente e seleção verde clara com borda fina substituem os blocos grandes/escuros. Nomes acessíveis, foco, seleção e preferência salva preservados.

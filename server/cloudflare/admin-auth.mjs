@@ -129,14 +129,7 @@ async function savePanelLanguage(env, language) {
 
 async function loginLimit(env, now) {
   if (!env.DB) return null;
-  const state = await env.DB.prepare('SELECT attempts, blocked_until FROM panel_login WHERE id = 1').first();
-  // The former policy blocked at five failures for fifteen minutes. Its lock
-  // cannot occur under the new three-failure policy; release it once while
-  // preserving the failures, with a compare-and-set for concurrent requests.
-  if (state?.blocked_until > 0 && state.attempts % 3 !== 0) {
-    await env.DB.prepare('UPDATE panel_login SET blocked_until = 0 WHERE id = 1 AND attempts = ? AND blocked_until = ?').bind(state.attempts, state.blocked_until).run();
-    return loginLimit(env, now);
-  }
+  const state = await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
   return state?.blocked_until > now ? state.blocked_until : null;
 }
 
@@ -146,9 +139,10 @@ async function recordLogin(env, valid, now) {
     await env.DB.prepare('UPDATE panel_login SET attempts = 0, blocked_until = 0 WHERE id = 1').run();
     return null;
   }
-  // Increment and set the new deadline atomically. Requests received while
-  // blocked never extend the deadline or advance the failure count.
-  const state = await env.DB.prepare('UPDATE panel_login SET attempts = attempts + 1, blocked_until = CASE WHEN (attempts + 1) % 3 = 0 THEN ? + ((attempts + 1) / 3) * 30000 ELSE 0 END WHERE id = 1 AND blocked_until <= ? RETURNING blocked_until').bind(now, now).first();
+  // The first five failures have no wait. Failure six waits thirty seconds;
+  // each subsequent group of three adds thirty seconds. Increment and set
+  // the deadline atomically; blocked requests do not advance or extend it.
+  const state = await env.DB.prepare('UPDATE panel_login SET attempts = attempts + 1, blocked_until = CASE WHEN (attempts + 1) >= 6 AND (attempts + 1) % 3 = 0 THEN ? + (((attempts + 1) / 3) - 1) * 30000 ELSE 0 END WHERE id = 1 AND blocked_until <= ? RETURNING blocked_until').bind(now, now).first();
   return state ? state.blocked_until > now ? state.blocked_until : null : loginLimit(env, now);
 }
 

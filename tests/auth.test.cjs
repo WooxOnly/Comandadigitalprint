@@ -280,7 +280,7 @@ test('manual rotation requires authorization and replaces the cached password in
   assert.ok(panel.includes('Gerenciar senha') && panel.includes('Logs do sistema') && panel.includes('Logs de impressão'));
   env.ADMIN_PANEL_USER = 'owner@example.com';
   assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).status, 303);
-  for (let i = 0; i < 5; i++) await panelLogin(adminResponse, env, 'wrong');
+  for (let i = 0; i < 6; i++) await panelLogin(adminResponse, env, 'wrong');
   assert.equal((await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).status, 429);
   database.close();
 });

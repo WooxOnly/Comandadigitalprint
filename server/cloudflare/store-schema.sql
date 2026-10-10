@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS panel_preferences (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   language TEXT NOT NULL CHECK (language IN ('pt', 'en', 'es'))
 );
+-- Give the new policy five fresh failures once, without touching credentials.
+-- The version change and counter reset are atomic; schema reapplication must
+-- preserve attempts recorded after this transition.
+CREATE TABLE IF NOT EXISTS panel_login_policy (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  version INTEGER NOT NULL CHECK (version > 0)
+);
+INSERT OR IGNORE INTO panel_login_policy(id, version) VALUES (1, 1);
+CREATE TRIGGER IF NOT EXISTS panel_login_policy_v2
+  AFTER UPDATE OF version ON panel_login_policy
+  WHEN OLD.version < 2 AND NEW.version = 2
+BEGIN
+  UPDATE panel_login SET attempts = 0, blocked_until = 0 WHERE id = 1;
+END;
+UPDATE panel_login_policy SET version = 2 WHERE id = 1 AND version < 2;
 CREATE TABLE IF NOT EXISTS manager_login_limits (
   key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, reset_at INTEGER NOT NULL
 );
