@@ -20,6 +20,14 @@ O e-mail destinatário do portal permanece independente do e-mail da conta Resen
 
 Referências oficiais: [limite do remetente de teste](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain), [registros e verificação do domínio](https://resend.com/docs/dashboard/domains/manage-domains), [domínio exato do remetente](https://resend.com/docs/knowledge-base/403-error-domain-mismatch) e [permissões da chave](https://resend.com/docs/create-an-api-key). Copiar os registros gerados no painel, sem presumir seus tipos ou valores.
 
+## Alternativa sem domínio próprio
+
+O proprietário informou não ter domínio. A alternativa pesquisada é Brevo Free: após aprovação da conta para envio, até 300 e-mails/dia e API REST transacional. Um remetente Gmail pode ser verificado por código enviado ao próprio endereço; o Brevo reescreve o remetente dos e-mails transacionais para um domínio dele, independente do provedor do destinatário. O e-mail do portal permanece cadastrado normalmente no servidor.
+
+O enviador atual continua sendo Resend. Integrar/configurar Brevo depende da escolha do proprietário, da conta aprovada, do remetente verificado e de uma chave própria de envio. A reescrita é descrita pelo Brevo como solução provisória; domínio próprio continua sendo uma alternativa para preservar a identidade do remetente.
+
+Fontes: [plano e aprovação](https://www.brevo.com/pricing/), [verificação individual](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email), [reescrita e destinatários externos](https://help.brevo.com/hc/en-us/articles/14925263522578-Comply-with-Gmail-Yahoo-and-Microsoft-s-requirements-for-email-senders) e [contrato de envio REST](https://developers.brevo.com/reference/send-transac-email).
+
 ## Verificação e alcance
 
 Em 11/10/2026, a presença de `RESEND_API_KEY` como segredo foi conferida no Worker de homologação. A página de recuperação respondeu HTTP 200 nos três idiomas com envio habilitado e sem aviso de indisponibilidade. Essa verificação por leitura confirma a configuração; a validade da chave no fornecedor, o recebimento do e-mail e a redefinição ainda precisam do teste real do proprietário.
