@@ -24,7 +24,17 @@ Referências oficiais: [limite do remetente de teste](https://resend.com/docs/kn
 
 O proprietário informou não ter domínio. A alternativa pesquisada é Brevo Free: após aprovação da conta para envio, até 300 e-mails/dia e API REST transacional. Um remetente Gmail pode ser verificado por código enviado ao próprio endereço; o Brevo reescreve o remetente dos e-mails transacionais para um domínio dele, independente do provedor do destinatário. O e-mail do portal permanece cadastrado normalmente no servidor.
 
-O enviador atual continua sendo Resend. Integrar/configurar Brevo depende da escolha do proprietário, da conta aprovada, do remetente verificado e de uma chave própria de envio. A reescrita é descrita pelo Brevo como solução provisória; domínio próprio continua sendo uma alternativa para preservar a identidade do remetente.
+O transporte aceita `PASSWORD_RESET_PROVIDER=resend` (padrão) ou `PASSWORD_RESET_PROVIDER=brevo`. Cada seleção exige sua própria chave; valor desconhecido ou chave ausente desabilita a recuperação, sem enviar pelo outro provedor. A reescrita é descrita pelo Brevo como solução provisória; domínio próprio continua sendo uma alternativa para preservar a identidade do remetente.
+
+Para ativar Brevo em homologação:
+
+1. Criar a conta no [Brevo](https://www.brevo.com/), concluir sua verificação e obter aprovação de envio no plano gratuito.
+2. Cadastrar um remetente chamado **BistroHub**, com um endereço que o proprietário controla, e confirmar o código recebido nesse endereço. O remetente pode ser diferente do destinatário de recuperação.
+3. Gerar uma **chave de API v3** em **SMTP & API → API Keys**. Adicionar no Worker `seabra-cardapio-homologacao` como segredo `BREVO_API_KEY`, copiando o valor somente para o Cloudflare. A chave SMTP é uma credencial diferente da chave API usada nesta integração.
+4. Definir `PASSWORD_RESET_FROM` como o e-mail do remetente verificado e a variável `PASSWORD_RESET_PROVIDER` como `brevo`. Preservar `ADMIN_RECOVERY_EMAIL` original e `PASSWORD_RESET_ORIGIN` exclusivo de homologação; salvar/publicar a configuração. A presença de uma chave Resend não ativa fallback.
+5. Solicitar um link para a conta cadastrada e conferir o recebimento antes de redefinir. A resposta pública continua genérica; formulário habilitado não comprova aprovação de envio, validade da chave ou entrega na caixa postal.
+
+O Worker faz uma única requisição HTTPS ao provedor selecionado, sem repetição automática. Em falha, remove o token não entregue e registra somente o provedor conhecido e o status HTTP, sem corpo da resposta, endereço, token ou chave. O transporte de produção e as contas dos gestores continuam configurados separadamente.
 
 Fontes: [plano e aprovação](https://www.brevo.com/pricing/), [verificação individual](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email), [reescrita e destinatários externos](https://help.brevo.com/hc/en-us/articles/14925263522578-Comply-with-Gmail-Yahoo-and-Microsoft-s-requirements-for-email-senders) e [contrato de envio REST](https://developers.brevo.com/reference/send-transac-email).
 
@@ -32,8 +42,8 @@ Fontes: [plano e aprovação](https://www.brevo.com/pricing/), [verificação in
 
 Em 11/10/2026, a presença de `RESEND_API_KEY` como segredo foi conferida no Worker de homologação. A página de recuperação respondeu HTTP 200 nos três idiomas com envio habilitado e sem aviso de indisponibilidade. Essa verificação por leitura confirma a configuração; a validade da chave no fornecedor, o recebimento do e-mail e a redefinição ainda precisam do teste real do proprietário.
 
-Na mesma data, o proprietário relatou ausência dos e-mails e informou que a conta Resend usa um endereço diferente do destinatário do portal. O endereço original de recuperação foi mantido. Permanece pendente a verificação de domínio e a troca do remetente de onboarding por remetente autorizado, seguida do teste de entrega.
+Na mesma data, o proprietário relatou ausência dos e-mails e informou que a conta Resend usa um endereço diferente do destinatário do portal. O endereço original de recuperação foi mantido. Sem domínio próprio, foi preparado suporte ao Brevo; ativação depende da conta aprovada, do remetente verificado e da chave. A alternativa Resend exige verificar domínio e trocar o remetente de onboarding. O teste de entrega permanece pendente em ambos os caminhos.
 
-Testes locais simulam somente o transporte Resend, usando o Worker e SQLite reais para formular, redefinir, entrar e revogar sessões. Cobrem expiração, concorrência, uso único, confirmação, limites, idiomas e dimensões. O teste de entrega em uma caixa postal exige a chave configurada e é registrado separadamente em `PENDENCIAS.md`.
+Testes locais simulam somente o transporte Resend/Brevo, usando o Worker e SQLite reais para formular, redefinir, entrar e revogar sessões. Cobrem expiração, concorrência, uso único, confirmação, limites, idiomas, dimensões, seleção de credenciais e privacidade dos logs. O teste de entrega em uma caixa postal exige chave, remetente e autorização de envio válidos e é registrado separadamente em `PENDENCIAS.md`.
 
 Esta correção é do site/API. O APK de homologação já entregue continua atual; não há mudança nativa nem necessidade de nova build. A recuperação dos usuários gestores pelo administrativo e a recuperação local do app mantêm seus fluxos existentes.

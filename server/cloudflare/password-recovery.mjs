@@ -11,10 +11,12 @@ const tokenDigest = async token => hex(await crypto.subtle.digest('SHA-256', enc
 function configuration(env) {
   try {
     const origin = new URL(env.PASSWORD_RESET_ORIGIN);
-    if (!env.DB || !env.ADMIN_PASSWORD_SECRET || typeof env.RESEND_API_KEY !== 'string' || !env.RESEND_API_KEY.trim()
+    const provider = env.PASSWORD_RESET_PROVIDER === undefined ? 'resend' : env.PASSWORD_RESET_PROVIDER;
+    const apiKey = provider === 'resend' ? env.RESEND_API_KEY : provider === 'brevo' ? env.BREVO_API_KEY : null;
+    if (!env.DB || !env.ADMIN_PASSWORD_SECRET || typeof apiKey !== 'string' || !apiKey.trim()
       || !email(env.ADMIN_RECOVERY_EMAIL) || !email(env.PASSWORD_RESET_FROM) || origin.protocol !== 'https:'
       || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) return null;
-    return { origin: origin.origin, recipient: env.ADMIN_RECOVERY_EMAIL, from: env.PASSWORD_RESET_FROM };
+    return { origin: origin.origin, recipient: env.ADMIN_RECOVERY_EMAIL, from: env.PASSWORD_RESET_FROM, provider, apiKey };
   } catch { return null; }
 }
 export const recoveryReady = env => !!configuration(env);
@@ -50,22 +52,34 @@ export async function requestRecovery(request, env, username, language, now = Da
   await env.DB.prepare('INSERT INTO panel_password_recovery(token_hash, password_revision, expires_at) VALUES(?, ?, ?)').bind(hash, state?.revision || 0, now + TTL).run();
   const link = config.origin + '/admin/reset-password?token=' + token;
   const deliver = async () => {
+    let httpStatus = null;
     try {
-      const result = await fetch('https://api.resend.com/emails', {
+      const subject = translate(language, 'Redefinição de senha · BistroHub');
+      const text = [
+        translate(language, 'Use este link para redefinir a senha do painel BistroHub:'), link,
+        translate(language, 'O link expira em 15 minutos e pode ser usado uma única vez.'),
+        translate(language, 'Se você não solicitou esta alteração, ignore este e-mail. Sua senha permanece a mesma.'),
+      ].join('\n\n');
+      const brevo = config.provider === 'brevo';
+      // Provider selection is explicit. A failure never retries or switches
+      // providers. The custom Brevo header follows its single-email reference;
+      // no provider-specific deduplication window is assumed here.
+      const result = await fetch(brevo ? 'https://api.brevo.com/v3/smtp/email' : 'https://api.resend.com/emails', {
         method: 'POST', signal: AbortSignal.timeout(10000),
-        headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json', 'Idempotency-Key': 'bistro-reset-' + hash },
-        body: JSON.stringify({ from: config.from, to: [config.recipient], subject: translate(language, 'Redefinição de senha · BistroHub'), text: [
-          translate(language, 'Use este link para redefinir a senha do painel BistroHub:'), link,
-          translate(language, 'O link expira em 15 minutos e pode ser usado uma única vez.'),
-          translate(language, 'Se você não solicitou esta alteração, ignore este e-mail. Sua senha permanece a mesma.'),
-        ].join('\n\n') }),
+        headers: brevo
+          ? { 'api-key': config.apiKey, 'Content-Type': 'application/json', Accept: 'application/json' }
+          : { Authorization: 'Bearer ' + config.apiKey, 'Content-Type': 'application/json', 'Idempotency-Key': 'bistro-reset-' + hash },
+        body: JSON.stringify(brevo
+          ? { sender: { email: config.from, name: 'BistroHub' }, to: [{ email: config.recipient }], subject, textContent: text, headers: { 'Idempotency-Key': 'bistro-reset-' + hash } }
+          : { from: config.from, to: [config.recipient], subject, text }),
       });
+      if (Number.isInteger(result.status) && result.status >= 100 && result.status <= 599) httpStatus = result.status;
       if (!result.ok) throw new Error('Delivery unavailable');
     } catch {
       // Keep tokens/passwords/provider responses out of logs and do not disclose
       // account existence through a different public response on delivery failure.
       await env.DB.prepare('DELETE FROM panel_password_recovery WHERE token_hash = ?').bind(hash).run();
-      console.error('BistroHub password recovery email delivery failed');
+      console.error('BistroHub password recovery email delivery failed', { provider: config.provider, httpStatus });
     }
   };
   if (context?.waitUntil) context.waitUntil(deliver()); else await deliver();

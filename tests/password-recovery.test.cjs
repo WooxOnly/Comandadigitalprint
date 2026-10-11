@@ -58,16 +58,20 @@ async function fixture(t, initialRevision = 0) {
       .run(salt, passwordHash(oldPassword, salt), initialRevision);
   }
   const sent = [];
-  const fetchState = { response: null, fail: false };
+  const fetchState = { response: null, fail: false, error: null };
   const originalFetch = global.fetch;
   global.fetch = async (url, options) => {
-    assert.equal(url, 'https://api.resend.com/emails', 'tests must never send real mail or call another network URL');
+    assert.ok(['https://api.resend.com/emails', 'https://api.brevo.com/v3/smtp/email'].includes(url), 'tests must never send real mail or call another network URL');
     assert.equal(options.method, 'POST');
-    assert.equal(options.headers.Authorization, 'Bearer testkey');
-    sent.push({ ...JSON.parse(options.body), headers: options.headers });
+    const brevo = url === 'https://api.brevo.com/v3/smtp/email';
+    if (brevo) assert.equal(options.headers['api-key'], env.BREVO_API_KEY);
+    else assert.equal(options.headers.Authorization, 'Bearer ' + env.RESEND_API_KEY);
+    const payload = JSON.parse(options.body);
+    sent.push({ ...payload, headers: options.headers, payload, url });
+    if (fetchState.error) throw typeof fetchState.error === 'function' ? fetchState.error(payload, options) : fetchState.error;
     if (fetchState.fail === 'throw') throw new Error('mock provider unreachable');
     if (fetchState.response) return fetchState.response;
-    return new Response(JSON.stringify({ id: 'mock-email-id' }), { status: fetchState.fail ? 503 : 200 });
+    return new Response(JSON.stringify(brevo ? { messageId: 'mock-brevo-message-id' } : { id: 'mock-email-id' }), { status: fetchState.fail ? 503 : brevo ? 201 : 200 });
   };
   t.after(() => { global.fetch = originalFetch; });
   const call = (path, now = start, options = {}, context) => adminResponse(new Request(origin + path, options), env, now, context);
@@ -95,7 +99,7 @@ async function requestEmail(f, now = start, username = recipient, options = {}, 
 function emailedToken(f, index = f.sent.length - 1) {
   const message = f.sent[index];
   assert.ok(message, 'a mocked email must have been created');
-  const match = message.text.match(/https:\/\/example\.com\/admin\/reset-password\?token=([a-f0-9]{64})/);
+  const match = (message.text ?? message.textContent).match(/https:\/\/example\.com\/admin\/reset-password\?token=([a-f0-9]{64})/);
   assert.ok(match, 'the email must use the fixed configured HTTPS origin and a 256-bit token');
   return match[1];
 }
@@ -301,7 +305,7 @@ test('unknown users receive the same generic response without sending email or c
 test('provider HTTP and network failures remove the pending token without exposing account existence or provider details', async t => {
   const f = await fixture(t);
   const logs = [];
-  t.mock.method(console, 'error', value => logs.push(value));
+  t.mock.method(console, 'error', (...values) => logs.push(values));
   const unknown = await requestEmail(f, start, 'unknown@example.com');
   const generic = resultMessage(await unknown.text());
   for (const mode of [true, 'throw']) {
@@ -315,7 +319,10 @@ test('provider HTTP and network failures remove the pending token without exposi
     assert.equal(passwordState(f), undefined);
     assert.deepEqual(loginState(f), { attempts: 0, blocked_until: 0 });
   }
-  assert.deepEqual(logs, ['BistroHub password recovery email delivery failed', 'BistroHub password recovery email delivery failed']);
+  assert.deepEqual(logs, [
+    ['BistroHub password recovery email delivery failed', { provider: 'resend', httpStatus: 503 }],
+    ['BistroHub password recovery email delivery failed', { provider: 'resend', httpStatus: null }],
+  ]);
 });
 
 test('waitUntil sends email in the delivery context without blocking the generic HTTP response', async t => {
@@ -421,4 +428,152 @@ test('a configured recovery email is a case-insensitive login alias for the defa
   assert.equal((await login(f, 'newpass8')).status, 303);
   assert.equal((await f.provisionableStores('someone@example.com', 'newpass8', f.env, start)).status, 401);
   assert.equal((await f.provisionableStores('admin', 'newpass8', f.env, start)).status, 200);
+});
+
+const configureBrevo = f => {
+  f.env.PASSWORD_RESET_PROVIDER = 'brevo';
+  f.env.BREVO_API_KEY = 'test-brevo-key';
+  f.env.PASSWORD_RESET_FROM = 'verified-sender@gmail.com';
+};
+
+for (const provider of [undefined, 'resend']) {
+  test(`${provider === undefined ? 'default' : 'explicit'} Resend selection ignores a configured Brevo key`, async t => {
+    const f = await fixture(t);
+    f.env.PASSWORD_RESET_PROVIDER = provider;
+    f.env.BREVO_API_KEY = 'other-provider-key';
+    assert.equal((await requestEmail(f)).status, 200);
+    assert.equal(f.sent.length, 1);
+    assert.equal(f.sent[0].url, 'https://api.resend.com/emails');
+    assert.equal(f.sent[0].headers.Authorization, 'Bearer testkey');
+    assert.equal(f.sent[0].headers['api-key'], undefined);
+    assert.deepEqual(f.sent[0].payload.to, [recipient]);
+    assert.ok(!JSON.stringify(f.sent).includes(f.env.BREVO_API_KEY));
+  });
+}
+
+test('Brevo sends the original registered recipient using its own key, fixed REST contract and all three email languages', async t => {
+  const f = await fixture(t);
+  configureBrevo(f);
+  delete f.env.RESEND_API_KEY;
+  const languages = {
+    pt: ['Redefinição de senha · BistroHub', 'Use este link para redefinir a senha do painel BistroHub:', 'O link expira em 15 minutos e pode ser usado uma única vez.'],
+    en: ['Password reset · BistroHub', 'Use this link to reset your BistroHub portal password:', 'The link expires in 15 minutes and can only be used once.'],
+    es: ['Restablecimiento de contraseña · BistroHub', 'Utiliza este enlace para restablecer tu contraseña del portal BistroHub:', 'El enlace caduca en 15 minutos y solo se puede utilizar una vez.'],
+  };
+  for (const [language, [subject, introduction, expiry]] of Object.entries(languages)) {
+    const response = await requestEmail(f, start, recipient, { headers: { 'Accept-Language': language } });
+    assert.equal(response.status, 200);
+    const sent = f.sent.at(-1), token = emailedToken(f);
+    assert.equal(sent.url, 'https://api.brevo.com/v3/smtp/email');
+    assert.deepEqual(sent.headers, { 'api-key': 'test-brevo-key', 'Content-Type': 'application/json', Accept: 'application/json' });
+    assert.deepEqual(sent.payload.sender, { email: 'verified-sender@gmail.com', name: 'BistroHub' });
+    assert.deepEqual(sent.payload.to, [{ email: recipient }]);
+    assert.equal(sent.payload.subject, subject);
+    assert.ok(sent.payload.textContent.startsWith(introduction + '\n\n'));
+    assert.ok(sent.payload.textContent.includes(expiry));
+    assert.deepEqual(sent.payload.headers, { 'Idempotency-Key': 'bistro-reset-' + tokenHash(token) });
+    assert.equal(sent.payload.htmlContent, undefined);
+    assert.equal(sent.payload.templateId, undefined);
+    assert.equal(tokens(f).find(row => row.token_hash === tokenHash(token)).used_at, null);
+  }
+  assert.equal(f.sent.length, 3);
+});
+
+test('a token delivered through Brevo completes the actual password reset and revokes the existing owner session', async t => {
+  const f = await fixture(t, 5);
+  configureBrevo(f);
+  const oldLogin = await login(f, f.oldPassword);
+  assert.equal(oldLogin.status, 303);
+  const oldCookie = oldLogin.headers.getSetCookie().find(value => value.startsWith('__Host-comanda_panel=')).split(';')[0];
+  const unknown = await requestEmail(f, start, 'unknown@example.com');
+  const generic = resultMessage(await unknown.text());
+  assert.equal(f.sent.length, 0);
+  const known = await requestEmail(f);
+  assert.equal(resultMessage(await known.text()), generic);
+  const token = emailedToken(f);
+  f.db.prepare('UPDATE panel_login SET attempts=6,blocked_until=? WHERE id=1').run(start + 30000);
+  assert.equal((await reset(f, token)).status, 303);
+  assert.equal(passwordState(f).revision, 6);
+  assert.deepEqual(loginState(f), { attempts: 0, blocked_until: 0 });
+  assert.equal((await f.call('/admin/session', start, { headers: { Cookie: oldCookie } })).status, 401);
+  assert.equal((await f.provisionableStores(recipient, 'newpass8', f.env, start)).status, 200);
+  assert.equal((await login(f, 'newpass8')).status, 303);
+  assert.equal((await reset(f, token, 'another8')).status, 400);
+  assert.equal(f.sent.length, 1, 'reset and login never resend a recovery email');
+  assert.equal(f.env.ADMIN_RECOVERY_EMAIL, recipient);
+});
+
+test('unknown or malformed providers and a missing selected key remain unavailable without using the other provider', async t => {
+  const f = await fixture(t);
+  const cases = [
+    { provider: 'other', resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: '', resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: 'BREVO', resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: ' brevo ', resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: null, resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: true, resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: { toString: () => 'brevo' }, resend: 'testkey', brevo: 'test-brevo-key' },
+    { provider: 'brevo', resend: 'testkey', brevo: undefined },
+    { provider: 'brevo', resend: 'testkey', brevo: '   ' },
+    { provider: 'brevo', resend: 'testkey', brevo: { value: 'test-brevo-key' } },
+    { provider: 'resend', resend: undefined, brevo: 'test-brevo-key' },
+    { provider: undefined, resend: undefined, brevo: 'test-brevo-key' },
+  ];
+  for (const item of cases) {
+    f.env.PASSWORD_RESET_PROVIDER = item.provider;
+    f.env.RESEND_API_KEY = item.resend;
+    f.env.BREVO_API_KEY = item.brevo;
+    const before = state(f);
+    assert.match(await (await f.call('/admin/recover')).text(), /type="submit" disabled/);
+    assert.equal((await requestEmail(f)).status, 503);
+    assert.deepEqual(state(f), before);
+    assert.equal(f.sent.length, 0);
+  }
+});
+
+for (const provider of ['resend', 'brevo']) {
+  for (const failure of ['rejected', 'network']) {
+    test(`${provider} ${failure} failure cleans up once without fallback or disclosing sensitive provider data`, async t => {
+      const f = await fixture(t), logs = [];
+      configureBrevo(f);
+      f.env.PASSWORD_RESET_PROVIDER = provider;
+      t.mock.method(console, 'error', (...values) => logs.push(values));
+      const privateContent = 'private-provider-detail ' + recipient + ' testkey test-brevo-key https://example.com/admin/reset-password?token=' + 'f'.repeat(64);
+      if (failure === 'rejected') f.fetchState.response = new Response(privateContent, { status: 429, headers: { 'X-Sensitive-Diagnostic': privateContent } });
+      else f.fetchState.error = (payload, options) => new Error(privateContent + JSON.stringify({ payload, headers: options.headers }));
+      const response = await requestEmail(f);
+      assert.equal(response.status, 200);
+      const markup = await response.text();
+      assert.ok(resultMessage(markup));
+      assert.ok(!markup.includes('private-provider-detail'));
+      assert.equal(f.sent.length, 1);
+      assert.equal(f.sent[0].url, provider === 'brevo' ? 'https://api.brevo.com/v3/smtp/email' : 'https://api.resend.com/emails');
+      assert.equal(tokens(f).length, 0);
+      assert.equal(passwordState(f), undefined);
+      assert.deepEqual(loginState(f), { attempts: 0, blocked_until: 0 });
+      assert.deepEqual(logs, [['BistroHub password recovery email delivery failed', { provider, httpStatus: failure === 'rejected' ? 429 : null }]]);
+      const logged = JSON.stringify(logs);
+      for (const sensitive of [recipient, f.env.PASSWORD_RESET_FROM, f.env.RESEND_API_KEY, f.env.BREVO_API_KEY, emailedToken(f), tokenHash(emailedToken(f)), privateContent]) {
+        assert.ok(!logged.includes(sensitive), 'operational logs must contain no recipient, credentials, token, digest or provider detail');
+      }
+    });
+  }
+}
+
+test('Brevo delivery in waitUntil returns immediately and still cleans up a rejection without retry or fallback', async t => {
+  const f = await fixture(t), pending = [], logs = [];
+  configureBrevo(f);
+  t.mock.method(console, 'error', (...values) => logs.push(values));
+  let completeDelivery;
+  f.fetchState.response = new Promise(resolve => { completeDelivery = resolve; });
+  const response = await requestEmail(f, start, recipient, {}, { waitUntil: promise => pending.push(promise) });
+  assert.equal(response.status, 200);
+  assert.equal(pending.length, 1);
+  assert.equal(f.sent.length, 1);
+  assert.equal(tokens(f).length, 1);
+  completeDelivery(new Response('private rejection detail', { status: 403 }));
+  await pending[0];
+  assert.equal(f.sent.length, 1);
+  assert.equal(tokens(f).length, 0);
+  assert.deepEqual(logs, [['BistroHub password recovery email delivery failed', { provider: 'brevo', httpStatus: 403 }]]);
 });

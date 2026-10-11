@@ -8,12 +8,15 @@ const { fixture } = require('../helpers/business-fixture.cjs');
 
 const viewports = [{ width: 600, height: 960 }, { width: 960, height: 600 }, { width: 800, height: 1280 }, { width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 844, height: 390 }];
 const languages = ['pt', 'en', 'es'];
+const providers = ['resend', 'brevo'];
 const redact = value => String(value).replace(/(token=)[^&\s"']+/g, '$1[redacted]').replace(/\b[a-f0-9]{64}\b/g, '[redacted]');
 
 async function languageChoice(page, language) {
   const button = page.locator(`[data-language=${language}]`);
   if (await button.getAttribute('aria-pressed') !== 'true') {
-    await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), button.click()]);
+    const [response] = await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), button.click()]);
+    assert.equal(response.request().method(), 'GET', 'A language change never resubmits the recovery form');
+    assert.equal(response.status(), 200);
   }
   assert.equal(await button.getAttribute('aria-pressed'), 'true');
 }
@@ -49,10 +52,32 @@ async function fits(page, label) {
   const originalFetch = global.fetch, emails = [], requests = [], errors = [];
   let current, base, cases = 0, flows = 0, browser;
   global.fetch = async (url, options) => {
-    if (String(url) !== 'https://api.resend.com/emails') return originalFetch(url, options);
+    const provider = String(url) === 'https://api.resend.com/emails' ? 'resend'
+      : String(url) === 'https://api.brevo.com/v3/smtp/email' ? 'brevo' : null;
+    if (!provider) return originalFetch(url, options);
+    assert.equal(provider, current.env.PASSWORD_RESET_PROVIDER || 'resend', 'Only the selected email provider receives the request');
     assert.equal(options.method, 'POST');
-    emails.push(JSON.parse(options.body));
-    return new Response('{"id":"synthetic-delivery"}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    const headers = new Headers(options.headers), body = JSON.parse(options.body);
+    assert.equal(headers.get('Content-Type'), 'application/json');
+    assert.equal(typeof body.subject, 'string');
+    if (provider === 'resend') {
+      assert.equal(headers.get('Authorization'), 'Bearer ' + current.env.RESEND_API_KEY);
+      assert.equal(headers.get('api-key'), null);
+      assert.match(headers.get('Idempotency-Key') || '', /^bistro-reset-[a-f0-9]{64}$/);
+      assert.equal(body.from, current.env.PASSWORD_RESET_FROM);
+      assert.deepEqual(body.to, [current.env.ADMIN_RECOVERY_EMAIL]);
+      assert.equal(typeof body.text, 'string');
+      emails.push({ provider, from: body.from, to: body.to, subject: body.subject, text: body.text });
+      return new Response('{"id":"synthetic-resend-delivery"}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    assert.equal(headers.get('api-key'), current.env.BREVO_API_KEY);
+    assert.equal(headers.get('Authorization'), null);
+    assert.deepEqual(body.sender, { email: current.env.PASSWORD_RESET_FROM, name: 'BistroHub' });
+    assert.deepEqual(body.to, [{ email: current.env.ADMIN_RECOVERY_EMAIL }]);
+    assert.equal(typeof body.textContent, 'string');
+    // Normalize only the synthetic test record, preserving the production API contract.
+    emails.push({ provider, from: body.sender.email, to: body.to.map(recipient => recipient.email), subject: body.subject, text: body.textContent });
+    return new Response('{"messageId":"synthetic-brevo-delivery"}', { status: 201, headers: { 'Content-Type': 'application/json' } });
   };
   const server = https.createServer({ key: fs.readFileSync(path.join(directory, 'key.pem')), cert: fs.readFileSync(path.join(directory, 'cert.pem')) }, async (request, response) => {
     try {
@@ -79,35 +104,47 @@ async function fits(page, label) {
   base = 'https://localhost:' + server.address().port;
   try {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
-    for (const language of languages) for (const viewport of viewports) {
+    for (const provider of providers) for (const language of languages) for (const viewport of viewports) {
       const cleanup = [], context = await browser.newContext({ ignoreHTTPSErrors: true, viewport, locale: { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }[language] });
       current = await fixture({ after: fn => cleanup.push(fn) });
-      Object.assign(current.env, { RESEND_API_KEY: 'synthetic-resend-key', ADMIN_RECOVERY_EMAIL: 'owner@example.com', PASSWORD_RESET_FROM: 'recovery@example.com', PASSWORD_RESET_ORIGIN: base });
+      Object.assign(current.env, { RESEND_API_KEY: 'synthetic-resend-key', BREVO_API_KEY: 'synthetic-brevo-key', ADMIN_RECOVERY_EMAIL: 'owner@example.com', PASSWORD_RESET_FROM: 'recovery@example.com', PASSWORD_RESET_ORIGIN: base });
+      // Both keys are present: explicit selection must never depend on key availability.
+      // Portrait Resend cases also cover the backwards-compatible default provider.
+      if (provider === 'brevo' || viewport.width > viewport.height) current.env.PASSWORD_RESET_PROVIDER = provider;
       emails.length = 0; requests.length = 0;
       const page = await context.newPage();
       page.on('pageerror', error => errors.push(redact(error.stack || error)));
       const snapshot = async stage => {
-        if ((language === 'pt' && viewport.width === 600) || (language === 'en' && viewport.width === 960)) await page.screenshot({ path: path.join(directory, `${stage}-${language}-${viewport.width}x${viewport.height}.png`), fullPage: true });
+        if ((language === 'pt' && viewport.width === 600) || (language === 'en' && viewport.width === 960)) await page.screenshot({ path: path.join(directory, `${provider}-${stage}-${language}-${viewport.width}x${viewport.height}.png`), fullPage: true });
       };
       try {
         await page.goto(base + '/admin');
         await languageChoice(page, language);
         assert.equal(await page.locator('.recovery-link').textContent(), translate(language, 'Esqueceu a senha?'));
-        await fits(page, `login ${language} ${viewport.width}x${viewport.height}`); cases++;
+        await fits(page, `${provider} login ${language} ${viewport.width}x${viewport.height}`); cases++;
         await snapshot('login');
         await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.locator('.recovery-link').click()]);
         assert.equal(new URL(page.url()).pathname, '/admin/recover');
         assert.equal(await page.locator('h1').textContent(), translate(language, 'Recuperar senha'));
-        await fits(page, `recover ${language} ${viewport.width}x${viewport.height}`); cases++;
+        await fits(page, `${provider} recover ${language} ${viewport.width}x${viewport.height}`); cases++;
         await snapshot('recover');
         await page.locator('[name=username]').fill(viewport.width < viewport.height ? 'admin' : 'owner@example.com');
         await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.locator('form button[type=submit]').click()]);
         assert.equal(await page.locator('.success').textContent(), translate(language, 'Se os dados corresponderem ao cadastro, enviaremos um link de recuperação para o e-mail cadastrado.'));
         assert.equal(await page.locator('.success').getAttribute('role'), 'status');
         assert.equal(emails.length, 1, 'Recovery delivers one message to the configured owner');
+        assert.equal(emails[0].provider, provider);
+        assert.equal(emails[0].from, 'recovery@example.com');
         assert.deepEqual(emails[0].to, ['owner@example.com']);
         assert.equal(emails[0].subject, translate(language, 'Redefinição de senha · BistroHub'));
         assert.ok(emails[0].text.includes(translate(language, 'O link expira em 15 minutos e pode ser usado uma única vez.')));
+        const otherLanguage = { pt: 'en', en: 'es', es: 'pt' }[language];
+        await languageChoice(page, otherLanguage);
+        await languageChoice(page, language);
+        assert.equal(new URL(page.url()).pathname, '/admin/recover');
+        assert.equal(emails.length, 1, 'Changing language after a native recovery POST never delivers another email');
+        assert.equal(requests.filter(request => request.pathname === '/admin/recover').length, 1, 'Changing language never repeats the recovery POST');
+        assert.equal(current.db.prepare('SELECT COUNT(*) AS count FROM panel_password_recovery').get().count, 1, 'Language navigation never creates another reset token');
         const link = emails[0].text.split('\n').find(line => line.startsWith(base + '/admin/reset-password?'));
         assert.ok(link, 'Email contains the canonical reset destination');
         const token = new URL(link).searchParams.get('token');
@@ -116,12 +153,12 @@ async function fits(page, label) {
         assert.equal(response.status(), 200);
         assert.equal(response.headers()['referrer-policy'], 'same-origin');
         assert.equal(await page.locator('[name=token]').inputValue() === token, true, 'Token passes only into the reset form');
-        const otherLanguage = { pt: 'en', en: 'es', es: 'pt' }[language];
         await languageChoice(page, otherLanguage);
         assert.equal(new URL(page.url()).searchParams.get('token') === token, true, 'Changing language preserves the reset URL');
         assert.equal(await page.locator('[name=token]').inputValue() === token, true, 'Changing language preserves the reset form token');
         await languageChoice(page, language);
-        await fits(page, `reset ${language} ${viewport.width}x${viewport.height}`); cases++;
+        assert.equal(emails.length, 1);
+        await fits(page, `${provider} reset ${language} ${viewport.width}x${viewport.height}`); cases++;
         await snapshot('reset');
         for (const field of ['newPassword', 'confirmPassword']) assert.equal(await page.locator(`[name=${field}]`).getAttribute('minlength'), '8');
         const newPassword = 'NewPass8';
@@ -144,24 +181,26 @@ async function fits(page, label) {
         flows++;
       } finally { await context.close(); cleanup.reverse().forEach(fn => fn()); }
     }
-    for (const language of languages) {
+    for (const provider of providers) for (const language of languages) {
       const cleanup = [], context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: viewports[0], locale: { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }[language] });
       current = await fixture({ after: fn => cleanup.push(fn) });
-      emails.length = 0;
+      Object.assign(current.env, { PASSWORD_RESET_PROVIDER: provider, ADMIN_RECOVERY_EMAIL: 'owner@example.com', PASSWORD_RESET_FROM: 'recovery@example.com', PASSWORD_RESET_ORIGIN: base });
+      current.env[provider === 'resend' ? 'BREVO_API_KEY' : 'RESEND_API_KEY'] = 'synthetic-other-provider-key';
+      emails.length = 0; requests.length = 0;
       try {
         const page = await context.newPage();
         page.on('pageerror', error => errors.push(redact(error.stack || error)));
         const response = await page.goto(base + '/admin/recover');
         assert.equal(response.status(), 200);
-        assert.equal(await page.locator('form button[type=submit]').isDisabled(), true);
+        assert.equal(await page.locator('form button[type=submit]').isDisabled(), true, 'A key for only the other provider never enables recovery');
         assert.equal(await page.locator('.error').textContent(), translate(language, 'A recuperação por e-mail ainda não está disponível. Tente novamente mais tarde.'));
         assert.equal(await page.locator('.success').count(), 0, 'Unavailable recovery never claims delivery');
         assert.equal(emails.length, 0);
-        await fits(page, `unavailable ${language}`); cases++;
+        await fits(page, `${provider} unavailable ${language}`); cases++;
       } finally { await context.close(); cleanup.reverse().forEach(fn => fn()); }
     }
     assert.deepEqual(errors, [], 'Browser/server runtime errors');
-    console.log(JSON.stringify({ ok: true, flows, layoutCases: cases, languages, viewports, screenshots: directory, evidence: 'Chromium + HTTPS + real Worker/DB; mocked email delivery only. Native CSRF/Origin, 8-character reset, language reload, consumed links and recovered login verified.' }));
+    console.log(JSON.stringify({ ok: true, flows, layoutCases: cases, providers, languages, viewports, screenshots: directory, evidence: 'Chromium + HTTPS + real Worker/DB; mocked Resend/Brevo delivery only. Selected provider contracts/no fallback, native CSRF/Origin, 8-character reset, GET language navigation without duplicate email/token, consumed links and recovered login verified.' }));
   } finally {
     global.fetch = originalFetch;
     if (browser) await browser.close();
