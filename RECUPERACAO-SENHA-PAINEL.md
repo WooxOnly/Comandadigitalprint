@@ -20,6 +20,8 @@ Para envio a outros destinatários, cadastrar e verificar um domínio no Resend 
 
 ## Verificação e alcance
 
+Em 11/10/2026, a presença de `RESEND_API_KEY` como segredo foi conferida no Worker de homologação. A página de recuperação respondeu HTTP 200 nos três idiomas com envio habilitado e sem aviso de indisponibilidade. Essa verificação por leitura confirma a configuração; a validade da chave no fornecedor, o recebimento do e-mail e a redefinição ainda precisam do teste real do proprietário.
+
 Testes locais simulam somente o transporte Resend, usando o Worker e SQLite reais para formular, redefinir, entrar e revogar sessões. Cobrem expiração, concorrência, uso único, confirmação, limites, idiomas e dimensões. O teste de entrega em uma caixa postal exige a chave configurada e é registrado separadamente em `PENDENCIAS.md`.
 
 Esta correção é do site/API. O APK de homologação já entregue continua atual; não há mudança nativa nem necessidade de nova build. A recuperação dos usuários gestores pelo administrativo e a recuperação local do app mantêm seus fluxos existentes.
