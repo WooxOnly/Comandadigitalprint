@@ -8,19 +8,23 @@ Os tokens têm 256 bits aleatórios e somente seus digests ficam no D1. Recupera
 
 ## Configuração em homologação
 
-1. Criar uma conta no [Resend](https://resend.com/signup) com o mesmo e-mail escolhido como destinatário de recuperação. Gerar uma chave com permissão de envio de e-mails.
+1. Criar uma conta no [Resend](https://resend.com/signup) e gerar uma chave com permissão de envio de e-mails. O endereço dessa conta pode ser diferente do e-mail de recuperação cadastrado no portal quando o remetente usa domínio próprio verificado.
 2. No Cloudflare, abrir **Workers & Pages → seabra-cardapio-homologacao → Settings → Variables and Secrets**. Adicionar **RESEND_API_KEY** como segredo, colando a chave somente no Cloudflare, e salvar/publicar a configuração.
-3. **ADMIN_RECOVERY_EMAIL** define o destinatário e **PASSWORD_RESET_FROM** define o remetente. São segredos do Worker, fora do Git. Para a primeira verificação, o remetente é `onboarding@resend.dev`; o Resend permite esse remetente de teste somente para o e-mail da própria conta. Não é envio geral para clientes.
+3. **ADMIN_RECOVERY_EMAIL** define o destinatário cadastrado e **PASSWORD_RESET_FROM** define o remetente. São segredos do Worker, fora do Git. Para enviar a Hotmail, Gmail ou outros destinatários externos, adicionar um domínio próprio em **Resend → Domains**, publicar os registros DNS fornecidos pelo Resend, aguardar **Verified** e configurar o remetente com um endereço desse domínio. A chave de envio precisa ter acesso a esse domínio. `onboarding@resend.dev` é somente para teste com o e-mail da própria conta Resend.
 4. **PASSWORD_RESET_ORIGIN** está na configuração de homologação e aponta exclusivamente para `https://seabra-cardapio-homologacao.wooxonly-comandas.workers.dev`.
 5. Abrir `/admin/recover`, solicitar o link, conferir a caixa de entrada/spam e redefinir a senha. Confirmar login com a nova senha e rejeição da senha/link anteriores. Esse teste altera a senha real e deve ser feito pelo proprietário.
 
 Sem todos os valores de envio, o botão na página de recuperação fica desabilitado e a página informa a indisponibilidade. Não afirma envio de e-mail. Uma falha de entrega do fornecedor elimina o token não entregue e registra somente um aviso operacional sem e-mail, chave ou token.
 
-Para envio a outros destinatários, cadastrar e verificar um domínio no Resend e substituir o remetente por um endereço desse domínio. Esse passo não é necessário para o teste do proprietário com o remetente de onboarding. Produção não recebe automaticamente a configuração de homologação.
+O e-mail destinatário do portal permanece independente do e-mail da conta Resend. O formulário identifica a conta, enquanto o servidor escolhe seu endereço de recuperação cadastrado; nunca envia um link válido para um endereço arbitrário do formulário. O fluxo desta página corresponde à conta proprietária do administrativo; recuperação de gestores pelo administrativo mantém seu fluxo existente. Produção não recebe automaticamente a configuração de homologação.
+
+Referências oficiais: [limite do remetente de teste](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain), [registros e verificação do domínio](https://resend.com/docs/dashboard/domains/manage-domains), [domínio exato do remetente](https://resend.com/docs/knowledge-base/403-error-domain-mismatch) e [permissões da chave](https://resend.com/docs/create-an-api-key). Copiar os registros gerados no painel, sem presumir seus tipos ou valores.
 
 ## Verificação e alcance
 
 Em 11/10/2026, a presença de `RESEND_API_KEY` como segredo foi conferida no Worker de homologação. A página de recuperação respondeu HTTP 200 nos três idiomas com envio habilitado e sem aviso de indisponibilidade. Essa verificação por leitura confirma a configuração; a validade da chave no fornecedor, o recebimento do e-mail e a redefinição ainda precisam do teste real do proprietário.
+
+Na mesma data, o proprietário relatou ausência dos e-mails e informou que a conta Resend usa um endereço diferente do destinatário do portal. O endereço original de recuperação foi mantido. Permanece pendente a verificação de domínio e a troca do remetente de onboarding por remetente autorizado, seguida do teste de entrega.
 
 Testes locais simulam somente o transporte Resend, usando o Worker e SQLite reais para formular, redefinir, entrar e revogar sessões. Cobrem expiração, concorrência, uso único, confirmação, limites, idiomas e dimensões. O teste de entrega em uma caixa postal exige a chave configurada e é registrado separadamente em `PENDENCIAS.md`.
 
