@@ -68,3 +68,37 @@ node --test tests/network-printing.test.cjs tests/receipt-printing.test.cjs
 
 A compatibilidade do firmware (inclusive tabela de acentos e corte) depende
 do teste físico. Nenhum teste nesta sessão enviou dados à impressora real.
+
+## Opção econômica de impressora — 11/10/2026
+
+O proprietário considerou a recomendação Epson de aproximadamente US$299 cara. A indicação econômica é **NETUM NT-8330L, variante USB LAN / US Plug, SKU SHF-NT-8330L-US**, com papel de 80 mm, guilhotina e Ethernet. [Variante específica no fabricante](https://www.netum.net/products/nt-8330-thermal-printer?variant=39636173946969): **US$84,99**, antes de frete e impostos. A variante USB de US$77,99 não tem rede. A alternativa [NETUM NT-8360L USB + LAN / US Plug](https://www.netum.net/products/nt-8360-thermal-printer?variant=40286163599449), SKU SHF-NT-8360L-US, estava a US$89,00. Preços/variantes confirmados no catálogo público atual do fabricante, sem compra.
+
+O [suporte oficial NETUM](https://support.netum.net/hc/en-us/articles/44800664000795--All-Models-Receipt-Printer-Software-Drivers) associa NT-8330/NT-8360L ao [pacote de manuais e SDK](https://cdn.shopify.com/s/files/1/2144/8019/files/80MM_Thermal_Printer_Manual_SDK-8360.zip?v=1710728732). A consulta leu documentação e fonte do exemplo Android, sem executar os programas do pacote: o exemplo usa TCP 9100 e envio de bytes ESC/POS. É compatibilidade documental, ainda sujeita ao teste físico de acentos, colunas, corte e reconexão no BistroHub.
+
+**Wi-Fi opcional, externo:** as variantes acima não incluem rádio Wi-Fi. A ponte **TP-Link TL-WR902AC** pode receber Wi-Fi e fornecer a conexão Ethernet para a impressora, conforme o [modo Client documentado pelo fabricante](https://www.tp-link.com/us/support/faq/2031/). Consultada a [US$39,99 na B&H](https://www.bhphotovideo.com/c/product/1322916-REG/tp_link_tl_wr902ac_ac750_wireless_travel_router.html), resulta em **US$124,98** com NT-8330L, antes do frete e dos impostos. São dois equipamentos, com alimentação própria e um cabo Ethernet curto; não é um adaptador USB conectado à impressora. Usar Ethernet direto no início e acrescentar a ponte somente se precisar evita investimento antecipado.
+
+A [política de envio NETUM](https://www.netum.net/policies/shipping-policy) permite origem China ou depósito americano conforme disponibilidade; frete depende do checkout/peso. Não afirmar frete grátis, estoque local ou prazo específico sem consultar o pedido. Antes de padronizar várias unidades, testar uma unidade real com o aplicativo e as três línguas.
+
+## Modelos Epson comparados — fora do orçamento indicado
+
+Foi comparada **Epson OmniLink TM-m30III, preta, variante americana C31CK50022**, com Ethernet e Wi-Fi incluídos. O modo de rede direto usa o protocolo ESC/POS/TCP 9100 documentado para essa família. Bobina de 80 mm, fonte de alimentação e guilhotina atendem ao tipo de comanda/recibo do projeto. O proprietário rejeitou seu custo atual; ela permanece como referência técnica para futuros perfis, sem homologação física ou decisão de compra.
+
+A variante preta **C31CK50012** tem Ethernet e aceita Wi-Fi por **OT-WL06, C32C891321**, adquirido separadamente. A **TM-T20IV C31CL47002** é outra opção com Ethernet e o mesmo acessório opcional; **C31CL47001** é USB/serial e não possui Ethernet. Nos modelos pesquisados, a conexão por cabo Ethernet desativa o Wi-Fi. Planejar o uso de uma conexão de rede por vez, sem pressupor alternância automática.
+
+Preços consultados em 11/10/2026 na Provantage, produtos novos antes de impostos: [TM-m30III C31CK50022 com Wi-Fi/Ethernet](https://www.provantage.com/epson-c31ck50022~7EPSF0C0.htm), US$299,04; [TM-m30III C31CK50012 Ethernet](https://www.provantage.com/epson-c31ck50012~7EPSF0AX.htm), US$267,43; [TM-T20IV C31CL47002 Ethernet](https://www.provantage.com/epson-c31cl47002~7EPSF0E6.htm), US$284,10. Cotação e disponibilidade mudam; confirmar o número de peça e o conteúdo do kit no pedido.
+
+Fontes técnicas: [ficha americana TM-m30III e variantes](https://mediaserver.goepson.com/ImConvServlet/imconv/430e3674d351b5c529e64b0c90ab1c1568ef528a/original?assetDescr=TM-m30III-Thermal-Receipt-Printer-Specification-Sheet-CPD-62919-Final.pdf), [manual TM-m30III Rev.F](https://files.support.epson.com/pdf/pos/bulk/tm-m30iii_trg_en_revf.pdf), [página TM-T20IV](https://epson.com/For-Work/Printers/POS/TM-T20IV-Thermal-Receipt-Printer/p/C31CL47002) e [manual TM-T20IV Rev.D](https://files.support.epson.com/pdf/pos/bulk/tm-t20iv_trg_en_rev_d.pdf).
+
+## Direção multiplataforma e novos modelos — planejado
+
+O proprietário determinou Android, Windows e web como destinos do BistroHub operacional, mantendo PT-BR/EN/ES. A expansão deve reutilizar regras de pedidos, módulos, permissões e o contrato da API, com adaptação de interface e impressão por plataforma. Windows e as telas operacionais web ainda não foram implementados nesta etapa.
+
+A impressão deve separar três responsabilidades:
+
+1. **Conteúdo:** pedido/recibo e contexto da loja, sem comandos de uma marca ou dependência do dispositivo.
+2. **Perfil de modelo:** protocolo, codificação e número de tabela, largura/colunas, fonte, corte, recursos e comandos de status compatíveis. Perfis novos entram na lista homologada somente após teste real; ESC/POS, StarPRNT e BXL/POS não são automaticamente intercambiáveis.
+3. **Transporte:** TCP local no Android; transporte/driver no Windows; serviço de impressão no computador da loja ou API de impressora documentada para a versão web. A conexão TCP nativa atual não está disponível diretamente em um navegador comum. SDK ePOS/Server Direct Print da Epson são alternativas específicas a avaliar, sem obrigar todos os modelos a usá-los.
+
+Para várias lojas/aparelhos, planejar trabalhos de impressão identificados por loja, pedido e destino, com fila e estados persistentes. Repetir automaticamente um envio com resultado desconhecido pode duplicar papel; reimpressão deve ser uma ação explícita com novo trabalho e confirmação. Isolar configuração e acesso por loja. A confirmação de gravação no socket permanece distinta da impressão física, mesmo quando houver consulta de sensores ou spooler do sistema.
+
+Essa direção foi registrada para o desenvolvimento futuro. O APK atual, as preferências existentes e a política de impressão automática não foram alterados por essa pesquisa.
