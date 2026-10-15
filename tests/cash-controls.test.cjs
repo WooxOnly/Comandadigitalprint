@@ -13,7 +13,7 @@ const reverse = (session, original, kind = 'refund') => ({ operation: kind, id: 
 const setSettings = (f, tax = { enabled: false, rateBps: 0 }, managers = [], storeId = 'seabra-1') => f.db.prepare('INSERT INTO store_cash_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').run(storeId, JSON.stringify({ tax, managers }));
 async function staff(f, username, storeId = 'seabra-1') {
   const salt = randomBytes(16).toString('hex'), hash = pbkdf2Sync('staff-password', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex');
-  f.db.prepare('INSERT INTO store_records(store_id, key, data, revision) VALUES(?, ?, ?, 1)').run(storeId, 'user:' + username, JSON.stringify({ username, active: true, login: { salt, hash, iterations: 100000 } }));
+  f.db.prepare('INSERT INTO store_records(store_id, key, data, revision) VALUES(?, ?, ?, 1)').run(storeId, 'user:' + username, JSON.stringify({ username, active: true, role: username==='manager'?'manager':'cashier', login: { salt, hash, iterations: 100000 } }));
   const login = await (await f.call('/login', { storeId, username, password: 'staff-password' })).json(); assert.ok(login.token);
   return { storeId, username, token: login.token };
 }
@@ -62,11 +62,11 @@ test('only admins and portal-appointed active managers can discount, reverse or 
   assert.equal((await f.cash(discounted, manager)).status, 200);
   const saved = JSON.parse(f.db.prepare('SELECT data FROM cash_entries WHERE id = ?').get(discounted.id).data); assert.equal(saved.authorizedBy, 'manager');
   assert.equal((await f.cash(reverse(session, discounted), clerk)).value.error, 'MANAGER_REQUIRED');
-  assert.equal((await report(f, undefined, undefined, clerk)).value.error, 'MANAGER_REQUIRED');
+  assert.equal((await report(f, undefined, undefined, clerk)).value.error, 'ACCESS_DENIED');
   assert.equal((await report(f, undefined, undefined, manager)).status, 200);
   setSettings(f);
-  assert.equal((await f.cash(reverse(session, discounted), manager)).value.error, 'MANAGER_REQUIRED');
-  assert.equal((await f.cash(reverse(session, discounted), f.a)).status, 200);
+  assert.equal((await f.cash(reverse(session, discounted), manager)).status, 200);
+  assert.equal((await f.cash(reverse(session, discounted), f.a)).status, 400); // Already refunded by the manager.
   assert.equal((await f.call('/change', { id: randomUUID(), base: 0, key: 'cash-settings', value: { managers: ['cashier'] } }, clerk.token)).status, 400);
 });
 
@@ -94,7 +94,7 @@ test('staff cannot bypass discount approval by changing a unit or catalog price'
   const result = await f.call('/change', { id: randomUUID(), base: 1, key: 'menu', value: [{ id: 'pizza', name: 'Pizza', category: 'Pizzas', price: 9 }] }, clerk.token);
   assert.equal(result.status, 403);
   const tablet = f.tablet(new Map(), clerk); await tablet.cloud.setSession(clerk); await tablet.cloud.sync();
-  await assert.rejects(tablet.cloud.write({ menu: [{ id: 'pizza', name: 'Pizza', category: 'Pizzas', price: 9 }] }), error => error.code === 'MANAGER_REQUIRED');
+  await assert.rejects(tablet.cloud.write({ menu: [{ id: 'pizza', name: 'Pizza', category: 'Pizzas', price: 9 }] }), error => error.code === 'ACCESS_DENIED');
   assert.equal((await tablet.cloud.get('menu'))[0].price, 10);
 });
 

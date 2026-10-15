@@ -281,6 +281,7 @@ function useAppState() {
   }
 
   async function printSavedOrder(order: SavedOrder, isNew = false, source: 'history' | 'preparation' = 'history') {
+    if (cloud.role(currentUser) === 'cook' && (source !== 'preparation' || isNew)) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
     if (!isNew && !allowed('reprint')) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
     if (printDispatcher.busy) { showFeedback('Impressão em andamento', 'Aguarde a impressão em andamento.', 'error'); return; }
     if (source === 'preparation') { try { await cloud.authorizePreparationReprint(order.id); } catch (error) { Alert.alert(t('Acesso restrito'), t(error instanceof Error ? error.message : 'Reimpressão no preparo não habilitada para esta loja.')); return; } }

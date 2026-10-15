@@ -1,6 +1,16 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Operador de caixa": ["Cashier", "Cajero"],
+  "Admin": ["Admin", "Admin"],
+  "Gerente": ["Manager", "Gerente"],
+  "Cozinheiro": ["Cook", "Cocinero"],
+  "Perfil de acesso": ["Access profile", "Perfil de acceso"],
+  "Perfil inválido.": ["Invalid access profile.", "Perfil de acceso no válido."],
+  "Editar usuário": ["Edit user", "Editar usuario"],
+  "Seu perfil não tem acesso a esta tela ou o módulo está desativado.": ["Your profile cannot access this screen or the module is disabled.", "Tu perfil no tiene acceso a esta pantalla o el módulo está desactivado."],
+  "O perfil limita as telas do aplicativo. Módulos desativados permanecem indisponíveis.": ["The profile limits app screens. Disabled modules remain unavailable.", "El perfil limita las pantallas de la aplicación. Los módulos desactivados siguen sin estar disponibles."],
+
   "Preparo": ["Kitchen", "Cocina"],
   "Clientes": ["Customers", "Clientes"],
   "Fila de preparo": ["Kitchen queue","Cola de cocina"],

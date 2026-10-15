@@ -1,3 +1,4 @@
+import { appRole, validRole } from '../../shared/app-roles.mjs';
 import { adminScope } from './admin-scope.mjs';
 import { digest, hex, json, readBody } from './manager-auth.mjs';
 import { translate } from './manager-i18n.mjs';
@@ -16,16 +17,17 @@ export async function appUsersResponse(request, env, { browserLogin, sameOrigin,
     const selectedStoreId = scope.store.id;
     if (request.method === 'GET') {
       const { results } = await env.DB.prepare("SELECT data, revision FROM store_records WHERE store_id = ? AND key LIKE 'user:%' ORDER BY key").bind(selectedStoreId).all();
-      return reply({ users: results.map(row => { const user = JSON.parse(row.data); return { username: user.username, active: user.active, revision: row.revision }; }).filter(user => user.username !== 'admin') });
+      return reply({ users: results.map(row => { const user = JSON.parse(row.data); return { username: user.username, active: user.active, role: appRole(user.username,user.role), revision: row.revision }; }).filter(user => user.username !== 'admin') });
     }
     const input = JSON.parse(await readBody(request, 4096));
-    if (!input || typeof input.username !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(input.username) || input.username === 'admin' || typeof input.active !== 'boolean' || typeof input.password !== 'string' || input.password.length > 128 || !Number.isSafeInteger(input.revision) || input.revision < 0) return reply({ error: 'Dados de acesso inválidos.' }, 400);
+    if (!input || typeof input.username !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(input.username) || input.username === 'admin' || (input.role !== undefined && !validRole(input.role)) || typeof input.active !== 'boolean' || typeof input.password !== 'string' || input.password.length > 128 || !Number.isSafeInteger(input.revision) || input.revision < 0) return reply({ error: 'Dados de acesso inválidos.' }, 400);
     const key = 'user:' + input.username;
     const previous = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(selectedStoreId, key).first();
     if ((previous?.revision || 0) !== input.revision) return reply({ error: 'Cadastro alterado em outra sessão. Atualize a página.' }, 409);
     if (!previous && !input.password) return reply({ error: 'Informe uma senha para o novo usuário.' }, 400);
     const user = previous ? JSON.parse(previous.data) : { username: input.username };
     user.active = input.active;
+    user.role = input.role ?? appRole(input.username,user.role);
     if (input.password) {
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
       user.login = { salt, hash: await digest(input.password, salt), iterations: 100000 };

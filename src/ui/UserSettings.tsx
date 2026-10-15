@@ -1,3 +1,5 @@
+import { type AppRole, ROLE_LABELS } from '../../shared/app-roles.mjs';
+import { UserRolePicker } from './UserRolePicker';
 import { useEffect, useState } from 'react';
 import { logError } from '../services/diagnostics';
 import { cloud } from '../services/cloudStorage';
@@ -9,9 +11,10 @@ import { PasswordField } from './AccessGate';
 import { styles, COLORS } from './theme';
 
 export function UserSettings() {
-  const { service, currentUser, changeOwnPassword } = useAuth();
+  const { service, changeOwnPassword } = useAuth();
   const { t } = useLanguage();
   const [users, setUsers] = useState(() => service.listUsers());
+  const [role,setRole] = useState<AppRole>('cashier');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -45,7 +48,7 @@ export function UserSettings() {
       Alert.alert(t('Falha ao salvar'), t(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'));
     } finally { setBusy(false); }
   }
-  if (currentUser !== 'admin') return <View style={styles.panel}>
+  if (service.currentRole() !== 'admin') return <View style={styles.panel}>
     <Text style={styles.panelTitle}>{t('Alterar minha senha')}</Text>
     <Text style={styles.helperText}>{t('Você só pode alterar sua própria senha.')}</Text>
     <PasswordField label={t('Senha atual')} value={currentPassword} onChangeText={setCurrentPassword} />
@@ -56,25 +59,26 @@ export function UserSettings() {
   </View>;
   return <View style={styles.panel}>
     <Text style={styles.panelTitle}>{t('Gerenciar usuários')}</Text>
-    <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>
+    <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setRole('cashier'); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>
     {loadError && <Text style={styles.helperText}>{t('Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.')}</Text>}
     <Text style={styles.helperText}>{t('Usuários são compartilhados entre tablets após sincronizar. Offline, ficam disponíveis os acessos já recebidos neste aparelho.')}</Text>
     {tab === 'manage' && <View>
     <View style={styles.orderCard}><Text style={styles.cardTitle}>admin</Text><Text style={styles.helperText}>{t('Administrador protegido. Senha semanal gerenciada pelo painel online.')}</Text></View>
     {users.length === 0 && <Text style={styles.helperText}>{t('Nenhum usuário adicional cadastrado.')}</Text>}
     {users.map((user) => <View key={user.username} style={styles.orderCard}>
-      <View style={styles.orderLine}><Text style={styles.cardTitle}>{user.username}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
-      <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Redefinir senha')}</Text></Pressable>
+      <View style={styles.orderLine}><Text style={styles.cardTitle}>{user.username} · {t(ROLE_LABELS[user.role])}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
+      <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setRole(user.role); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Editar usuário')}</Text></Pressable>
     </View>)}
     </View>}
     {tab === 'create' && <View>
-    <Text style={styles.sectionTitle}>{t(editing ? 'Redefinir senha' : 'Cadastrar usuário')}</Text>
+    <Text style={styles.sectionTitle}>{t(editing ? 'Editar usuário' : 'Cadastrar usuário')}</Text>
     <TextInput accessibilityLabel={t('Usuário')} placeholder={t('Usuário')} placeholderTextColor={COLORS.placeholder} value={username} onChangeText={setUsername} editable={!editing && !busy} autoCapitalize="none" autoCorrect={false} maxLength={24} style={styles.input} />
+    <UserRolePicker value={role} onChange={setRole} disabled={busy} />
     <PasswordField label={t('Senha')} value={password} onChangeText={setPassword} />
     <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />
     <Text style={styles.helperText}>{t('Informe uma senha e confirme a mesma senha.')}</Text>
-    <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={() => change(() => editing ? service.updateUser(editing, users.find((u) => u.username === editing)!.active, password, confirmation) : service.createUser(username, password, confirmation))}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar usuário')}</Text></Pressable>
-    {editing && <Pressable disabled={busy} style={styles.cancelButton} onPress={() => { setEditing(null); setUsername(''); setPassword(''); setConfirmation(''); }}><Text style={styles.cancelButtonText}>{t('Cancelar')}</Text></Pressable>}
+    <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={() => change(() => editing ? service.updateUser(editing, users.find((u) => u.username === editing)!.active, password || undefined, password ? confirmation : undefined, role) : service.createUser(username, password, confirmation, role))}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar usuário')}</Text></Pressable>
+    {editing && <Pressable disabled={busy} style={styles.cancelButton} onPress={() => { setEditing(null); setRole('cashier'); setUsername(''); setPassword(''); setConfirmation(''); }}><Text style={styles.cancelButtonText}>{t('Cancelar')}</Text></Pressable>}
     </View>}
   </View>;
 }

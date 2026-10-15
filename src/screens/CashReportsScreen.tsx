@@ -1,7 +1,7 @@
+import { useAppRole } from '../ui/useAppRole';
 import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useBusiness } from '../state/BusinessContext';
-import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
@@ -14,13 +14,14 @@ import { logError } from '../services/diagnostics';
 
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
 export default function CashReportsScreen() {
-  const { modules, overview } = useBusiness(), { currentUser } = useAuth(), { t, locale } = useLanguage();
+  const { modules } = useBusiness(), { t, locale } = useLanguage();
   const [from, setFrom] = useState(today), [through, setThrough] = useState(today);
   const [report, setReport] = useState<CashReport | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [loadedFilters, setLoadedFilters] = useState('');
   const money = (cents: number) => formatMoney(cents, locale), signature = JSON.stringify([from, through]);
-  const allowed = currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser);
+  const role = useAppRole();
+  const allowed = ['admin','manager'].includes(role || '');
   if (!modules.cash || !allowed) return <ScreenFrame><Text style={styles.settingsIntro}>{t(!modules.cash ? 'Módulo não habilitado para esta empresa.' : 'Somente gerentes e administradores podem consultar relatórios.')}</Text></ScreenFrame>;
   async function run(operation: () => Promise<void>) {
     if (lock.current) return; lock.current = true; setBusy(true); setError('');

@@ -32,6 +32,7 @@ function useAuthState() {
   const logout = useCallback(() => {
     service.logout(); cloud.setOfflineActor(''); void cloud.setSession(null); setCurrentUser(''); setSignedIn(false);
   }, [service]);
+  useEffect(() => cloud.subscribe(() => { if (signedIn && cloud.sessionRejected()) logout(); }), [signedIn, logout]);
   const load = useCallback(async () => {
     try {
       if (Platform.OS === 'web') throw new Error('Acesso local indisponível no navegador. Use o aplicativo Android ou iPad.');

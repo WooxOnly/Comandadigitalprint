@@ -1,5 +1,16 @@
 // Shared portal catalog: source text in Brazilian Portuguese, then EN and ES.
 export const ADMIN_TRANSLATIONS = Object.fromEntries([
+  ["O perfil define as telas disponíveis. Estas opções não ampliam o acesso do perfil.", "The profile defines available screens. These options do not expand profile access.", "El perfil define las pantallas disponibles. Estas opciones no amplían el acceso del perfil."],
+  ["Operador de caixa", "Cashier", "Cajero"],
+  ["Admin", "Admin", "Admin"],
+  ["Gerente", "Manager", "Gerente"],
+  ["Cozinheiro", "Cook", "Cocinero"],
+  ["Perfil de acesso", "Access profile", "Perfil de acceso"],
+  ["Perfil inválido.", "Invalid access profile.", "Perfil de acceso no válido."],
+  ["Editar usuário", "Edit user", "Editar usuario"],
+  ["Seu perfil não tem acesso a esta tela ou o módulo está desativado.", "Your profile cannot access this screen or the module is disabled.", "Tu perfil no tiene acceso a esta pantalla o el módulo está desactivado."],
+  ["O perfil limita as telas do aplicativo. Módulos desativados permanecem indisponíveis.", "The profile limits app screens. Disabled modules remain unavailable.", "El perfil limita las pantallas de la aplicación. Los módulos desactivados siguen sin estar disponibles."],
+
   ["Home", "Home", "Inicio"],
   ["Gerencie clientes, acessos e configurações do BistroHub.", "Manage BistroHub customers, access and settings.", "Gestiona los clientes, accesos y la configuración de BistroHub."],
   ["Clientes: {count}", "Customers: {count}", "Clientes: {count}"],

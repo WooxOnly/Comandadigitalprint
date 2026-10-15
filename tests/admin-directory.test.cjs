@@ -132,7 +132,7 @@ test('owner manages independent app users with CAS, protected hashes, synchroniz
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'',revision:0})).status,400);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'a',revision:0})).status,200);
   const listing=await(await f.request(path)).json(),user=listing.users[0];
-  assert.deepEqual(Object.keys(user).sort(),['active','revision','username']);assert.equal(user.username,'cliente');
+  assert.deepEqual(Object.keys(user).sort(),['active','revision','role','username']);assert.equal(user.username,'cliente');
   const login=await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'a'});assert.equal(login.status,200);const session=await login.json();
   assert.equal((await f.call('/login',{storeId:'seabra-2',username:'cliente',password:'a'})).status,401);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'b',revision:0})).status,409);

@@ -1,3 +1,4 @@
+import { useAppRole } from '../ui/useAppRole';
 import { useStoreModules } from '../ui/useStoreModules';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../state/AuthContext';
@@ -15,6 +16,7 @@ export default function HomeScreen() {
   const { width, fontScale } = useWindowDimensions();
   const { history, isWide } = useApp();
   const modules = useStoreModules();
+  const role = useAppRole();
   return <ScreenFrame><View>
                   <View style={[styles.hero, isWide && styles.heroWide]}>
                     <Text style={styles.heroEyebrow}>{t("BOM ATENDIMENTO COMEÇA AQUI")}</Text>
@@ -26,7 +28,7 @@ export default function HomeScreen() {
                   </View>
                   <Text style={[styles.sectionTitle, isWide && styles.sectionTitleWide]}>{t("Acesso rápido")}</Text>
                   <View style={styles.mainMenu}>
-                    {navigationTabs(modules).filter((tab) => tab.screen !== 'home').map((tab) => (
+                    {navigationTabs(modules, role).filter((tab) => tab.screen !== 'home').map((tab) => (
                       <Pressable testID={'home-module-' + tab.screen} key={tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, (width < 360 || fontScale >= 1.4) && styles.mainMenuButtonCompact, pressed && styles.pressed]}>
                         <View style={[styles.menuIconBadge, isWide && styles.menuIconBadgeWide]}><NavigationIcon icon={tab.icon} size={isWide ? 22 : 25} color={COLORS.primary} /></View>
                         <Text style={styles.mainMenuTitle}>{tab.screen === 'printer' ? t("Configurações") : t(['preparation', 'customers'].includes(tab.screen) ? tab.title : tab.label)}</Text>

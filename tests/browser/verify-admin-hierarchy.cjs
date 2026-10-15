@@ -123,10 +123,10 @@ async function choose(page, language) {
         await page.goto(base+'/admin?groupId='+clients[0].groupId+'&storeId=seabra-1#client-password');
         await visible(page,'client-password');await page.waitForFunction(()=>document.querySelector('#app-user-password').required);
         const appUsername='qa-'+language;
-        await page.locator('#app-username').fill(appUsername);await page.locator('#app-user-password').fill('a');
+        await page.locator('#app-user-role').selectOption('cook');await page.locator('#app-username').fill(appUsername);await page.locator('#app-user-password').fill('a');
         await page.locator('#app-user-form button').click();
         await page.waitForFunction(text=>document.querySelector('#app-user-result').textContent===text,translate(language,'Usuário salvo.'));
-        assert.equal(await page.locator('#app-user-picker').inputValue(),appUsername);
+        assert.equal(await page.locator('#app-user-picker').inputValue(),appUsername);assert.equal(await page.locator('#app-user-role').inputValue(),'cook');
         assert.equal(await page.locator('#app-username').getAttribute('readonly'),'');
         assert.equal(await page.locator('#app-user-password').inputValue(),'');
         assert.ok((await page.locator('#client-password a[href*="/admin/gestores"]').getAttribute('href')).includes(clients[0].groupId));

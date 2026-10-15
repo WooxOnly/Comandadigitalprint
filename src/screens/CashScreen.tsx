@@ -1,3 +1,4 @@
+import { useAppRole } from '../ui/useAppRole';
 import { useAccess } from '../ui/useAccess';
 import { useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
@@ -29,6 +30,7 @@ export default function CashScreen() {
   const busy = working || !!pendingCash;
   const { printerSettings, showFeedback } = useApp();
   const { currentUser } = useAuth();
+  const role = useAppRole();
   const { t, locale, language } = useLanguage();
   const [opening, setOpening] = useState('0.00'), [counted, setCounted] = useState('');
   const [amount, setAmount] = useState(''), [note, setNote] = useState(''), [customer, setCustomer] = useState('');
@@ -44,7 +46,7 @@ export default function CashScreen() {
   const operation = useRef<{ signature: string; id: string } | null>(null);
   const session = overview?.sessions.find(record => !record.closedAt);
   const money = (cents: number) => formatMoney(cents, locale);
-  const canManage = currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser);
+  const canManage = ['admin','manager'].includes(role || '') || currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser);
   const taxRateBps = overview?.settings?.tax.enabled ? overview.settings.tax.rateBps : 0;
   const extras = () => ({ tipCents: parseMoney(tip), deliveryFeeCents: parseMoney(deliveryFee) });
   function paymentsInput(totalCents: number) {
@@ -90,7 +92,7 @@ export default function CashScreen() {
     <Text style={styles.settingsIntro}>{t('Caixa em USD: dinheiro, cartão e Zelle. Cada tablet tem sua própria abertura e fechamento.')}</Text>
     <Text style={styles.helperText}>{t('Movimentações do caixa exigem conexão. As comandas e encomendas continuam disponíveis sem depender do caixa.')}</Text>
     <Pressable accessibilityRole="button" disabled={busy} style={styles.secondaryWideButton} onPress={() => void cloud.sync()}><Text style={styles.secondaryButtonText}>{t('Atualizar caixa')}</Text></Pressable>
-    {canManage && <Pressable accessibilityRole="button" style={styles.secondaryWideButton} onPress={() => router.navigate('/cash-reports')}><Text style={styles.secondaryButtonText}>{t('Relatórios do Caixa')}</Text></Pressable>}
+    {['admin','manager'].includes(role || '') && <Pressable accessibilityRole="button" style={styles.secondaryWideButton} onPress={() => router.navigate('/cash-reports')}><Text style={styles.secondaryButtonText}>{t('Relatórios do Caixa')}</Text></Pressable>}
     {!!error && <Text style={styles.errorText} accessibilityLiveRegion="polite">{t(error)}</Text>}
     {pendingCash && <View style={styles.panel}><Text style={styles.helperText}>{t('Há uma operação sem confirmação. Consulte seu resultado antes de movimentar o caixa novamente.')}</Text><Pressable accessibilityRole="button" disabled={working} style={styles.secondaryWideButton} onPress={() => { void cashCommand(pendingCash).then(result => { operation.current = null; setError(''); if (result.receipt) { setReceipt(result.receipt); setItems([]); setTendered(''); setCustomer(''); setDiscountText('0.00'); setDiscountReason(''); setCustomerId(undefined); setTip('0.00'); setDeliveryFee('0.00'); setParts({ cash: '0.00', card: '0.00', zelle: '0.00' }); } if (['void', 'refund'].includes(String(pendingCash.operation))) { setReversing(null);  setReceipt(null); } }).catch(e => setError(e.message)); }}><Text style={styles.secondaryButtonText}>{t('Consultar operação pendente')}</Text></Pressable></View>}
     {receipt && <View style={styles.panel}><Text style={styles.panelTitle}>{t('Recebimento registrado')} · {money(receipt.totalCents)}</Text>{receipt.changeCents > 0 && <Text style={styles.cardTitle}>{t('Troco')}: {money(receipt.changeCents)}</Text>}<Pressable accessibilityRole="button" disabled={printing || (!canReprint && printedReceipts.has(receipt.id))} style={styles.secondaryWideButton} onPress={() => void print(receipt, true)}><Text style={styles.secondaryButtonText}>{t('Imprimir recibo não fiscal')}</Text></Pressable></View>}

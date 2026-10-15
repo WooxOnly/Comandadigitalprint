@@ -240,7 +240,7 @@ test('staff can sync only their own password, while menu edits reach another tab
     const admin = f.tablet(), staffTablet = f.tablet();
     await admin.cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: f.token }); await admin.cloud.sync();
     const salt = randomBytes(16).toString('hex');
-    const staff = { username: 'staff', active: true, login: { salt, hash: pbkdf2Sync('123456', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
+    const staff = { username: 'staff', active: true, role: 'manager', login: { salt, hash: pbkdf2Sync('123456', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex'), iterations: 100000 } };
     await admin.cloud.write({ 'user:staff': staff }); await admin.cloud.sync();
     const signedIn = await (await f.request('/login', { username: 'staff', password: '123456' })).json();
     await staffTablet.cloud.setSession({ storeId: 'seabra-1', username: 'staff', token: signedIn.token }); await staffTablet.cloud.sync();

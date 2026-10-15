@@ -1,3 +1,4 @@
+import { appRole, roleAction, roleWrite, roleScreen } from '../../shared/app-roles.mjs';
 import { inspectBackupSnapshot } from './backupRecovery';
 import { DEFAULT_ACCESS, validAccess, allowedAccess } from '../../shared/operations-validation.mjs';
 import type { AccessAction, AccessSettings } from './access';
@@ -19,7 +20,9 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   let state: State;
   let offlineActor = '';
   const actor = () => session?.username || offlineActor || state?.reader || '';
-  const can = (action: AccessAction) => allowedAccess(state?.access ?? DEFAULT_ACCESS, action, actor());
+  const roleOf = (username = actor()) => {const user=state?.values['user:' + username]?.value as { role?: string; active?: boolean } | undefined;return user?.active===false ? null : appRole(username,user?.role)};
+  const can = (action: AccessAction, username = actor()) => roleAction(roleOf(username), action) && (['admin','manager'].includes(roleOf(username) || '') || allowedAccess(state?.access ?? DEFAULT_ACCESS, action, username));
+  let rejectedSession = false;
   let loading: Promise<void> | undefined;
   let lock: Promise<unknown> = Promise.resolve();
   let running: Promise<void> | undefined;
@@ -85,13 +88,17 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       let changed = false;
       for (const [key, value] of Object.entries(entries)) {
         if (!validCloudValue(key, value)) throw new CloudError('INVALID_DATA');
+        if (JSON.stringify(values[key]?.value) === JSON.stringify(value)) continue;
+        const previous = values[key]?.value as { role?: string; active?: boolean } | undefined, nextUser = value as { role?: string; active?: boolean };
+        const ownPassword = key === 'user:' + actor() && !!previous && previous.active === nextUser.active && appRole(actor(),previous.role) === appRole(actor(),nextUser.role);
+        if (!ownPassword && !roleWrite(roleOf(),key,value)) throw new CloudError('ACCESS_DENIED');
         if ((key === 'menu' || key.startsWith('product-option:')) && !can('menu')) throw new CloudError('ACCESS_DENIED');
         if ((['printer', 'order-settings', 'logo'].includes(key) || key.startsWith('printer:')) && !can('settings')) throw new CloudError('ACCESS_DENIED');
         if (key.startsWith('activity:') && ['reprint', 'restore'].includes((value as { kind: string }).kind) && !can((value as { kind: AccessAction }).kind)) throw new CloudError('ACCESS_DENIED');
         if (key.startsWith('preparation:') && !state.modules?.preparation) throw new CloudError('MODULE_DISABLED');
         if (key.startsWith('customer:') && !state.modules?.customers) throw new CloudError('MODULE_DISABLED');
         if (key.startsWith('preorder:') && !state.modules?.preorders) throw new CloudError('MODULE_DISABLED');
-        if (key === 'menu' && state.modules?.cash && !(session && (session.username === 'admin' || state.cashOverview?.settings?.managers.includes(session.username)))) {
+        if (key === 'menu' && state.modules?.cash && !(session && (['admin','manager'].includes(roleOf() || '') || state.cashOverview?.settings?.managers.includes(session.username)))) {
           const menu = (state.values.menu?.value ?? []) as { id: string; price: number }[];
           if ((value as { id: string; price: number }[]).some(product => !menu.some(previous => previous.id === product.id && previous.price === product.price))) throw new CloudError('MANAGER_REQUIRED');
         }
@@ -147,11 +154,12 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         // Upload individual immutable orders: retries cannot duplicate an order.
         for (const sent of Object.values(state.pending)) {
           if (session?.token !== token) return;
+          if (!sent.key.startsWith('user:') && !roleWrite(roleOf(),sent.key,sent.value)) continue;
           if (sent.key.startsWith('activity:') && ['reprint', 'restore'].includes((sent.value as { kind: string }).kind) && !can((sent.value as { kind: AccessAction }).kind)) continue;
           if ((sent.key === 'menu' || sent.key.startsWith('product-option:')) && !can('menu')) continue;
           if ((['printer', 'order-settings', 'logo'].includes(sent.key) || sent.key.startsWith('printer:')) && !can('settings')) continue;
           if (sent.key.startsWith('preparation:') && (!state.modules?.preparation || state.pending['order:' + (sent.value as { orderId: string }).orderId])) continue;
-          if (((sent.key.startsWith('preorder:') && !state.modules?.preorders) || (sent.key.startsWith('customer:') && !state.modules?.customers)) || sent.conflict || (sent.key.startsWith('user:') && username !== 'admin' && sent.key !== 'user:' + username)) continue;
+          if (((sent.key.startsWith('preorder:') && !state.modules?.preorders) || (sent.key.startsWith('customer:') && !state.modules?.customers)) || sent.conflict || (sent.key.startsWith('user:') && roleOf() !== 'admin' && sent.key !== 'user:' + username)) continue;
           if (sent.key.startsWith('preorder:') && (sent.value as { customerId?: string }).customerId) {
             const linkedId = (sent.value as { customerId: string }).customerId;
             // A disabled/conflicted customer must not block independent kitchen
@@ -185,7 +193,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await pull(token);
         if (session?.token !== token) return;
-        if (state.modules?.cash) {
+        if (state.modules?.cash && roleScreen(roleOf(),'cash')) {
           await serial(async () => {
             const overview = await request('/cash?deviceId=' + encodeURIComponent(state.deviceId), undefined, token);
             if (!Array.isArray(overview.sessions) || !Array.isArray(overview.entries)) throw new CloudError('INVALID_DATA');
@@ -194,7 +202,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
         status = Object.values(state.pending).some((p) => p.conflict) ? 'CONFLICT' : Object.keys(state.pending).length ? 'PENDING' : 'SYNCED';
-      } catch (error) { status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE'; }
+      } catch (error) { if (error instanceof CloudError && error.status === 401) rejectedSession = true; status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE'; }
       finally { emit(); }
     })().catch(() => { status = 'STORAGE_ERROR'; emit(); }).finally(() => { running = undefined; });
     return running;
@@ -204,7 +212,9 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     storeId,
     setOfflineActor(username: string) { offlineActor = username; },
     access() { return state?.access ?? DEFAULT_ACCESS as AccessSettings; },
-    allowed(action: AccessAction, username = actor()) { return allowedAccess(state?.access ?? DEFAULT_ACCESS, action, username); },
+    role: roleOf,
+    sessionRejected() { return rejectedSession; },
+    allowed(action: AccessAction, username = actor()) { return can(action, username); },
     async activity(kind: 'print' | 'reprint' | 'restore', target: string, details = '') { const id = uuid(); await write({ ['activity:' + id]: { id, kind, target, details, createdAt: new Date().toISOString() } }); },
     preparationSettings() { return state?.preparationSettings ?? DEFAULT_PREPARATION_SETTINGS; },
     async authorizePreparationReprint(orderId: string) {
@@ -237,7 +247,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       });
     },
     async recoverFromCloud() {
-      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      await load(); if (!roleScreen(roleOf(),'customers')) throw new CloudError('ACCESS_DENIED'); if (!session) throw new CloudError('LOGIN_REQUIRED');
       if (!can('restore')) throw new CloudError('ACCESS_DENIED');
       if (running) await running;
       await serial(() => persist({ ...state, cursor: 0 }));
@@ -246,18 +256,18 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       await this.activity('restore', state.deviceId, 'Releitura completa dos dados da empresa na nuvem');
     },
     async customerHistory(customerId: string) {
-      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      await load(); if (!roleScreen(roleOf(),'customers')) throw new CloudError('ACCESS_DENIED'); if (!session) throw new CloudError('LOGIN_REQUIRED');
       return request('/customers/history?' + new URLSearchParams({ customerId }));
     },
     async cashReport(start: string, end: string, timeZone: string) {
-      await load();
+      await load(); if (!roleScreen(roleOf(),'cash-reports')) throw new CloudError('ACCESS_DENIED');
       if (!session) throw new CloudError('LOGIN_REQUIRED');
       const result = await request('/cash/report?' + new URLSearchParams({ start, end, timeZone }));
       if (result.storeId !== storeId() || !Array.isArray(result.days) || !Array.isArray(result.products) || !Array.isArray(result.methods) || !Array.isArray(result.closings) || !Array.isArray(result.movements) || !result.totals) throw new CloudError('INVALID_DATA');
       return result as CashReport;
     },
     async cashCommand(input: Record<string, unknown>) {
-      await load();
+      await load(); if (!roleScreen(roleOf(),'cash')) throw new CloudError('ACCESS_DENIED');
       return serial(async () => {
         if (!session) throw new CloudError('LOGIN_REQUIRED');
         const attempt = JSON.parse(JSON.stringify(input)) as Record<string, unknown>;
@@ -308,7 +318,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       if (next && next.storeId !== storeId()) throw new CloudError('STORE_MISMATCH');
       await load();
       const changed = state.reader !== next?.username;
-      session = next;
+      session = next; rejectedSession = false;
       if (changed && next) await serial(() => persist({ ...state, reader: next.username, cursor: 0 }));
       if (!next) { status = 'LOGIN_REQUIRED'; emit(); }
     },

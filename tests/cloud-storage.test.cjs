@@ -40,7 +40,7 @@ test('encrypted storage migrates local data, commits atomically and restores its
   }[name] || require(name)));
   assert.equal(await store.loadStoreId(), 'seabra-1');
   const syncModule = loadTs('src/services/cloudSync.ts');
-  const load = () => compile('src/services/cloudStorage.ts', (name) => ({
+  const load = () => { const result = compile('src/services/cloudStorage.ts', (name) => ({
     '@react-native-async-storage/async-storage': asyncStorage,
     'expo-secure-store': secure,
     'expo-crypto': { randomUUID: crypto.randomUUID },
@@ -50,7 +50,7 @@ test('encrypted storage migrates local data, commits atomically and restores its
     './cloudSync': syncModule,
     '../config/auth': { ADMIN_CREDENTIAL_ENDPOINT: 'https://example.com/auth/admin' },
     '../config/store': store,
-  }[name] || require(name)));
+  }[name] || require(name))); result.cloud.setOfflineActor('admin'); return result; };
   const first = load();
   assert.equal(first.cloud.storeId(), 'seabra-1');
   assert.deepEqual(JSON.parse(await first.appStorage.getItem('@comandadigitalprint/orders')), original);
@@ -158,7 +158,7 @@ test('a newly bound store uses separate encrypted state, key and backups', async
     '../config/auth': { ADMIN_CREDENTIAL_ENDPOINT: 'https://example.com/auth/admin' },
     '../config/store': store,
   }[name] || require(name)));
-  await storage.cloud.load();
+  await storage.cloud.load(); storage.cloud.setOfflineActor('admin');
   assert.equal(storage.cloud.storeId(), 'loja-2');
   assert.equal(await storage.appStorage.getItem('@comandadigitalprint/menu'), null);
   assert.equal(storage.cloud.pending('menu'), false);

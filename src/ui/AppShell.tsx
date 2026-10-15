@@ -1,3 +1,6 @@
+import { roleScreen, pathScreen } from '../../shared/app-roles.mjs';
+import { useAppRole } from './useAppRole';
+import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { router, usePathname } from 'expo-router';
@@ -19,7 +22,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const storeName = useStoreName();
   const path = usePathname();
   const modules = useStoreModules();
-  const tabs = navigationTabs(modules);
+  const role = useAppRole();
+  const { logout } = useAuth();
+  const tabs = navigationTabs(modules, role);
+  const permitted = roleScreen(role,pathScreen(path),modules);
+  const landing = tabs[0] ? ROUTES[tabs[0].screen] : '/preparation';
+  useEffect(()=>{if(!permitted && path!==landing)router.replace(landing)},[permitted,path,landing]);
   const activeTab = tabs.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/')) || (tab.screen === 'cash' && path === '/cash-reports') || (tab.screen === 'printer' && path === '/backups'));
   const currentTab = activeTab || TABS[0];
   const kitchen = path === '/preparation';
@@ -31,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const minTabWidth = tabs.length > TABS.length ? (fontScale >= 1.4 ? 124 : 100) : 0;
   const navWidth = Math.max(Math.min(width, tabs.length > TABS.length ? 1160 : kitchen ? 760 : isWide ? 640 : 760), minTabWidth * tabs.length + (minTabWidth ? 16 + 4 * (tabs.length - 1) : 0));
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.screen === screen));
-  const selectedOffset = Math.max(0, (selectedIndex + 0.5) * (navWidth / tabs.length) - width / 2);
+  const selectedOffset = Math.max(0, (selectedIndex + 0.5) * (navWidth / Math.max(1,tabs.length)) - width / 2);
   useEffect(() => { navScroll.current?.scrollTo({ x: selectedOffset, animated: false }); }, [selectedOffset]);
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -40,22 +48,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         <StatusBar style="dark" />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
-            <Pressable onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>
+            <Pressable disabled={role !== 'admin'} accessible={role === 'admin'} onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
               <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
               <Text style={[styles.title, kitchen && { fontSize: 18 }]}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
+            {role === 'cook' && <Pressable accessibilityRole="button" accessibilityLabel={t('Sair do sistema')} onPress={logout} style={styles.noteChip}><Text style={styles.noteChipText}>{t('Sair do sistema')}</Text></Pressable>}
             {isWide && !kitchen && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
           </View>
 
           <CloudStatus compact={kitchen} />
-          <View style={styles.flex}>{children}</View>
+          <View style={styles.flex}>{permitted ? children : <View style={styles.panel}><Text style={styles.panelTitle}>{t('Acesso restrito')}</Text><Text style={styles.helperText}>{t('Seu perfil não tem acesso a esta tela ou o módulo está desativado.')}</Text><Pressable style={styles.cancelButton} onPress={logout}><Text style={styles.cancelButtonText}>{t('Sair do sistema')}</Text></Pressable></View>}</View>
 
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}
 
-          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground} testID="bottom-navigation">
+          {tabs.length > 0 && <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground} testID="bottom-navigation">
             <ScrollView ref={navScroll} horizontal showsHorizontalScrollIndicator persistentScrollbar style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} onContentSizeChange={() => navScroll.current?.scrollTo({ x: selectedOffset, animated: false })}>
               <View testID="navigation-content" style={[styles.bottomNav, isWide && styles.bottomNavWide, { width: navWidth, maxWidth: navWidth }, kitchen && { paddingVertical: 3 }]}>
                 {tabs.map((tab) => <Pressable testID={'nav-' + tab.screen} key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} aria-selected={screen === tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
@@ -64,10 +73,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Pressable>)}
               </View>
             </ScrollView>
-          </View>
+          </View>}
         </KeyboardAvoidingView>
 
-        <Modal visible={selectedProduct !== null} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setSelectedProduct(null)}>
+        <Modal visible={selectedProduct !== null && roleScreen(role,'order',modules)} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setSelectedProduct(null)}>
           <SafeAreaProvider><KeyboardAvoidingView style={[styles.modalBackdrop, isWide && styles.modalBackdropWide]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <SafeAreaView edges={['bottom']} style={[styles.productModal, isWide && styles.productModalWide]}>
               <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.modalContent}>
@@ -103,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SafeAreaView>
           </KeyboardAvoidingView></SafeAreaProvider>
         </Modal>
-        <ReceiptPreview />
+        {permitted && <ReceiptPreview />}
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -4,7 +4,7 @@ export async function cashSettings(env, storeId) {
   const row = await env.DB.prepare('SELECT data FROM store_cash_settings WHERE store_id = ?').bind(storeId).first();
   return row ? JSON.parse(row.data) : { ...DEFAULT_CASH_SETTINGS, tax: { ...DEFAULT_CASH_SETTINGS.tax }, managers: [] };
 }
-export function canManageCash(actor, settings) { return actor.username === 'admin' || settings.managers.includes(actor.username); }
+export function canManageCash(actor, settings) { return actor.username === 'admin' || ['admin','manager'].includes(actor.role) || settings.managers.includes(actor.username); }
 export async function validateManagers(env, storeId, settings) {
   if (!validCashSettings(settings)) return false;
   for (const name of settings.managers) {

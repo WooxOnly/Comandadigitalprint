@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const { DatabaseSync } = require('node:sqlite');
 const ts = require('typescript');
 const output = {};
-new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
+new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../../shared/app-roles.mjs' ? require('../shared/app-roles.mjs') : name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
 const { createLocalAuth, settingsAccessCode } = output;
 function storeDatabase() {
   const database = new DatabaseSync(':memory:');
@@ -193,17 +193,17 @@ test('local users survive restart, require unlocked settings and support disable
   await assert.rejects(auth.createUser('staff', '', ''));
   await auth.createUser('Staff', '123456', '123456');
   await assert.rejects(auth.createUser('staff', '123456', '123456'));
-  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
+  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true, role: 'cashier' }]);
   assert.deepEqual(auth.loginUsers(), ['admin', 'staff']);
   f.fail = true;
   await assert.rejects(auth.updateUser('staff', false));
   await assert.rejects(auth.createUser('other', '123456', '123456'));
-  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true }]);
+  assert.deepEqual(auth.listUsers(), [{ username: 'staff', active: true, role: 'cashier' }]);
   f.fail = false;
   const reopened = f.create(); await reopened.load();
   await assert.rejects(reopened.verify('login', 'wrong', 'staff'));
   await reopened.verify('login', '123456', 'STAFF');
-  await reopened.verify('settings', '2066');
+  await assert.rejects(reopened.verify('settings', '2066'),/permissão/);
   await assert.rejects(reopened.updateUser('staff', false));
   reopened.logout();
   await assert.rejects(reopened.updateUser('staff', true, '654321', '654321'));
@@ -221,16 +221,9 @@ test('local users survive restart, require unlocked settings and support disable
   await reopened.verify('login', '654321', 'staff');
 });
 
-test('staff can change only their own password after unlocking settings', async () => {
-  const f = fixture(), admin = f.create(); await admin.load(); await admin.setup('admin', 'abc123', 'abc123');
-  await admin.verify('settings', '2066'); await admin.createUser('staff', '123456', '123456');
-  const staff = f.create(); await staff.load(); await staff.verify('login', '123456', 'staff'); await staff.verify('settings', '2066');
-  await assert.rejects(staff.createUser('other', '123456', '123456'), /protegido/);
-  await assert.rejects(staff.updateUser('staff', true, '654321', '654321'), /protegido/);
-  await assert.rejects(staff.changeOwnPassword('wrong', '654321', '654321'), /atual incorreta/);
-  await staff.changeOwnPassword('123456', '654321', '654321');
-  staff.logout(); await assert.rejects(staff.verify('login', '123456', 'staff'));
-  await staff.verify('login', '654321', 'staff');
+test('staff profiles cannot unlock Settings even with the correct hourly password', async () => {
+  const f=fixture(),admin=f.create();await admin.load();await admin.setup('admin','abc123','abc123');await admin.verify('settings','2066');
+  for(const role of ['manager','cashier','cook']){await admin.createUser(role,'a','a',role);const user=f.create();await user.load();await user.verify('login','a',role);assert.equal(user.currentRole(),role);await assert.rejects(user.verify('settings','2066'),/permissão/);await assert.rejects(user.createUser('other','a','a'),/protegido/);}
 });
 
 test('native password wrapper preserves old and weekly hashes and releases stalled verification', async (t) => {
@@ -411,7 +404,7 @@ test('admin rotation is weekly; offline, invalid responses and failed writes ret
 test('app passwords support the chosen length through creation, restart, reset and self-service change', async () => {
   const f = fixture(), auth = f.create(); await auth.load(); await auth.setup('admin', 'a', 'a'); await auth.verify('settings', '2066');
   await assert.rejects(auth.createUser('staff', '', '')); await assert.rejects(auth.createUser('staff', 'chosen', 'mismatch'));
-  await auth.createUser('staff', 'x', 'x');
+  await auth.createUser('staff', 'x', 'x', 'admin');
   const restarted = f.create(); await restarted.load(); await restarted.verify('login', 'x', 'staff'); await restarted.verify('settings', '2066');
   await restarted.changeOwnPassword('x', 'password8', 'password8'); restarted.logout(); await restarted.verify('login', 'password8', 'staff');
   await auth.verify('settings', '2066'); const long = 'Senha com acentuação · '.repeat(4); await auth.updateUser('staff', true, long, long);

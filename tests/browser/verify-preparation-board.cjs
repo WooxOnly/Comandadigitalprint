@@ -14,7 +14,7 @@ const viewports=[{width:1280,height:800},{width:1200,height:800},{width:960,heig
   for(const language of ['pt','en','es']){
    const context=await browser.newContext(),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
    try{
-    await page.goto(base+'/tablet-preview.html?language='+language+'#/preparation');await page.waitForFunction(()=>!!window.qa);
+    await page.goto(base+'/tablet-preview.html?language='+language+'#/preparation');await page.waitForFunction(()=>!!window.qa);if(process.env.PREPARATION_ROLE==='cook')await page.evaluate(()=>window.qa.setProfile({username:'chef',role:'cook'}));
     await page.evaluate(()=>{const issued=Date.now()-26*3600000;const history=Array.from({length:12},(_,n)=>({id:'kitchen-'+n,plate:String(n+1),tabletLabel:'1',dailyNumber:n+1,customer:'Cliente com nome longo · Customer · Cliente',serviceMode:n%2?'takeout':'dine_in',createdAt:new Date(issued+n*3600000).toISOString(),items:Array.from({length:8},(_,i)=>({id:'item-'+i,productId:'pizza',name:'Pizza '+i+' · Produto com nome longo e acentuação',category:'Pizzas',quantity:i+1,note:'Sem cebola · No onions · Sin cebolla',flavors:['Calabresa','Mussarela'],extras:[]}))}));window.qa.setHistory(history.reverse());});
     for(const viewport of viewports){
      await page.setViewportSize(viewport);await page.getByTestId('preparation-card-kitchen-0').waitFor();

@@ -1,3 +1,4 @@
+import { appRole, roleAction } from '../../shared/app-roles.mjs';
 import { DEFAULT_ACCESS, allowedAccess } from '../../shared/operations-validation.mjs';
 export async function storeAccess(env, storeId) {
   const row = await env.DB.prepare('SELECT data FROM store_access_settings WHERE store_id = ?').bind(storeId).first();
@@ -5,6 +6,9 @@ export async function storeAccess(env, storeId) {
 }
 export const fail = (status, code) => { throw Object.assign(new Error(code), { status }); };
 export async function requireAccess(env, actor, action) {
+  const role=actor.role ?? appRole(actor.username);
+  if (!roleAction(role, action)) fail(403, 'ACCESS_DENIED');
+  if (['admin','manager'].includes(role)) return;
   if (!allowedAccess(await storeAccess(env, actor.storeId), action, actor.username)) fail(403, 'ACCESS_DENIED');
 }
 export async function validAccessUsers(env, storeId, access) {

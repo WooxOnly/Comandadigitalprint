@@ -1,3 +1,4 @@
+import { roleScreen, type AppRole } from '../../shared/app-roles.mjs';
 import { Platform, StyleSheet, type ImageSourcePropType } from 'react-native';
 import type { PrinterConnection, PrinterSettings } from '../../printerService';
 export type AppScreen = 'home' | 'order' | 'menu' | 'history' | 'printer' | 'preparation' | 'preorders' | 'customers' | 'cash';
@@ -27,8 +28,8 @@ export const MODULE_TABS: (NavigationTab & { module: 'preparation' | 'preorders'
   { module: 'customers', screen: 'customers', label: 'Clientes', title: 'Cadastro de Clientes', icon: { source: require('../../assets/navigation/customers.png') }, hint: 'Contatos, endereços e histórico' },
   { module: 'cash', screen: 'cash', label: 'Caixa', title: 'Caixa', icon: { source: require('../../assets/navigation/cash.png') }, hint: 'Abertura, recebimentos e fechamento' },
 ];
-export function navigationTabs(modules: { preorders: boolean; cash: boolean; customers?: boolean; preparation?: boolean }): NavigationTab[] {
-  return [...TABS.filter(tab => tab.screen !== 'printer'), ...MODULE_TABS.filter(tab => modules[tab.module]), TABS.find(tab => tab.screen === 'printer')!];
+export function navigationTabs(modules: { preorders: boolean; cash: boolean; customers?: boolean; preparation?: boolean }, role: AppRole | null = 'admin'): NavigationTab[] {
+  return [...TABS.filter(tab => tab.screen !== 'printer'), ...MODULE_TABS.filter(tab => modules[tab.module]), TABS.find(tab => tab.screen === 'printer')!].filter(tab=>roleScreen(role,tab.screen,modules));
 }
 
 export const COLORS = {

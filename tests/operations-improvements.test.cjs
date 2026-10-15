@@ -18,9 +18,9 @@ async function ownerCookie(f) {
 }
 async function staff(f) {
   const salt = randomBytes(16).toString('hex'), hash = pbkdf2Sync('password', Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex');
-  f.db.prepare('INSERT INTO store_records(store_id, key, data, revision) VALUES(?, ?, ?, 1)').run(f.a.storeId, 'user:staff', JSON.stringify({ username: 'staff', active: true, login: { salt, hash, iterations: 100000 } }));
+  f.db.prepare('INSERT INTO store_records(store_id, key, data, revision) VALUES(?, ?, ?, 1)').run(f.a.storeId, 'user:staff', JSON.stringify({ username: 'staff', active: true, role: 'manager', login: { salt, hash, iterations: 100000 } }));
   const login = await (await f.call('/login', { storeId: f.a.storeId, username: 'staff', password: 'password' })).json();
-  return { storeId: f.a.storeId, username: 'staff', token: login.token };
+  return { storeId: f.a.storeId, username: 'staff', token: login.token, credential:login.credential, revision:login.revision };
 }
 const restrict = (f, access) => f.db.prepare('INSERT INTO store_access_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').run(f.a.storeId, JSON.stringify(access));
 
@@ -136,9 +136,13 @@ test('a partial printer failure never resends confirmed destinations on an expli
 });
 
 test('access restrictions apply on server and offline, preserve revoked queues and allow independent kitchen orders', async t => {
-  const f = await fixture(t), employee = await staff(f), a = f.tablet(new Map(), employee); await a.cloud.setSession(employee); await a.cloud.sync();
+  const f = await fixture(t), employee = await staff(f), a = f.tablet(new Map(), employee); await a.cloud.cacheUser('staff',employee.credential,employee.revision); await a.cloud.setSession(employee); await a.cloud.sync();
   a.offline = true; await a.cloud.write({ menu: [{ id: 'pizza', name: 'Pizza', category: 'Pizzas', price: 10 }] });
-  const access = { menu: [], settings: [], reprint: [], restore: [] }; restrict(f, access); a.offline = false; await a.cloud.sync();
+  const access = { menu: [], settings: [], reprint: [], restore: [] }; restrict(f, access);
+  const previous=JSON.parse(f.db.prepare("SELECT data FROM store_records WHERE store_id='seabra-1' AND key='user:staff'").get().data),next={...previous,role:'cashier'};
+  f.db.prepare('INSERT INTO store_events(store_id,mutation,key,data,actor,created_at) VALUES(?,?,?,?,?,?)').run('seabra-1',randomUUID(),'user:staff',JSON.stringify(next),'admin',date());
+  const login=await(await f.call('/login',{storeId:'seabra-1',username:'staff',password:'password'})).json();employee.token=login.token;await a.cloud.cacheUser('staff',login.credential,login.revision);await a.cloud.setSession(employee);
+  a.offline = false; await a.cloud.sync();
   assert.equal(a.cloud.pending('menu'), true); assert.equal(a.cloud.allowed('menu'), false); assert.equal(a.cloud.allowed('menu', 'admin'), true);
   assert.equal((await write(f, 'product-option:pizza', { productId: 'pizza', available: false, favorite: false }, 0, employee)).status, 403);
   assert.equal((await write(f, 'order-settings', { requireCustomer: true }, 0, employee)).status, 403);

@@ -1,3 +1,4 @@
+import { useAppRole } from '../ui/useAppRole';
 import { useAccess } from '../ui/useAccess';
 import { searchCatalog } from '../services/catalogOptions';
 import { useBusiness } from '../state/BusinessContext';
@@ -15,8 +16,9 @@ import { styles, COLORS } from '../ui/theme';
 export default function MenuScreen() {
   const { t, locale } = useLanguage();
   const { modules, overview } = useBusiness(), { currentUser } = useAuth();
+  const role = useAppRole();
   const canEdit = useAccess('menu');
-  const canChangePrice = canEdit && ( !modules.cash || currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser));
+  const canChangePrice = canEdit && ( !modules.cash || ['admin','manager'].includes(role || '') || currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser));
   const { width, fontScale } = useWindowDimensions();
   const { productOptions, updateProductOption, menu, updateMenuProduct, removeMenuProduct, addMenuProduct, saveMenu } = useApp();
   const [search, setSearch] = useState('');

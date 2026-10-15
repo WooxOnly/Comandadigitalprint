@@ -1,3 +1,4 @@
+import { appRole, roleScreen, roleWrite, roleRead } from '../../shared/app-roles.mjs';
 import { storeAccess, requireAccess, preparationSettings } from './operations.mjs';
 import { PREPARATION_TIMES, PREPARATION_ACTORS } from '../../shared/preparation-times.mjs';
 import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
@@ -39,9 +40,12 @@ async function session(request, env) {
   // Tokens issued before the store migration belong only to Seabra 1.
   data.storeId = data.storeId ?? DEFAULT_STORE_ID;
   try { await activeStore(env, data.storeId); } catch { fail(401, 'LOGIN_REQUIRED'); }
+  data.role = 'admin';
   if (data.username !== 'admin') {
     const record = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(data.storeId, 'user:' + data.username).first();
     if (!record || !JSON.parse(record.data).active || record.revision !== data.revision) fail(401, 'LOGIN_REQUIRED');
+    data.role = appRole(data.username, JSON.parse(record.data).role);
+    if (!data.role) fail(403, 'ACCESS_DENIED');
   }
   return data;
 }
@@ -96,6 +100,8 @@ export async function cloudResponse(request, env) {
       return response;
     }
     const actor = await session(request, env);
+    const requiredScreen = { '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
+    if (requiredScreen && !roleScreen(actor.role, requiredScreen)) fail(403, 'ACCESS_DENIED');
     if (url.pathname === '/cloud/preparation-settings' && request.method === 'GET') return reply(await preparationSettings(env, actor.storeId));
     if (url.pathname === '/cloud/preparation-reprint' && request.method === 'POST') {
       if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
@@ -139,13 +145,15 @@ export async function cloudResponse(request, env) {
       const cursor = Number(url.searchParams.get('after') || 0);
       if (!Number.isSafeInteger(cursor) || cursor < 0) fail(400, 'INVALID_DATA');
       const { results } = await env.DB.prepare('SELECT seq, key, data FROM store_events WHERE store_id = ? AND seq > ? ORDER BY seq LIMIT 50').bind(actor.storeId, cursor).all();
-      const changes = results.filter(row => (url.searchParams.get('features') === 'operations-v1' || !/^(product-option:|preparation:|activity:)/.test(row.key)) && (!row.key.startsWith('user:') || actor.username === 'admin' || row.key === 'user:' + actor.username)).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
+      const changes = results.filter(row => roleRead(actor.role, row.key) && (url.searchParams.get('features') === 'operations-v1' || !/^(product-option:|preparation:|activity:)/.test(row.key)) && (!row.key.startsWith('user:') || actor.role === 'admin' || row.key === 'user:' + actor.username)).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
       return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === 50 });
     }
     if (request.method === 'POST' && url.pathname === '/cloud/change') {
       const input = await body(request);
       if (input?.storeId && input.storeId !== actor.storeId) fail(403, 'STORE_FORBIDDEN');
+      if(typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && typeof input.value === 'object' && !Array.isArray(input.value) && input.value.role === undefined){const previous=await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId,input.key).first();if(previous?.data && JSON.parse(previous.data).role!==undefined)input.value.role=JSON.parse(previous.data).role;}
       if (!input || !validCloudValue(input.key, input.value) || !/^[a-zA-Z0-9-]{16,80}$/.test(input.id || '') || !Number.isSafeInteger(input.base) || input.base < 0) fail(400, 'INVALID_DATA');
+      if(!input.key.startsWith('user:') && !roleWrite(actor.role,input.key,input.value)) fail(403,'ACCESS_DENIED');
       if (input.key.startsWith('customer:') && !(await storeModules(env, actor.storeId)).customers) fail(403, 'MODULE_DISABLED');
       if (input.key.startsWith('preorder:') && !(await storeModules(env, actor.storeId)).preorders) fail(403, 'MODULE_DISABLED');
       if (input.key === 'menu' && (await storeModules(env, actor.storeId)).cash && !canManageCash(actor, await cashSettings(env, actor.storeId))) {
@@ -153,11 +161,11 @@ export async function cloudResponse(request, env) {
         const menu = current ? JSON.parse(current.data) : [];
         if (input.value.some(product => !menu.some(previous => previous.id === product.id && previous.price === product.price))) fail(403, 'MANAGER_REQUIRED');
       }
-      if (input.key.startsWith('user:') && actor.username !== 'admin') {
+      if (input.key.startsWith('user:') && actor.role !== 'admin') {
         if (input.key !== 'user:' + actor.username) fail(403, 'ADMIN_REQUIRED');
         const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
         const previous = existing && JSON.parse(existing.data);
-        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active) fail(403, 'ADMIN_REQUIRED');
+        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
       }
       const data = JSON.stringify(input.value);
       const prior = await env.DB.prepare('SELECT key, data, seq FROM store_events WHERE store_id = ? AND mutation = ?').bind(actor.storeId, input.id).first();

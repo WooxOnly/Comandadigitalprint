@@ -1,3 +1,4 @@
+import { appRole, validRole, type AppRole } from '../../shared/app-roles.mjs';
 import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
@@ -33,14 +34,15 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
   };
   const clearSession = () => { signedIn = false; signedInDay = ''; currentUser = ''; settingsOpen = false; };
   const isSessionActive = () => {
-    if (signedIn && signedInDay !== localDay()) clearSession();
+    if (signedIn && (signedInDay !== localDay() || (currentUser !== 'admin' && !users.some(user=>user.username===currentUser && user.active)))) clearSession();
     return signedIn;
   };
   const USER_INDEX = 'comandadigitalprint.users.v1';
-  type User = { username: string; active: boolean; login: Digest; attempts: number; blockedUntil: number };
+  type User = { username: string; active: boolean; role?: AppRole; login: Digest; attempts: number; blockedUntil: number };
   let users: User[] = [];
   const userKey = (username: string) => `comandadigitalprint.user.${username}`;
-  const requireSettings = () => { if (!isSessionActive() || !settingsOpen) throw new Error('Acesso protegido'); };
+  const currentRole = () => {if(currentUser==='admin')return 'admin';const user=users.find(user=>user.username===currentUser);return user?.active ? appRole(currentUser,user.role) : null;};
+  const requireSettings = () => { if (!isSessionActive() || !settingsOpen || currentRole() !== 'admin') throw new Error('Acesso protegido'); };
   async function saveUser(next: User) {
     await storage.setItemAsync(userKey(next.username), JSON.stringify(next));
     users = users.map((user) => user.username === next.username ? next : user);
@@ -71,7 +73,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
           if (!Array.isArray(index) || index.some((name) => typeof name !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(name) || name === 'admin') || new Set(index).size !== index.length) throw new Error();
           users = await Promise.all(index.map(async (name) => {
             const user = JSON.parse(await storage.getItemAsync(userKey(name)) || 'null');
-            if (!user || user.username !== name || typeof user.active !== 'boolean' || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
+            if (!user || user.username !== name || typeof user.active !== 'boolean' || (user.role!==undefined && !validRole(user.role)) || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
             return user as User;
           }));
           record = parsed; loaded = true;
@@ -117,6 +119,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     async verify(kind: 'login' | 'settings', password: string, username = '') {
       return run(async () => {
         if (!loaded || (kind === 'settings' && !isSessionActive())) throw new Error(AUTH_STORAGE_ERROR);
+        if (kind === 'settings' && currentRole() !== 'admin') throw new Error('Usuário sem permissão para esta ação.');
         const name = kind === 'settings' ? currentUser : username.trim().toLowerCase();
         const account = name === 'admin' ? record : users.find((user) => user.username === name && user.active);
         if (!account) throw new Error(name === 'admin' && !record ? 'Recupere o acesso do admin antes de entrar.' : 'Usuário ou senha incorretos.');
@@ -137,34 +140,37 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     isSessionActive,
     logout: clearSession,
     loginUsers() { return ['admin', ...users.filter((user) => user.active).map((user) => user.username)]; },
-    listUsers() { requireSettings(); return users.map(({ username, active }) => ({ username, active })); },
-    async createUser(username: string, password: string, confirmation: string) {
+    currentRole,
+    listUsers() { requireSettings(); return users.map(({ username, active, role }) => ({ username, active, role: appRole(username,role)! })); },
+    async createUser(username: string, password: string, confirmation: string, role: AppRole = 'cashier') {
       return run(async () => {
         requireSettings();
-        if (currentUser !== 'admin') throw new Error('Acesso protegido');
+        if (currentRole() !== 'admin') throw new Error('Acesso protegido');
+        if (!validRole(role)) throw new Error('Perfil inválido.');
         const name = username.trim().toLowerCase();
         if (!/^[a-z0-9._-]{3,24}$/.test(name) || name === 'admin') throw new Error('Use de 3 a 24 letras, números, ponto, hífen ou sublinhado. Admin é reservado.');
         if (users.some((user) => user.username === name)) throw new Error('Este usuário já existe.');
         if (users.length >= 30) throw new Error('Limite de 30 usuários neste aparelho.');
         if (!validPasswords(password, confirmation)) throw new Error(PASSWORD_ERROR);
-        const user: User = { username: name, active: true, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
+        const user: User = { username: name, active: true, role, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
         requireSettings();
         await storage.setItemAsync(userKey(name), JSON.stringify(user));
         await storage.setItemAsync(USER_INDEX, JSON.stringify([...users.map((u) => u.username), name]));
         users = [...users, user];
       });
     },
-    async updateUser(username: string, active: boolean, password?: string, confirmation?: string) {
+    async updateUser(username: string, active: boolean, password?: string, confirmation?: string, role?: AppRole) {
       return run(async () => {
         requireSettings();
-        if (currentUser !== 'admin') throw new Error('Acesso protegido');
+        if (currentRole() !== 'admin') throw new Error('Acesso protegido');
+        if (role!==undefined && !validRole(role)) throw new Error('Perfil inválido.');
         const user = users.find((u) => u.username === username);
         if (!user) throw new Error('Usuário não encontrado.');
         if (!active && username === currentUser) throw new Error('Não é possível desativar o usuário conectado.');
         if (password !== undefined && !validPasswords(password, confirmation || '')) throw new Error(PASSWORD_ERROR);
         const login = password === undefined ? user.login : await makeDigest(password);
         requireSettings();
-        await saveUser({ ...user, active, login, attempts: 0, blockedUntil: 0 });
+        await saveUser({ ...user, active, role: role ?? user.role ?? 'cashier', login, attempts: 0, blockedUntil: 0 });
       });
     },
     async changeOwnPassword(currentPassword: string, password: string, confirmation: string) {
