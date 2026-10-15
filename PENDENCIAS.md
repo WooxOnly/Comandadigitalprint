@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Ícones e navegação dos módulos do APK — 14/10/2026
+
+- Corrigida a causa comum a **Preparo, Encomendas, Clientes e Caixa**: antes tinham atalhos separados sem ícone e não faziam parte da barra inferior. Agora Home e barra compartilham uma lista única, filtrada pelos módulos habilitados da loja. Cada módulo tem ícone local PNG transparente com fonte SVG versionada, sem fonte externa ou dependência de rede.
+- Atalhos opcionais recebem o mesmo layout responsivo dos existentes. Barra inferior inclui módulos ativos antes de Ajustes, destaca a tela atual e seus pais (Relatórios → Caixa, detalhes → Histórico, recuperação → Ajustes). Rolagem horizontal em telas estreitas mantém alvos de toque e traz o item selecionado para a área visível; no tablet horizontal a barra comporta os nove itens. Preservado o painel com seis pedidos.
+- **28 testes existentes aprovados**, lint, TypeScript e `git diff --check` aprovados. Chromium com componentes reais do APK via React Native Web aprovou **132 cenários específicos**, incluindo as 16 combinações de módulos, ícones locais, seleção, cliques e rotas filhas; **318 verificações gerais de layout** e **27 de preparo**, PT-BR/EN/ES em retrato e paisagem. Testes de Android e impressora físicos continuam separados.
+- Correção exclusiva do APK; sem alteração de Worker, banco, senhas ou módulos reais da loja. Código e nova build de homologação serão registrados após o envio e a aceitação pelo EAS. Instalar a nova build para receber os ícones e a navegação.
+
 ## Senhas administrativas globais e acessos do cliente — 14/10/2026
 
 - Menu principal **Home, Clientes, Gerenciar senhas, Minha conta e Sair**. Home apresenta contagens reais e atalhos. Senha semanal do administrador e senha horária de Ajustes ficam em Gerenciar senhas global, sem escolher cliente, grupo ou loja. Contexto e navegação de loja não aparecem nas páginas globais. Clientes continuam de loja única ou grupos sem camada superior obrigatória.

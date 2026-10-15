@@ -1,7 +1,7 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, type ImageSourcePropType } from 'react-native';
 import type { PrinterConnection, PrinterSettings } from '../../printerService';
-export type AppScreen = 'home' | 'order' | 'menu' | 'history' | 'printer';
-export const ROUTES = { home: '/', order: '/order', menu: '/menu', history: '/history', printer: '/printer' } as const;
+export type AppScreen = 'home' | 'order' | 'menu' | 'history' | 'printer' | 'preparation' | 'preorders' | 'customers' | 'cash';
+export const ROUTES = { home: '/', order: '/order', menu: '/menu', history: '/history', printer: '/printer', preparation: '/preparation', preorders: '/preorders', customers: '/customers', cash: '/cash' } as const;
 export const PLATES = Array.from({ length: 10 }, (_, index) => String(index + 1));
 export const CONNECTIONS: { value: PrinterConnection; label: string }[] = [
   { value: 'system', label: Platform.OS === 'ios' ? 'Sistema iOS (AirPrint)' : 'Sistema Android' },
@@ -12,13 +12,24 @@ export const CONNECTIONS: { value: PrinterConnection; label: string }[] = [
 export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = { connection: 'system', name: '', address: '', port: '9100', paperWidth: '80', automatic: false };
 export const QUICK_NOTES = ['Sem cebola', 'Pouco sal', 'Bem passado'];
 
-export const TABS: { screen: AppScreen; label: string; title: string; icon: string; hint: string }[] = [
+export type NavigationTab = { screen: AppScreen; label: string; title: string; icon: string | { source: ImageSourcePropType }; hint: string };
+export const TABS: NavigationTab[] = [
   { screen: 'home', label: 'Início', title: 'Início', icon: '⌂', hint: 'Visão geral' },
   { screen: 'order', label: 'Pedido', title: 'Novo pedido', icon: '+', hint: 'Montar uma comanda' },
   { screen: 'menu', label: 'Cardápio', title: 'Cardápio', icon: '≡', hint: 'Produtos e categorias' },
   { screen: 'history', label: 'Histórico', title: 'Histórico', icon: '◷', hint: 'Consultar e reimprimir' },
   { screen: 'printer', label: 'Ajustes', title: 'Configurações', icon: '⚙', hint: 'Impressora e atualização' },
 ];
+
+export const MODULE_TABS: (NavigationTab & { module: 'preparation' | 'preorders' | 'customers' | 'cash' })[] = [
+  { module: 'preparation', screen: 'preparation', label: 'Preparo', title: 'Painel de preparo', icon: { source: require('../../assets/navigation/preparation.png') }, hint: 'Pedidos recebidos, em preparo e prontos' },
+  { module: 'preorders', screen: 'preorders', label: 'Encomendas', title: 'Encomendas', icon: { source: require('../../assets/navigation/preorders.png') }, hint: 'Retiradas e entregas agendadas' },
+  { module: 'customers', screen: 'customers', label: 'Clientes', title: 'Cadastro de Clientes', icon: { source: require('../../assets/navigation/customers.png') }, hint: 'Contatos, endereços e histórico' },
+  { module: 'cash', screen: 'cash', label: 'Caixa', title: 'Caixa', icon: { source: require('../../assets/navigation/cash.png') }, hint: 'Abertura, recebimentos e fechamento' },
+];
+export function navigationTabs(modules: { preorders: boolean; cash: boolean; customers?: boolean; preparation?: boolean }): NavigationTab[] {
+  return [...TABS.filter(tab => tab.screen !== 'printer'), ...MODULE_TABS.filter(tab => modules[tab.module]), TABS.find(tab => tab.screen === 'printer')!];
+}
 
 export const COLORS = {
   background: '#F5F3EF', surface: '#FFFFFF', ink: '#223B35', muted: '#62716B',

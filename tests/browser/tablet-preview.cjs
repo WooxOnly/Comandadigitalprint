@@ -10,7 +10,7 @@ import React,{createContext,useContext,useEffect,useState} from 'react';
 import {useWindowDimensions} from 'react-native';
 import {translate,LOCALES} from '${root}/src/i18n/translations';
 const noop=()=>{},asyncNoop=async()=>{},sub=()=>noop;
-export const modules={preorders:true,cash:true,customers:true,preparation:true};
+export let modules={preorders:true,cash:true,customers:true,preparation:true};
 let kitchenSettings={allowReprint:true};const kitchenListeners=new Set();
 const access={menu:null,settings:null,reprint:null,restore:null};
 const status={status:'SYNCED',pending:0,conflicts:[],lastSync:Date.now()};
@@ -31,7 +31,7 @@ const App=createContext(null),Language=createContext(null),Route=createContext('
 export function Fixture({children}){
  const [history,setHistory]=useState([order]);
  const [customer,setCustomer]=useState('Cliente sintético'),[plate,setPlate]=useState('1'),[previewOrder,setPreviewOrder]=useState(null),[selectedProduct,setSelectedProduct]=useState(null),[language,setLanguage]=useState(new URLSearchParams(location.search).get('language')||'pt'),[route,setRoute]=useState(location.hash.slice(1)||'/');
- useEffect(()=>{const refresh=()=>setRoute(location.hash.slice(1)||'/');addEventListener('hashchange',refresh);window.qa={setHistory,printCalls:[],setKitchenReprint:value=>{kitchenSettings={allowReprint:value};kitchenListeners.forEach(fn=>fn())},setLanguage,setPreviewOrder,setSelectedProduct,openReceipt:()=>setPreviewOrder(order),openProduct:()=>setSelectedProduct(products[0])};return()=>removeEventListener('hashchange',refresh)},[]);
+ useEffect(()=>{const refresh=()=>setRoute(location.hash.slice(1)||'/');addEventListener('hashchange',refresh);window.qa={setHistory,setModules:value=>{modules={...modules,...value};kitchenListeners.forEach(fn=>fn())},printCalls:[],setKitchenReprint:value=>{kitchenSettings={allowReprint:value};kitchenListeners.forEach(fn=>fn())},setLanguage,setPreviewOrder,setSelectedProduct,openReceipt:()=>setPreviewOrder(order),openProduct:()=>setSelectedProduct(products[0])};return()=>removeEventListener('hashchange',refresh)},[]);
  const app={customer,setCustomer,changeCustomer:setCustomer,plate,setPlate,setPreviewOrder,previewOrder,selectedProduct,setSelectedProduct,openProduct:setSelectedProduct,history,printSavedOrder:(order,isNew=false,source='history')=>{window.qa.printCalls.push({id:order.id,isNew,source});setPreviewOrder(order)},items,menu:products,filteredMenu:products,pizzaMenu:[],categories:['Todos','Pizzas'],category:'Todos',subcategories:[],subcategory:'Todos',productOptions:{},productSearch:'',favoritesOnly:false,orderSettings:{requireCustomer:false},customerError:false,serviceMode:'dine_in',customPlate:'',printerSettings:printer,printedDestinations:[],isReady:true,sending:false,printing:false,updatingMenu:false,savingOrderSettings:false,feedback:null,logoUri:null,pizzaMode:null,secondFlavor:null,extras:[],extraPlacement:'whole',productNote:'',menuUpdateStatus:null};
  const value=new Proxy(app,{get:(target,key)=>key in target?target[key]:noop});
  return <Route.Provider value={route}><Language.Provider value={{language,locale:LOCALES[language],t:text=>translate(text,language),setLanguage:async value=>{localStorage.setItem('qa-language',value);setLanguage(value)},ready:true}}><App.Provider value={value}>{children}</App.Provider></Language.Provider></Route.Provider>;

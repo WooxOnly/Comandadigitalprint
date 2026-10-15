@@ -1,6 +1,8 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Preparo": ["Kitchen", "Cocina"],
+  "Clientes": ["Customers", "Clientes"],
   "Fila de preparo": ["Kitchen queue","Cola de cocina"],
   "Ordem de emissão": ["Ordered by time placed","Orden por hora del pedido"],
   "Filtros e avisos": ["Filters and alerts","Filtros y avisos"],

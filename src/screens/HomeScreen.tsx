@@ -5,8 +5,9 @@ import { Text, useWindowDimensions, View } from 'react-native';
 import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { router } from 'expo-router';
 import { useApp } from '../state/AppContext';
+import { NavigationIcon } from '../ui/NavigationIcon';
 import { ScreenFrame } from '../ui/ScreenFrame';
-import { styles, TABS, ROUTES } from '../ui/theme';
+import { styles, navigationTabs, ROUTES, COLORS } from '../ui/theme';
 
 export default function HomeScreen() {
   const { logout } = useAuth();
@@ -25,15 +26,14 @@ export default function HomeScreen() {
                   </View>
                   <Text style={[styles.sectionTitle, isWide && styles.sectionTitleWide]}>{t("Acesso rápido")}</Text>
                   <View style={styles.mainMenu}>
-                    {TABS.filter((tab) => tab.screen !== 'home').map((tab) => (
-                      <Pressable key={tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, (width < 360 || fontScale >= 1.4) && styles.mainMenuButtonCompact, pressed && styles.pressed]}>
-                        <View style={[styles.menuIconBadge, isWide && styles.menuIconBadgeWide]}><Text style={[styles.mainMenuIcon, isWide && styles.mainMenuIconWide]}>{tab.icon}</Text></View>
-                        <Text style={styles.mainMenuTitle}>{tab.screen === 'printer' ? t("Configurações") : t(tab.label)}</Text>
+                    {navigationTabs(modules).filter((tab) => tab.screen !== 'home').map((tab) => (
+                      <Pressable testID={'home-module-' + tab.screen} key={tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, (width < 360 || fontScale >= 1.4) && styles.mainMenuButtonCompact, pressed && styles.pressed]}>
+                        <View style={[styles.menuIconBadge, isWide && styles.menuIconBadgeWide]}><NavigationIcon icon={tab.icon} size={isWide ? 22 : 25} color={COLORS.primary} /></View>
+                        <Text style={styles.mainMenuTitle}>{tab.screen === 'printer' ? t("Configurações") : t(['preparation', 'customers'].includes(tab.screen) ? tab.title : tab.label)}</Text>
                         <Text style={styles.mainMenuHint}>{tab.screen === 'history' ? history.length + (history.length === 1 ? t(" pedido salvo") : t(" pedidos salvos")) : t(tab.hint)}</Text>
                       </Pressable>
                     ))}
                   </View>
-                  {(modules.preorders || modules.cash || modules.customers || modules.preparation) && <View style={styles.mainMenu}>{([{ key: 'preparation', label: 'Painel de preparo', hint: 'Pedidos recebidos, em preparo e prontos', path: '/preparation' }, { key: 'customers', label: 'Cadastro de Clientes', hint: 'Contatos, endereços e histórico', path: '/customers' }, { key: 'preorders', label: 'Encomendas', hint: 'Retiradas e entregas agendadas', path: '/preorders' }, { key: 'cash', label: 'Caixa', hint: 'Abertura, recebimentos e fechamento', path: '/cash' }] as const).filter(module => modules[module.key]).map(module => <Pressable accessibilityRole="button" key={module.key} onPress={() => router.navigate(module.path)} style={styles.mainMenuButton}><Text style={styles.mainMenuTitle}>{t(module.label)}</Text><Text style={styles.mainMenuHint}>{t(module.hint)}</Text></Pressable>)}</View>}
                   <View style={styles.homeFooter}><Text style={styles.homeFooterText}>{t("Seu cardápio e seu histórico ficam salvos neste aparelho.")}</Text></View>
                   <Pressable style={styles.cancelButton} onPress={logout}><Text style={styles.cancelButtonText}>{t('Sair do sistema')}</Text></Pressable>
                 </View></ScreenFrame>;

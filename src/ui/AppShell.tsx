@@ -1,26 +1,38 @@
 import { useLanguage } from '../i18n/LanguageContext';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { TOPPINGS } from '../../menuData';
 import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
-import { styles, COLORS, TABS, ROUTES } from './theme';
+import { styles, COLORS, TABS, ROUTES, navigationTabs } from './theme';
 import { CloudStatus } from './CloudStatus';
 import { ReceiptPreview } from './ReceiptPreview';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
+import { NavigationIcon } from './NavigationIcon';
+import { useStoreModules } from './useStoreModules';
 import { useStoreName } from './useStoreName';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
   const storeName = useStoreName();
   const path = usePathname();
-  const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/'))) || TABS[0];
+  const modules = useStoreModules();
+  const tabs = navigationTabs(modules);
+  const activeTab = tabs.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/')) || (tab.screen === 'cash' && path === '/cash-reports') || (tab.screen === 'printer' && path === '/backups'));
+  const currentTab = activeTab || TABS[0];
   const kitchen = path === '/preparation';
   const moduleTitle = path === '/backups' ? 'Recuperação de dados' : path === '/preparation' ? 'Painel de preparo' : path === '/customers' ? 'Cadastro de Clientes' : path === '/preorders' ? 'Encomendas' : path === '/cash' ? 'Caixa' : path === '/cash-reports' ? 'Relatórios do Caixa' : null;
-  const screen = moduleTitle ? null : currentTab.screen;
+  const screen = activeTab?.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
+  const { width, fontScale } = useWindowDimensions();
+  const navScroll = useRef<ScrollView>(null);
+  const minTabWidth = tabs.length > TABS.length ? (fontScale >= 1.4 ? 124 : 100) : 0;
+  const navWidth = Math.max(Math.min(width, tabs.length > TABS.length ? 1160 : kitchen ? 760 : isWide ? 640 : 760), minTabWidth * tabs.length + (minTabWidth ? 16 + 4 * (tabs.length - 1) : 0));
+  const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.screen === screen));
+  const selectedOffset = Math.max(0, (selectedIndex + 0.5) * (navWidth / tabs.length) - width / 2);
+  useEffect(() => { navScroll.current?.scrollTo({ x: selectedOffset, animated: false }); }, [selectedOffset]);
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView style={styles.container}>
@@ -43,12 +55,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}
 
-          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground}><View style={[styles.bottomNav, isWide && styles.bottomNavWide, kitchen && { paddingVertical: 3, maxWidth: 760 }]}>
-            {TABS.map((tab) => <Pressable key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
-              <Text style={[styles.bottomNavIcon, isWide && styles.bottomNavIconWide, screen === tab.screen && styles.activeBottomNavText, kitchen && { fontSize: 16 }]}>{tab.icon}</Text>
-              <Text style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
-            </Pressable>)}
-          </View></View>
+          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground} testID="bottom-navigation">
+            <ScrollView ref={navScroll} horizontal showsHorizontalScrollIndicator persistentScrollbar style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} onContentSizeChange={() => navScroll.current?.scrollTo({ x: selectedOffset, animated: false })}>
+              <View testID="navigation-content" style={[styles.bottomNav, isWide && styles.bottomNavWide, { width: navWidth, maxWidth: navWidth }, kitchen && { paddingVertical: 3 }]}>
+                {tabs.map((tab) => <Pressable testID={'nav-' + tab.screen} key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} aria-selected={screen === tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
+                  <View style={{ marginBottom: 3 }}><NavigationIcon icon={tab.icon} size={kitchen ? 16 : isWide ? 19 : 23} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
+                  <Text numberOfLines={1} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
+                </Pressable>)}
+              </View>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
 
         <Modal visible={selectedProduct !== null} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setSelectedProduct(null)}>
