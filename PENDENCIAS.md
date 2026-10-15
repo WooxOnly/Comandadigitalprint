@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Caixa: módulo e configurações no mesmo bloco — 14/10/2026
+
+- Opção **Usa módulo de caixa (USD)** movida para o bloco **Configuração do Caixa**, tanto no cadastro quanto na edição de loja. Taxa, aplicação de sales tax e seleção de gerentes ficam em fieldset nativamente desabilitado enquanto o módulo estiver desligado; o próprio seletor do módulo permanece utilizável.
+- Ativação libera os campos imediatamente; alternar sem salvar preserva os valores do formulário. Ao salvar com o módulo desligado, o payload omite `cashSettings`, preservando no servidor a taxa e os gerentes anteriormente salvos. Campos desabilitados deixam de bloquear a validação dos demais módulos.
+- Mensagem de orientação em PT-BR, EN e ES. **25 testes existentes aprovados**, lint e TypeScript aprovados. Conferência Chromium privada aprovou **21 cenários** em três idiomas: agrupamento, bloqueio, alternância com valores preservados, edição ativa, payload inativo omitido, cadastro novo e três dimensões sem rolagem horizontal. Mudança exclusiva do portal: sem alteração do APK ou migração de dados.
+- Publicação de homologação e conferência online serão registradas após concluir.
+
 ## Painel de preparo em grade e reimpressão por loja — 14/10/2026
 
 - Proprietário pediu referência de KDS com pelo menos seis pedidos visíveis no tablet de 11 polegadas, por data/hora de emissão, detalhes e reimpressão configurável no portal. Implementado **3 × 2 horizontal / 2 × 3 vertical**, paginação de seis, desempate estável por ID e comparação de instantes com fusos. Pendentes de dias anteriores permanecem na fila; dia, concluídos, atraso e avisos sonoros têm filtros em janela separada. Cabeçalho e navegação compactados apenas nesta tela.
