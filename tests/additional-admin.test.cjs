@@ -78,16 +78,16 @@ test('additional administrator has an independent password and case-insensitive 
   assert.equal(f.db.prepare('SELECT COUNT(*) AS count FROM panel_admin_accounts').get().count, 1);
 });
 
-test('additional administrator reaches groups before locations and can manage groups, locations and manager users', async t => {
+test('additional administrator reaches clients before locations and can manage groups, locations and manager users', async t => {
   const f = await setup(t), extra = f.browser();
   assert.equal((await extra.login()).status, 303);
   const root = await extra.request('/admin'); assert.equal(root.status, 200);
   const markup = await root.text();
-  assert.match(markup, /selectedGroupId="",hasStore=false/);
-  assert.match(markup, /selected:"groups"/);
+  assert.match(markup, /id="clients"/);
+  assert.ok(!markup.includes('class="store-nav"'));
   assert.ok(!markup.includes('store-picker'));
   assert.equal((await extra.request('/admin/gestores')).status, 200);
-  const created = await extra.json('/admin/manager-clients', { name: 'Additional admin group', active: true, storeIds: [] });
+  const created = await extra.json('/admin/clients', { name: 'Additional admin group', kind: 'group' });
   assert.equal(created.status, 201); const group = (await created.json()).client;
   const location = await extra.json('/admin/stores', { name: 'Additional admin location', groupId: group.id, modules: { cash: true, preorders: true, customers: true, preparation: true } });
   assert.equal(location.status, 201); const store = await location.json();

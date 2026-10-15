@@ -11,72 +11,87 @@ async function setup(t) {
   assert.equal(login.status, 303);
   const cookie = login.headers.getSetCookie().find(c => c.startsWith('__Host-comanda_panel=')).split(';')[0];
   const request = (path, data, method = 'POST') => f.adminResponse(new Request(origin + path, { method: data === undefined ? 'GET' : method, headers: { Cookie: cookie, Origin: origin, ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), f.env);
-  const group = (name, storeIds, active = true) => { const id = randomUUID(); f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active) VALUES(?,?,?,?)').run(id, name, JSON.stringify(storeIds), Number(active)); return id; };
+  const group = (name, storeIds, active = true) => {
+    const id = randomUUID(); f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active) VALUES(?,?,?,?)').run(id, name, JSON.stringify(storeIds), Number(active)); return id;
+  };
   return { ...f, request, group, cookie };
 }
-test('owner entry starts with groups; explicit group and location preserve all owner access without a default location', async t => {
-  const f = await setup(t), first = f.group('Grupo principal', ['seabra-1']), second = f.group('Grupo secundário', ['seabra-2'], false);
+test('Clientes lists individual customers and groups directly without an organization above them', async t => {
+  const f = await setup(t), group = f.group('Seabra Food', ['seabra-1']);
+  const singleResponse = await f.request('/admin/clients', { name: 'Loja independente', kind: 'single', storeIds: ['seabra-2'] });
+  assert.equal(singleResponse.status, 201); const single = (await singleResponse.json()).client;
   const root = await (await f.request('/admin')).text();
-  assert.ok(!root.includes('store-picker')); assert.match(root, /selectedGroupId="",hasStore=false/);
-  assert.match(root, /selected:"groups"/); assert.ok(root.includes('Grupo principal')); assert.ok(root.includes('Grupo secundário'));
-  assert.ok(!root.includes('class="edit-store"')); assert.ok(!root.includes('Painel do Gestor</a>'));
-  const group = await (await f.request('/admin?groupId=' + first)).text();
-  assert.match(group, /selected:"locations"/); assert.ok(group.includes('groupId=' + first + '&amp;storeId=seabra-1#stores'));
-  assert.ok(!group.includes('data-store-id="seabra-2"'));
-  const store = await (await f.request('/admin?groupId=' + second + '&storeId=seabra-2')).text();
-  assert.match(store, /selected:"stores"/); assert.match(store, /data-store-id="seabra-2"/); assert.ok(!store.includes('data-store-id="seabra-1"'));
-  assert.equal((await f.request('/admin?groupId=' + first + '&storeId=seabra-2')).status, 400);
+  assert.match(root, /id="clients"/); assert.ok(root.includes('Seabra Food')); assert.ok(root.includes('Loja independente'));
+  assert.ok(!root.includes('class="store-nav"')); assert.ok(!root.includes('class="edit-store"')); assert.ok(!root.includes('id="groups"'));
+  assert.ok(root.includes('value="single"')); assert.ok(root.includes('value="group"'));
+  const locations = await (await f.request('/admin?groupId=' + group)).text();
+  assert.ok(locations.includes('groupId=' + group + '&amp;storeId=seabra-1#stores')); assert.ok(!locations.match(/class="scope-path"[^]*?<\/nav>/)?.[0].includes('Organização pendente'));
+  assert.ok(!locations.includes('class="store-nav"'));
+  const store = await (await f.request('/admin?groupId=' + single.id + '&storeId=seabra-2')).text();
+  assert.ok(store.includes('class="store-nav"')); assert.ok(store.includes('data-store-id="seabra-2"')); assert.ok(!store.includes('data-store-id="seabra-1"'));
+  assert.equal((await f.request('/admin?groupId=' + group + '&storeId=seabra-2')).status, 400);
+  assert.equal((await f.request('/admin?storeId=seabra-1')).status, 400);
   assert.equal((await f.request('/admin?groupId=missing')).status, 404);
-  assert.equal((await f.request('/admin?storeId=missing')).status, 404);
-  assert.equal((await f.request('/admin?storeId=invalid_')).status, 400);
 });
-test('unassigned and inactive locations remain available to owner without reactivating them', async t => {
-  const f = await setup(t); f.group('Grupo', ['seabra-1']); f.db.prepare("UPDATE stores SET active=0 WHERE id='seabra-2'").run();
-  assert.ok((await (await f.request('/admin')).text()).includes('Lojas sem grupo'));
-  const stores = await (await f.request('/admin/stores?groupId=unassigned')).json(); assert.deepEqual(stores.map(s => s.id), ['seabra-2']); assert.equal(stores[0].active, 0);
-  assert.match(await (await f.request('/admin?groupId=unassigned&storeId=seabra-2')).text(), /data-store-id="seabra-2"/);
-  assert.equal((await f.request('/admin/stores', { id: 'seabra-2', name: 'Loja arquivada' }, 'PATCH')).status, 200);
-  assert.equal(f.db.prepare("SELECT active FROM stores WHERE id='seabra-2'").get().active, 0);
-  const group = await f.request('/admin/manager-clients', { name: 'Grupo arquivado', storeIds: ['seabra-2'], active: true }); assert.equal(group.status, 201);
-  const registry = await (await f.request('/admin/manager-clients')).json(); assert.equal(registry.stores.find(s => s.id === 'seabra-2').active, 0);
-});
-test('groups can be created empty, then new locations are linked atomically without taking a colliding existing location', async t => {
+test('customer types, revisions and atomic conversions preserve memberships and manager credentials', async t => {
   const f = await setup(t);
-  const created = await f.request('/admin/manager-clients', { name: 'Grupo novo', active: true, storeIds: [] }); assert.equal(created.status, 201);
-  const group = (await created.json()).client; assert.deepEqual(group.storeIds, []);
-  assert.match(await (await f.request('/admin?groupId=' + group.id)).text(), /Este grupo ainda não tem lojas/);
-  const store = await f.request('/admin/stores', { name: 'Seabra 1', groupId: group.id, modules: { preorders: true, cash: false, customers: false, preparation: true } });
-  assert.equal(store.status, 201); const value = await store.json(); assert.equal(value.id, 'seabra-1-2');
-  const saved = f.db.prepare('SELECT store_ids, revision FROM manager_clients WHERE id=?').get(group.id);
-  assert.deepEqual(JSON.parse(saved.store_ids), ['seabra-1-2']); assert.equal(saved.revision, 2);
-  assert.equal(value.modules.preparation, true);
-  const parallel = await Promise.all(['Loja paralela A', 'Loja paralela B'].map(name => f.request('/admin/stores', { name, groupId: group.id })));
-  assert.deepEqual(parallel.map(r => r.status), [201, 201]);
-  assert.equal(JSON.parse(f.db.prepare('SELECT store_ids FROM manager_clients WHERE id=?').get(group.id).store_ids).length, 3);
-  for (const groupId of ['missing','unassigned',null]) assert.equal((await f.request('/admin/stores', { name: 'Não criar', groupId })).status, groupId === 'missing' ? 404 : 400);
-  assert.equal(f.db.prepare("SELECT COUNT(*) AS count FROM stores WHERE name='Não criar'").get().count, 0);
+  assert.equal((await f.request('/admin/clients', { name: 'Inválido', kind: 'single', storeIds: ['seabra-1', 'seabra-2'] })).status, 400);
+  assert.equal((await f.request('/admin/clients', { name: 'Inválido', kind: 'other' })).status, 400);
+  const created = await f.request('/admin/clients', { name: 'Individual', kind: 'single', storeIds: ['seabra-1'] }); assert.equal(created.status, 201);
+  const client = (await created.json()).client; assert.equal(client.kind, 'single'); assert.equal(client.revision, 1);
+  const user = randomUUID(); f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run(user, client.id, 'Gestora', 'gestora', 'synthetic-salt', 'synthetic-hash');
+  const before = { ...f.db.prepare('SELECT * FROM manager_users WHERE id=?').get(user) };
+  const upgraded = await f.request('/admin/clients', { id: client.id, revision: 1, name: 'Grupo', kind: 'group', storeIds: ['seabra-1', 'seabra-2'] }, 'PATCH');
+  assert.equal(upgraded.status, 200); assert.equal((await upgraded.json()).client.kind, 'group');
+  assert.equal((await f.request('/admin/clients', { id: client.id, revision: 1, name: 'Desatualizado', kind: 'single', storeIds: [] }, 'PATCH')).status, 409);
+  assert.equal((await f.request('/admin/clients', { id: client.id, revision: 2, name: 'Individual', kind: 'single', storeIds: ['seabra-1','seabra-2'] }, 'PATCH')).status, 400);
+  const reduced = await f.request('/admin/clients', { id: client.id, revision: 2, name: 'Individual', kind: 'single', storeIds: ['seabra-1'] }, 'PATCH');
+  assert.equal(reduced.status, 200); assert.equal((await reduced.json()).client.revision, 3);
+  assert.deepEqual({ ...f.db.prepare('SELECT * FROM manager_users WHERE id=?').get(user) }, before);
+  assert.deepEqual(JSON.parse(f.db.prepare('SELECT store_ids FROM manager_clients WHERE id=?').get(client.id).store_ids), ['seabra-1']);
 });
-test('global and group diagnostics and activity include location names and respect explicit scope', async t => {
-  const f = await setup(t), group = f.group('Primeiro', ['seabra-1']);
-  for (const id of ['seabra-1', 'seabra-2']) {
-    f.db.prepare('INSERT INTO store_diagnostics(store_id,id,device_id,created_at,received_at,actor,event,code) VALUES(?,?,?,?,?,?,?,?)').run(id, id, 'tablet', '2026-10-09T10:00:00Z', '2026-10-09T10:00:00Z', 'admin', 'sync.failed', id);
-    f.db.prepare('INSERT INTO store_admin_activity(store_id,created_at,actor,action) VALUES(?,?,?,?)').run(id, '2026-10-09T10:00:00Z', 'owner', 'Changed ' + id);
+test('individual location limits remain atomic when two stores are created concurrently', async t => {
+  const f = await setup(t), response = await f.request('/admin/clients', { name: 'Individual', kind: 'single' });
+  const client = (await response.json()).client;
+  const responses = await Promise.all(['Nova A','Nova B'].map(name => f.request('/admin/stores', { name, groupId: client.id })));
+  assert.deepEqual(responses.map(r => r.status).sort(), [201,400]);
+  assert.equal(JSON.parse(f.db.prepare('SELECT store_ids FROM manager_clients WHERE id=?').get(client.id).store_ids).length, 1);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS count FROM stores WHERE name IN ('Nova A','Nova B')").get().count, 1);
+  assert.equal((await f.request('/admin/stores', { name: 'Outra loja', groupId: client.id })).status, 400);
+});
+test('legacy groups and unassigned locations keep their identity and remain accessible', async t => {
+  const f = await setup(t), group = f.group('Grupo legado', ['seabra-1']);
+  f.db.prepare("UPDATE stores SET active=0 WHERE id='seabra-2'").run();
+  const root = await (await f.request('/admin')).text(); assert.ok(root.includes('Grupo legado')); assert.ok(root.includes('groupId=unassigned&amp;storeId=seabra-2'));
+  const clients = (await (await f.request('/admin/clients')).json()).clients; assert.equal(clients.find(c => c.id === group).kind, 'group');
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS count FROM manager_client_profiles').get().count, 0);
+  const registry = await (await f.request('/admin/manager-clients?groupId=' + group)).json(); assert.deepEqual(registry.stores.map(s=>s.id).sort(), ['seabra-1','seabra-2']);
+  assert.equal((await f.request('/admin?groupId=unassigned&storeId=seabra-2')).status, 200);
+  f.db.exec(require('node:fs').readFileSync('server/cloudflare/store-schema.sql','utf8'));
+  assert.equal((await f.request('/admin?groupId=' + group + '&storeId=seabra-1')).status, 200);
+});
+test('diagnostics and activity require an explicit location and cannot cross customer memberships', async t => {
+  const f = await setup(t), first = f.group('Primeiro', ['seabra-1']), second = f.group('Segundo', ['seabra-2']);
+  for (const id of ['seabra-1','seabra-2']) {
+    f.db.prepare('INSERT INTO store_diagnostics(store_id,id,device_id,created_at,received_at,actor,event,code) VALUES(?,?,?,?,?,?,?,?)').run(id,id,'tablet','2026-10-14T12:00:00Z','2026-10-14T12:00:00Z','admin','sync.failed',id);
+    f.db.prepare('INSERT INTO store_admin_activity(store_id,created_at,actor,action) VALUES(?,?,?,?)').run(id,'2026-10-14T12:00:00Z','owner',id);
   }
-  for (const [query, ids] of [['', ['seabra-1','seabra-2']], ['&groupId=' + group, ['seabra-1']], ['&storeId=seabra-2', ['seabra-2']]]) {
-    const logs = await (await f.request('/admin/logs?kind=errors' + query)).json(); assert.deepEqual(logs.map(s => s.store_id).sort(), ids); assert.ok(logs.every(s => s.store_name));
-    const activity = await (await f.request('/admin/activity?' + query.slice(1))).json(); assert.deepEqual(activity.events.map(s => s.store_id).sort(), ids); assert.ok(activity.events.every(s => s.store_name));
+  for (const query of ['', 'groupId='+first, 'storeId=seabra-1']) {
+    assert.equal((await f.request('/admin/logs?kind=errors&'+query)).status,400); assert.equal((await f.request('/admin/activity?'+query)).status,400);
   }
-  const empty = f.group('Vazio', []);
-  assert.deepEqual(await (await f.request('/admin/logs?kind=errors&groupId=' + empty)).json(), []);
-  assert.deepEqual((await (await f.request('/admin/activity?groupId=' + empty)).json()).events, []);
-  assert.equal((await f.request('/admin/logs?kind=errors&groupId=' + group + '&storeId=seabra-2')).status, 400);
-  assert.equal((await f.request('/admin/activity?groupId=missing')).status, 404);
+  for (const [groupId,storeId] of [[first,'seabra-1'],[second,'seabra-2']]) {
+    const query = new URLSearchParams({groupId,storeId});
+    assert.deepEqual((await (await f.request('/admin/logs?kind=errors&'+query)).json()).map(row=>row.store_id),[storeId]);
+    assert.deepEqual((await (await f.request('/admin/activity?'+query)).json()).events.map(row=>row.store_id),[storeId]);
+  }
+  assert.equal((await f.request('/admin/logs?kind=errors&groupId='+first+'&storeId=seabra-2')).status,400);
 });
 test('browser password consultation and rotation require an explicit location and keep other rotations untouched', async t => {
   const f = await setup(t);
   assert.equal((await f.request('/auth/admin/password')).status, 400);
   assert.equal((await f.request('/auth/admin/password', {})).status, 400);
-  assert.equal((await f.request('/auth/admin/password?storeId=seabra-2', {})).status, 200);
+  assert.equal((await f.request('/auth/admin/password?storeId=seabra-2', {})).status, 400);
+  assert.equal((await f.request('/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', {})).status, 200);
   assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-1'").get().revision, 0);
   assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-2'").get().revision, 1);
 });

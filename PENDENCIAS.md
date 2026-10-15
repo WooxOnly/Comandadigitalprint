@@ -1,5 +1,16 @@
 # Pendências e preferências
 
+## Clientes, navegação compacta e dados para homologação — 14/10/2026
+
+- Fluxo esclarecido pelo proprietário: **Clientes → cadastro de loja única ou grupo de lojas → loja escolhida**. O grupo Seabra Food não tem cliente/empresa acima. Não criar camada administrativa obrigatória acima dos grupos existentes; preservar IDs, vínculos e contas gestoras.
+- Implementado tipo `single`/`group` sobre o cadastro existente, com limite transacional de uma loja para clientes individuais, revisão contra edição simultânea e conversão explícita de tipo. Clientes novos podem vincular lojas existentes sem vínculo ou cadastrar a primeira loja após salvar.
+- Logs, histórico, configurações e senhas de tablet ficam dentro da loja escolhida. Senha da conta administrativa em **Minha conta**. A entrada `/admin#password` pede a loja e conserva a intenção de consultar a senha durante a navegação, sem selecionar uma loja automaticamente.
+- Administrativo compactado: cabeçalho horizontal em desktop, títulos e espaçamentos reduzidos e cartões de senha semanal/Ajustes lado a lado. Bandeiras 20 × 15 e alvos de toque 44 × 44 preservados. PT-BR, EN e ES; resultados de histórico protegidos contra respostas fora de ordem.
+- Proprietário confirmou que os dados anteriores eram de produção e pediu **copiar tudo** para homologação. Backups privados dos dois bancos salvos antes da cópia. Copiados e comparados por conteúdo: 21 registros atuais, 24 eventos por loja, 17 registros legados, 20 eventos legados, diagnósticos, numeração de loja/tablet e revisões semanais. Nome restaurado de produção: Seabra Hunters Creek. Acesso administrativo de homologação preservado; chaves, endpoints e APKs continuam separados. Produção somente lida, sem publicação ou escrita.
+- Cópia remota concluída; evidência privada sem conteúdo dos registros em `/tmp/bistro-business-copy-result.json`. Senha semanal deve ser consultada em homologação e usada na loja correspondente; copiar dados não torna a senha de produção válida no outro ambiente.
+- Validação de código: 254 testes globais aprovados antes dos últimos ajustes de densidade; 33 testes específicos após esses ajustes aprovados. Lint, TypeScript e empacotamento do Worker aprovados. Chromium aprovou 258 verificações específicas do fluxo de clientes/lojas e 198 de layout dos portais em três idiomas e seis dimensões. Consulta semanal e de Ajustes, inclusive resultados, coube sem rolagem vertical em 1280 × 720 nos três idiomas; formulários reais de cadastro individual, criação de loja e conversão para grupo aprovados. Publicação do código e vínculo Seabra Food serão registrados após a verificação online.
+- Alterações exclusivas de servidor/portal e dados: APK de homologação existente continua apontando para a API de homologação. Não é necessária nova compilação Android nesta entrega; validação física de tablet/impressora e ativação real de recuperação por e-mail continuam separadas.
+
 ## Administrador adicional em homologação — 14/10/2026
 
 - Proprietário autorizou um novo administrador com o mesmo acesso completo da conta atual, preservando os acessos existentes. Confirmou explicitamente somente homologação e corrigiu o endereço antes do cadastro; credenciais e e-mail da conta real ficam fora do Git.

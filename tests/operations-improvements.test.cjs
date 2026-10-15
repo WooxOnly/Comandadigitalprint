@@ -157,11 +157,11 @@ test('owner validates access members and audit pagination retains timestamp ties
   const stamp = '2026-10-04T12:00:00.000Z';
   for (let i = 0; i < 110; i++) f.db.prepare('INSERT INTO store_admin_activity(store_id, created_at, actor, action) VALUES(?, ?, ?, ?)').run(f.a.storeId, stamp, 'owner', 'event-' + i);
   f.db.prepare('INSERT INTO store_admin_activity(store_id, created_at, actor, action) VALUES(?, ?, ?, ?)').run(f.a.storeId, '2026-10-03T00:00:00Z', 'owner', 'older');
-  const query = suffix => f.adminResponse(new Request('https://example.com/admin/activity?storeId=seabra-1' + suffix, { headers: { Cookie: cookie } }), f.env);
+  const query = suffix => f.adminResponse(new Request('https://example.com/admin/activity?clientId=unassigned&groupId=unassigned&storeId=seabra-1' + suffix, { headers: { Cookie: cookie } }), f.env);
   assert.equal((await f.adminResponse(new Request('https://example.com/admin/activity'), f.env)).status, 401);
   const first = await (await query('')).json(); assert.equal(first.events.filter(row => row.created_at === stamp).length, 110); assert.ok(first.events.some(row => row.actor === 'staff')); assert.equal(first.before, stamp);
   const second = await (await query('&before=' + encodeURIComponent(first.before))).json(); assert.deepEqual(second.events.map(row => row.action), ['older']);
-  const other = await (await f.adminResponse(new Request('https://example.com/admin/activity?storeId=seabra-2', { headers: { Cookie: cookie } }), f.env)).json(); assert.equal(other.events.length, 0);
+  const other = await (await f.adminResponse(new Request('https://example.com/admin/activity?clientId=unassigned&groupId=unassigned&storeId=seabra-2', { headers: { Cookie: cookie } }), f.env)).json(); assert.equal(other.events.length, 0);
   assert.ok(!JSON.stringify(first).includes('hash')); assert.ok(!JSON.stringify(first).includes('password'));
 });
 

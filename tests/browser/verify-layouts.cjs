@@ -102,9 +102,9 @@ async function fits(page, label, controls = false) {
   const {translate:portalTranslation} = await import('../../server/cloudflare/manager-i18n.mjs');
   const {loadTs} = require('../helpers/load-ts.cjs'), {translate:appTranslation} = loadTs('src/i18n/translations.ts');
   f.modules('seabra-1',true,true,true,true);
-  f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active,revision) VALUES(?,?,?,?,1)').run('group','Synthetic group','["seabra-1"]',1);
+  f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active,revision) VALUES(?,?,?,?,1)').run('11111111-1111-4111-8111-111111111111','Synthetic group','["seabra-1"]',1);
   const salt='0123456789abcdef0123456789abcdef',password='manager-layout-password';
-  f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('manager','group','Gestor','manager',salt,await digest(password,salt));
+  f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('manager','11111111-1111-4111-8111-111111111111','Gestor','manager',salt,await digest(password,salt));
   const server = https.createServer({key:fs.readFileSync(path.join(directory,'key.pem')),cert:fs.readFileSync(path.join(directory,'cert.pem'))}, async (req,res) => {
     try {
       if (req.url.startsWith('/tablet-preview')) { const file=req.url.startsWith('/tablet-preview.js')?'tablet-preview.js':'tablet-preview.html';res.writeHead(200,{'Content-Type':file.endsWith('js')?'text/javascript':'text/html; charset=utf-8'});res.end(fs.readFileSync(path.join(directory,file)));return; }
@@ -118,29 +118,30 @@ async function fits(page, label, controls = false) {
   let cases=0;const errors=[];
   try {
     const context=await browser.newContext({ignoreHTTPSErrors:true,locale:'en-US'}),page=await context.newPage();page.on('pageerror',error=>{errors.push(error.message);console.error('PAGEERROR',error.message)});
-    if(process.env.LAYOUT_ONLY!=='tablet'){await page.goto(base+'/admin');await page.locator('[name=username]').fill('admin');await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await page.locator('button[type=submit]').click();await page.waitForSelector('#groups');
+    if(process.env.LAYOUT_ONLY!=='tablet'){await page.goto(base+'/admin');await page.locator('[name=username]').fill('admin');await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await page.locator('button[type=submit]').click();await page.waitForSelector('#clients');
     for(const language of ['pt','en','es']){
-      await selectPortalLanguage(page,language);await page.waitForSelector('#groups');
-      await page.goto(base+'/admin');assert.equal(await page.locator('#groups').isVisible(),true);assert.equal(await page.locator('#store-picker').count(),0);
-      for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin groups ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
-      await page.locator('#groups a[href="/admin?groupId=group"]').click();await page.waitForSelector('#locations');
+      await selectPortalLanguage(page,language);await page.waitForSelector('#clients');
+      await page.goto(base+'/admin');assert.equal(await page.locator('#clients').isVisible(),true);assert.equal(await page.locator('#store-picker').count(),0);
+      for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin clients ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
+      await page.locator('#clients a[href="/admin?groupId=11111111-1111-4111-8111-111111111111"]').click();await page.waitForSelector('#locations');
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin group locations ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
       await page.locator('#locations a[href*="storeId=seabra-1"]').click();await page.waitForSelector('#stores');
       assert.equal(await page.locator('.edit-store').count(),1);assert.equal(await page.locator('#new-panel-password').getAttribute('minlength'),'8');
-      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['password','errors','printing','activity','stores']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
-      await page.goto(base+'/admin/gestores');assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'),language);
+      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['password','errors','printing','activity','stores','account']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
+      await page.goto(base+'/admin/gestores?groupId=11111111-1111-4111-8111-111111111111');assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'),language);
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin provisioning ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
-      await page.locator('#client-name').fill('Grupo '+language);await page.locator('#stores input').first().check();await page.locator('#client-form button').click();await page.waitForFunction(message=>document.querySelector('#message').textContent===message,portalTranslation(language,'Grupo salvo.'));
+      await page.locator('#client-name').fill('Grupo '+language);await page.locator('#stores input').first().check();await page.locator('#client-form button').click();await page.waitForFunction(message=>document.querySelector('#message').textContent===message,portalTranslation(language,'Cliente salvo.'));
       await page.goto(base+'/admin');
     }
     const another=await browser.newContext({ignoreHTTPSErrors:true,locale:'pt-BR'}),second=await another.newPage();second.on('pageerror',error=>errors.push(error.message));
-    await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#groups');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
+    await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#clients');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
     await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
     for(const language of ['pt','en','es']){
       await selectPortalLanguage(page,language);await page.waitForFunction(()=>document.querySelector('#consult')&&!document.querySelector('#consult').disabled);
       for(const area of ['production','sales']){await page.locator('#area-'+area).click();await page.waitForFunction(()=>!document.querySelector('#consult').disabled);for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`manager ${language} ${area} ${viewport.width}x${viewport.height}`,true);cases++;}}
     }
     }
+    if(process.env.LAYOUT_ONLY!=='portal'){
     const routes=['/','/order','/menu','/history','/history/detail','/printer','/settings-access','/preparation','/customers','/preorders','/cash','/cash-reports','/backups','/login','/link'];
     for(const language of ['pt','en','es']){
       await page.goto(base+'/tablet-preview.html?language='+language);await page.waitForFunction(()=>!!window.qa);
@@ -187,6 +188,7 @@ async function fits(page, label, controls = false) {
       console.log(JSON.stringify({language,cases,errors}));
     }
     cases+=await verifyLoginCooldowns(browser,base,errors,directory);
+    }
     assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,cases,viewports,languages:['pt','en','es'],screenshots:directory,evidence:'Portals in Chromium; shipping APK components rendered through React Native Web with synthetic providers. Android hardware validation remains separate.'}));
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));cleanup.reverse().forEach(fn=>fn());}
 })().catch(error=>{console.error(error);process.exitCode=1});

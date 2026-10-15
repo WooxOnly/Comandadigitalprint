@@ -8,7 +8,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - Verify tablet portrait and landscape layouts, including rotation with a draft, large fonts, long names, keyboard access, forms, navigation and receipt dialogs. Run the responsive browser checks; distinguish browser/emulated evidence from Android device validation.
 
 - Web portal account passwords require at least 8 characters; user-chosen tablet passwords may use any nonempty length up to the existing 128-character input limit. Keep confirmation, hashing and authorization. API signing secrets are separate.
-- The system owner enters the administrative portal through groups, then chooses a client/location explicitly. Never select a default location. Manager metrics remain in the separate customer Manager Dashboard.
+- The system owner enters the administrative portal through Clientes. Each customer is either a single location or a group of locations, with no mandatory organization above a group. Then choose a store explicitly; logs, history and store settings belong inside that store, and account password management stays global. Preserve existing group IDs and manager memberships. Manager metrics remain in the separate customer Manager Dashboard.
 - Owner portal login and initial tablet linking allow the first five failed attempts without a wait. The sixth failure waits 30 seconds, the ninth 60, the twelfth 90, adding 30 seconds per three additional failures. A successful login clears the counter; requests during a wait neither count nor extend it.
 
 ## Expo has changed — do not trust your training data

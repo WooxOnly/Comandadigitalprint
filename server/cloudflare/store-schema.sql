@@ -30,6 +30,28 @@ CREATE TABLE IF NOT EXISTS manager_clients (
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   revision INTEGER NOT NULL DEFAULT 1
 );
+-- A customer may be an individual location or a group of locations. Existing
+-- manager groups keep their IDs, memberships and credentials.
+CREATE TABLE IF NOT EXISTS manager_client_profiles (
+  group_id TEXT PRIMARY KEY REFERENCES manager_clients(id),
+  kind TEXT NOT NULL CHECK (kind IN ('single', 'group'))
+);
+-- The limit is checked inside the same transaction as membership changes.
+CREATE TRIGGER IF NOT EXISTS individual_client_store_limit
+BEFORE UPDATE OF store_ids ON manager_clients
+WHEN (SELECT kind FROM manager_client_profiles WHERE group_id = NEW.id) = 'single'
+  AND json_array_length(NEW.store_ids) > 1
+BEGIN SELECT RAISE(ABORT, 'INDIVIDUAL_STORE_LIMIT'); END;
+CREATE TRIGGER IF NOT EXISTS individual_client_profile_insert
+BEFORE INSERT ON manager_client_profiles
+WHEN NEW.kind = 'single' AND
+  (SELECT json_array_length(store_ids) FROM manager_clients WHERE id = NEW.group_id) > 1
+BEGIN SELECT RAISE(ABORT, 'INDIVIDUAL_STORE_LIMIT'); END;
+CREATE TRIGGER IF NOT EXISTS individual_client_profile_update
+BEFORE UPDATE OF kind ON manager_client_profiles
+WHEN NEW.kind = 'single' AND
+  (SELECT json_array_length(store_ids) FROM manager_clients WHERE id = NEW.group_id) > 1
+BEGIN SELECT RAISE(ABORT, 'INDIVIDUAL_STORE_LIMIT'); END;
 CREATE TABLE IF NOT EXISTS manager_users (
   id TEXT PRIMARY KEY, client_id TEXT NOT NULL REFERENCES manager_clients(id),
   username TEXT NOT NULL UNIQUE, name TEXT NOT NULL,

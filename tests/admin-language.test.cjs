@@ -71,7 +71,7 @@ test('all administrative pages translate visible labels, escape original names a
   const { TRANSLATIONS, LANGUAGES } = await import('../server/cloudflare/manager-i18n.mjs');
   const stores = [{ id: 'seabra-1', name: '<script>Pedidos</script>', code: 1, cashUsers: ['hora'], cashSettings: { tax: { enabled: false, rateBps: 0 }, managers: [] } }];
   for (const language of ['pt', 'en', 'es']) {
-    const pages = [loginPage('test-nonce', '', 'csrf', language), panelPage('test-nonce', stores, 'seabra-1', language), managerAdminPage('test-nonce', language)];
+    const pages = [loginPage('test-nonce', '', 'csrf', language), panelPage('test-nonce', stores, 'seabra-1', language, [{ id: 'group', name: 'Grupo', storeIds: ['seabra-1'], active: true }], 'group'), managerAdminPage('test-nonce', language)];
     for (const content of pages) {
       assert.match(content, new RegExp("<html lang=['\"]" + LANGUAGES[language] + "['\"]>"));
       for (const match of content.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) new Script(match[1]);

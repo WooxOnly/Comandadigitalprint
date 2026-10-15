@@ -218,7 +218,7 @@ export async function provisionableStores(username, password, env, now = Date.no
 export async function adminResponse(request, env, now = Date.now(), context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = ['/admin/gestores', '/admin/manager-clients', '/admin/manager-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = ['/admin/gestores', '/admin/clients', '/admin/manager-clients', '/admin/manager-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
@@ -330,14 +330,13 @@ export async function adminResponse(request, env, now = Date.now(), context) {
     const groups = await adminGroups(env);
     let scope;
     try { scope = await adminScope(env, url); } catch (error) { return reply({ error: error.message }, error.status || 503); }
-    const selectedGroupId = scope.groupId || (scope.store ? groups.find(group => group.storeIds.includes(scope.store.id))?.id || 'unassigned' : '');
     for (const store of stores.filter(store => store.id === scope.storeId)) {
       store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id);
       store.cashSettings = await cashSettings(env, store.id);
       const { results } = await env.DB.prepare("SELECT SUBSTR(key, 6) AS username FROM store_records WHERE store_id = ? AND key LIKE 'user:%' AND json_extract(data, '$.active') = 1 ORDER BY key").bind(store.id).all();
       store.cashUsers = results.map(row => row.username);
     }
-    return htmlResponse(panelPage(nonce, stores, scope.storeId, language, groups, selectedGroupId), nonce, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin), 'Content-Language': language });
+    return htmlResponse(panelPage(nonce, stores, scope.storeId, language, groups, scope.groupId), nonce, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin), 'Content-Language': language });
   }
 
   if (pathname === '/admin/session' && request.method === 'GET') {
@@ -404,10 +403,19 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       if (body.access !== undefined && !validAccess(body.access)) return reply({ error: 'Permissões inválidas.' }, 400);
       if (body.cashSettings !== undefined && !validCashSettings(body.cashSettings)) return reply({ error: 'Configuração de caixa inválida.' }, 400);
       let destinationGroup = null;
+      if (request.method === 'POST' && body.clientId !== undefined) {
+        if (typeof body.clientId !== 'string' || !body.clientId) return reply({ error: 'Escolha um cliente.' }, 400);
+        if (typeof body.groupId !== 'string' || !body.groupId || body.groupId === 'unassigned') return reply({ error: 'Escolha um grupo.' }, 400);
+        const destinationUrl = new URL('/admin', url.origin);
+        destinationUrl.search = new URLSearchParams({ clientId: body.clientId, groupId: body.groupId }).toString();
+        try { await adminScope(env, destinationUrl); } catch (error) { return reply({ error: error.status ? error.message : 'Não foi possível cadastrar a loja.' }, error.status || 503); }
+      }
       if (request.method === 'POST' && body.groupId !== undefined) {
         if (typeof body.groupId !== 'string' || !body.groupId || body.groupId === 'unassigned') return reply({ error: 'Escolha um grupo.' }, 400);
         destinationGroup = await env.DB.prepare('SELECT id, store_ids FROM manager_clients WHERE id = ?').bind(body.groupId).first();
         if (!destinationGroup) return reply({ error: 'Grupo não encontrado.' }, 404);
+        const profile = await env.DB.prepare('SELECT kind FROM manager_client_profiles WHERE group_id = ?').bind(destinationGroup.id).first();
+        if (profile?.kind === 'single' && JSON.parse(destinationGroup.store_ids).length >= 1) return reply({ error: 'Um cliente de loja única pode ter apenas uma loja.' }, 400);
         if (JSON.parse(destinationGroup.store_ids).length >= 100) return reply({ error: 'O grupo já tem 100 lojas.' }, 400);
       }
       if (request.method === 'POST' && body.cashSettings?.managers.length) return reply({ error: 'Cadastre os usuários da empresa antes de escolher gerentes.' }, 400);
@@ -457,13 +465,15 @@ export async function adminResponse(request, env, now = Date.now(), context) {
         }
       }
       return reply({ error: 'Não foi possível gerar um identificador único.' }, 409);
-    } catch { return reply({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
+    } catch (error) { if (error.message?.includes('INDIVIDUAL_STORE_LIMIT')) return reply({ error: 'Um cliente de loja única pode ter apenas uma loja.' }, 400); return reply({ error: request.method === 'PATCH' ? 'Não foi possível salvar o nome da loja.' : 'Não foi possível cadastrar a loja.' }, 503); }
   }
 
   if (pathname === '/admin/activity' && request.method === 'GET') {
     if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
     try {
-    const filter = adminScopeFilter(await adminScope(env, url));
+    const scope = await adminScope(env, url);
+    if (!scope.store) return reply({ error: 'Escolha uma loja para consultar os registros.' }, 400);
+    const filter = adminScopeFilter(scope);
     const activityQuery = (operator, limit = '') => `SELECT activity.*, stores.name AS store_name FROM (
       SELECT store_id, seq, created_at, actor, CASE WHEN key LIKE 'activity:%' THEN json_extract(data, '$.kind') || ': ' || json_extract(data, '$.target') || ' · ' || json_extract(data, '$.details') WHEN key LIKE 'product-option:%' THEN key || ' · disponível=' || json_extract(data, '$.available') || ' · favorito=' || json_extract(data, '$.favorite') WHEN key LIKE 'preparation:%' THEN key || ': ' || json_extract(data, '$.status') ELSE key END AS action FROM store_events WHERE ${filter.sql} AND created_at ${operator} ? AND (key = 'menu' OR key = 'logo' OR key = 'order-settings' OR key LIKE 'printer:%' OR key LIKE 'product-option:%' OR key LIKE 'preparation:%' OR key LIKE 'activity:%')
       UNION ALL SELECT store_id, seq, created_at, actor, action FROM store_admin_activity WHERE ${filter.sql} AND created_at ${operator} ?
@@ -478,20 +488,24 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       return reply({ events: [...results.filter(row => row.created_at > boundary), ...ties], before: boundary });
     }
     return reply({ events: results, before: null });
-    } catch (error) { return reply({ error: 'Não foi possível consultar o histórico.' }, error.status || 503); }
+    } catch (error) { return reply({ error: error.status ? error.message : 'Não foi possível consultar o histórico.' }, error.status || 503); }
   }
 
   if (pathname === '/admin/logs' && request.method === 'GET') {
-    if (request.headers.get('Accept')?.includes('text/html')) return new Response(null, { status: 303, headers: { Location: '/admin#errors', 'Cache-Control': 'no-store' } });
+    const browserNavigation = request.headers.get('Accept')?.includes('text/html');
+    if (!browserLogin && browserNavigation) return new Response(null, { status: 303, headers: { Location: '/admin', 'Cache-Control': 'no-store' } });
     if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
     try {
       const kind = url.searchParams.get('kind');
       if (kind !== 'errors' && kind !== 'printing') return reply({ error: 'Categoria de registro inválida.' }, 400);
+      const scope = await adminScope(env, url);
+      if (!scope.store) return reply({ error: 'Escolha uma loja para consultar os registros.' }, 400);
+      if (browserNavigation) return new Response(null, { status: 303, headers: { Location: '/admin?' + new URLSearchParams({ clientId: scope.clientId, groupId: scope.groupId, storeId: scope.storeId }).toString() + '#' + (kind === 'printing' ? 'printing' : 'errors'), 'Cache-Control': 'no-store' } });
       const condition = kind === 'printing' ? "event IN ('print.failed', 'print_test.failed')" : "event NOT LIKE 'print.%' AND event NOT LIKE 'print_test.%' AND (event LIKE '%.failed' OR event IN ('runtime.error', 'runtime.fatal'))";
-      const filter = adminScopeFilter(await adminScope(env, url), 'store_diagnostics.store_id');
+      const filter = adminScopeFilter(scope, 'store_diagnostics.store_id');
       const { results } = await env.DB.prepare(`SELECT store_diagnostics.store_id, stores.name AS store_name, device_id, created_at, event, code, order_id FROM store_diagnostics JOIN stores ON stores.id = store_diagnostics.store_id WHERE ${filter.sql} AND ${condition} ORDER BY received_at DESC LIMIT 100`).bind(...filter.values).all();
       return reply(results, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin) });
-    } catch (error) { return reply({ error: 'Registros temporariamente indisponíveis.' }, error.status || 503); }
+    } catch (error) { return reply({ error: error.status ? error.message : 'Registros temporariamente indisponíveis.' }, error.status || 503); }
   }
 
   if (panelRoute) return reply({ error: 'Método não permitido.' }, 405);

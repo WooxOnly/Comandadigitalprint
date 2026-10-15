@@ -37,20 +37,20 @@ test('one owner login can manage weekly passwords and logs in either store', asy
     const login = await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN, 'admin', now);
     assert.equal(login.status, 303);
     const cookie = login.headers.get('Set-Cookie').split(';')[0];
-    const scoped = await (await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
+    const scoped = await (await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
     const first = await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json();
     assert.equal(scoped.storeId, 'seabra-2');
     assert.notEqual(scoped.password, first.password);
-    assert.equal((await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).status, 200);
-    const rotated = await (await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-2', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com' } }), env, now)).json();
+    assert.equal((await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).status, 200);
+    const rotated = await (await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com' } }), env, now)).json();
     assert.notEqual(rotated.password, scoped.password);
     assert.equal((await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json()).password, first.password);
     database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-1', 'first', 'tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
     database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-2', 'second', 'second-tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
-    const logs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors&storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
+    const logs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors&clientId=unassigned&groupId=unassigned&storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
     assert.equal(logs.length, 1);
     assert.equal(logs[0].device_id, 'second-tablet');
-    const firstLogs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors&storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).json();
+    const firstLogs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors&clientId=unassigned&groupId=unassigned&storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).json();
     assert.deepEqual(firstLogs.map((row) => row.device_id), ['tablet']);
   } finally { database.close(); }
 });
@@ -78,7 +78,7 @@ test('panel requires a session, ignores cached Basic auth and rejects cross-orig
   assert.ok((await panel.text()).includes('BistroHub'));
   const loginHtml = await (await adminResponse(new Request('https://example.com/admin'), env, now)).text();
   assert.ok(!loginHtml.includes('Identificador da loja'));
-  const password = await adminResponse(new Request('https://example.com/auth/admin/password?storeId=seabra-1', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
+  const password = await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-1', { headers: { Cookie: cookie } }), env, now + 59 * 60000);
   assert.equal(password.status, 200);
   assert.equal((await adminResponse(new Request('https://example.com/admin/session', { headers: { Cookie: cookie } }), env, now + 61 * 60000)).status, 401);
   const renewed = panel.headers.get('Set-Cookie').split(';')[0];
@@ -274,7 +274,7 @@ test('manual rotation requires authorization and replaces the cached password in
   await assert.rejects(auth.verify('login', before.password, 'admin'));
   await auth.verify('login', rotated.password, 'admin');
   const panelCookie = (await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).headers.get('Set-Cookie').split(';')[0];
-  const panel = await (await adminResponse(new Request('https://example.com/admin', { headers: { Cookie: panelCookie } }), env)).text();
+  const panel = await (await adminResponse(new Request('https://example.com/admin?clientId=unassigned&groupId=unassigned&storeId=seabra-1#password', { headers: { Cookie: panelCookie } }), env)).text();
   new Function(panel.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1]);
   assert.ok(panel.includes('Gerar nova senha agora'));
   assert.ok(panel.includes('Gerenciar senha') && panel.includes('Logs do sistema') && panel.includes('Logs de impressão'));
@@ -293,12 +293,12 @@ test('panel shows only failures in separate system and printing logs', async () 
     const env = { ADMIN_PASSWORD_SECRET: 'test-only-secret-not-for-deployment-1234', ADMIN_VIEW_TOKEN: 'owner-token', DB: binding(database) };
     const cookie = (await panelLogin(adminResponse, env, env.ADMIN_VIEW_TOKEN)).headers.get('Set-Cookie').split(';')[0];
     const get = (path, headers = {}) => adminResponse(new Request('https://example.com' + path, { headers: { Cookie: cookie, ...headers } }), env);
-    assert.deepEqual((await (await get('/admin/logs?kind=errors')).json()).map((row) => row.event).sort(), ['runtime.fatal', 'sync.failed']);
-    assert.deepEqual((await (await get('/admin/logs?kind=printing')).json()).map((row) => row.event).sort(), ['print.failed', 'print_test.failed']);
+    assert.deepEqual((await (await get('/admin/logs?kind=errors&clientId=unassigned&groupId=unassigned&storeId=seabra-1')).json()).map((row) => row.event).sort(), ['runtime.fatal', 'sync.failed']);
+    assert.deepEqual((await (await get('/admin/logs?kind=printing&clientId=unassigned&groupId=unassigned&storeId=seabra-1')).json()).map((row) => row.event).sort(), ['print.failed', 'print_test.failed']);
     assert.equal((await get('/admin/logs')).status, 400);
-    const browser = await get('/admin/logs', { Accept: 'text/html' });
+    const browser = await get('/admin/logs?kind=errors&clientId=unassigned&groupId=unassigned&storeId=seabra-1', { Accept: 'text/html' });
     assert.equal(browser.status, 303);
-    assert.equal(browser.headers.get('Location'), '/admin#errors');
+    assert.equal(browser.headers.get('Location'), '/admin?clientId=unassigned&groupId=unassigned&storeId=seabra-1#errors');
   } finally { database.close(); }
 });
 test('offline login persists hashed credentials, rejects wrong passwords and protects settings', async () => {
@@ -349,7 +349,7 @@ test('settings password uses the local 12-hour clock', async () => {
 test('admin panel reveals the same settings code using the browser local time', async () => {
   const vm = require('node:vm');
   const { panelPage } = await import('../server/cloudflare/admin-panel.mjs');
-  const html = panelPage('test-nonce');
+  const html = panelPage('test-nonce', [{ id: 'seabra-1', name: 'Synthetic store', code: 1 }], 'seabra-1', 'pt', [], 'unassigned', [], 'unassigned');
   assert.ok(html.includes('Consultar senha de Ajustes'));
   const script = html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
   const elements = new Map();
