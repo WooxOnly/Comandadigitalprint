@@ -2,6 +2,14 @@
 
 O botão **Esqueceu a senha?** fica abaixo de Entrar no administrativo. O proprietário informa seu usuário ou e-mail e recebe um link no endereço de recuperação configurado no servidor. O formulário, as mensagens e o e-mail têm versões em português, inglês e espanhol.
 
+## Administradores adicionais
+
+Contas administrativas adicionais têm o mesmo acesso completo ao administrativo, incluindo grupos, lojas, módulos, permissões e cadastro de gestores. Não são usuários do Painel do Gestor. Cada conta guarda sua própria senha com PBKDF2, revisão de sessão, idioma e contagem de tentativas em `panel_admin_accounts`. Os identificadores e a senha do proprietário original permanecem inalterados ao cadastrar outra conta.
+
+Trocar ou recuperar a senha de uma conta adicional encerra somente suas sessões e links antigos. A recuperação escolhe o endereço cadastrado na conta ativa e usa tokens em `panel_admin_password_recovery`, separados dos tokens do proprietário. A entrega continua dependendo do serviço de e-mail configurado; testes simulados não comprovam recebimento na caixa postal. Nenhum destinatário arbitrário é aceito a partir do formulário.
+
+Aplicar `store-schema.sql` antes de publicar o servidor atualizado. A inclusão de contas é feita no ambiente administrativo de infraestrutura autenticado; não há cadastro público de administradores. Senhas em texto, chaves e registros de contas reais não são registrados no Git. O login adicional também permite vincular tablets à loja, sem mudar os usuários operacionais ou a senha semanal.
+
 O link expira em 15 minutos. Abrir o link não o consome; salvar uma nova senha, de 8 a 256 caracteres, o consome em uma transação com a alteração da senha. A revisão da senha invalida as sessões e os demais links anteriores. A senha semanal dos tablets, as lojas, os dados e as contas dos gestores não são alterados. O proprietário pode entrar com seu usuário habitual ou com o e-mail de recuperação cadastrado, usando a nova senha.
 
 Os tokens têm 256 bits aleatórios e somente seus digests ficam no D1. Recuperação e redefinição exigem CSRF, mesma origem e corpo limitado. A solicitação oferece a mesma resposta para usuário conhecido/desconhecido; nunca escolhe o destinatário a partir de um campo enviado pelo navegador. Limites separados de envio e de redefinição preservam a regra existente de tentativas de login. Links são construídos com a origem configurada, nunca pelo Host da solicitação.

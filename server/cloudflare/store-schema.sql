@@ -44,6 +44,29 @@ CREATE TABLE IF NOT EXISTS panel_preferences (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   language TEXT NOT NULL CHECK (language IN ('pt', 'en', 'es'))
 );
+-- Additional full administrators have independent credentials and sessions.
+-- The original owner and recovery-email alias keep their existing records.
+CREATE TABLE IF NOT EXISTS panel_admin_accounts (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE CHECK (username = lower(trim(username))),
+  salt TEXT NOT NULL, hash TEXT NOT NULL,
+  iterations INTEGER NOT NULL DEFAULT 100000 CHECK (iterations BETWEEN 100000 AND 1000000),
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  language TEXT CHECK (language IN ('pt', 'en', 'es')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  blocked_until INTEGER NOT NULL DEFAULT 0
+);
+-- Separate tokens prevent legacy owner recovery from ever accepting an
+-- additional administrator's token, including during a Worker rollback.
+CREATE TABLE IF NOT EXISTS panel_admin_password_recovery (
+  token_hash TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES panel_admin_accounts(id) ON DELETE CASCADE,
+  password_revision INTEGER NOT NULL CHECK (password_revision > 0),
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS panel_admin_recovery_expiry ON panel_admin_password_recovery(expires_at);
 -- Only token digests are stored. A password revision invalidates earlier links.
 CREATE TABLE IF NOT EXISTS panel_password_recovery (
   token_hash TEXT PRIMARY KEY,

@@ -40,16 +40,27 @@ export async function requestRecovery(request, env, username, language, now = Da
   if (!await allow(env, key, 5, TTL, now)) return { status: 429, message: 'Muitas solicitações de recuperação. Tente novamente mais tarde.' };
   await env.DB.prepare('DELETE FROM panel_recovery_limits WHERE reset_at <= ?').bind(now).run();
   await env.DB.prepare('DELETE FROM panel_password_recovery WHERE expires_at <= ?').bind(now).run();
+  await env.DB.prepare('DELETE FROM panel_admin_password_recovery WHERE expires_at <= ?').bind(now).run();
   const response = { status: 200, message: 'Se os dados corresponderem ao cadastro, enviaremos um link de recuperação para o e-mail cadastrado.', success: true };
   const normalized = username.trim().toLowerCase();
-  if (normalized !== (env.ADMIN_PANEL_USER || 'admin').toLowerCase() && normalized !== config.recipient.toLowerCase()) return response;
+  const owner = normalized === (env.ADMIN_PANEL_USER || 'admin').toLowerCase() || normalized === config.recipient.toLowerCase();
+  const account = owner ? null : await env.DB.prepare('SELECT id, username, revision FROM panel_admin_accounts WHERE username = ? AND active = 1').bind(normalized).first();
+  if (!owner && (!account || !email(account.username) || account.username.length > 120)) return response;
+  const recipient = account ? account.username : config.recipient;
   // Unknown accounts do not exhaust the owner's delivery quota. All accounts
   // receive the same response, including when this quota is exhausted.
-  if (!await allow(env, 'owner-email', 5, EMAIL_WINDOW, now)) return response;
+  if (!await allow(env, account ? 'admin-email:' + account.id : 'owner-email', 5, EMAIL_WINDOW, now)) return response;
   const token = hex(crypto.getRandomValues(new Uint8Array(32)));
   const hash = await tokenDigest(token);
-  const state = await env.DB.prepare('SELECT revision FROM panel_password WHERE id = 1').first();
-  await env.DB.prepare('INSERT INTO panel_password_recovery(token_hash, password_revision, expires_at) VALUES(?, ?, ?)').bind(hash, state?.revision || 0, now + TTL).run();
+  if (account) {
+    const created = await env.DB.prepare(`INSERT INTO panel_admin_password_recovery(token_hash, account_id, password_revision, expires_at)
+      SELECT ?, id, revision, ? FROM panel_admin_accounts WHERE id = ? AND username = ? AND revision = ? AND active = 1 RETURNING token_hash`)
+      .bind(hash, now + TTL, account.id, account.username, account.revision).first();
+    if (!created) return response;
+  } else {
+    const state = await env.DB.prepare('SELECT revision FROM panel_password WHERE id = 1').first();
+    await env.DB.prepare('INSERT INTO panel_password_recovery(token_hash, password_revision, expires_at) VALUES(?, ?, ?)').bind(hash, state?.revision || 0, now + TTL).run();
+  }
   const link = config.origin + '/admin/reset-password?token=' + token;
   const deliver = async () => {
     let httpStatus = null;
@@ -70,15 +81,15 @@ export async function requestRecovery(request, env, username, language, now = Da
           ? { 'api-key': config.apiKey, 'Content-Type': 'application/json', Accept: 'application/json' }
           : { Authorization: 'Bearer ' + config.apiKey, 'Content-Type': 'application/json', 'Idempotency-Key': 'bistro-reset-' + hash },
         body: JSON.stringify(brevo
-          ? { sender: { email: config.from, name: 'BistroHub' }, to: [{ email: config.recipient }], subject, textContent: text, headers: { 'Idempotency-Key': 'bistro-reset-' + hash } }
-          : { from: config.from, to: [config.recipient], subject, text }),
+          ? { sender: { email: config.from, name: 'BistroHub' }, to: [{ email: recipient }], subject, textContent: text, headers: { 'Idempotency-Key': 'bistro-reset-' + hash } }
+          : { from: config.from, to: [recipient], subject, text }),
       });
       if (Number.isInteger(result.status) && result.status >= 100 && result.status <= 599) httpStatus = result.status;
       if (!result.ok) throw new Error('Delivery unavailable');
     } catch {
       // Keep tokens/passwords/provider responses out of logs and do not disclose
       // account existence through a different public response on delivery failure.
-      await env.DB.prepare('DELETE FROM panel_password_recovery WHERE token_hash = ?').bind(hash).run();
+      await env.DB.prepare(account ? 'DELETE FROM panel_admin_password_recovery WHERE token_hash = ?' : 'DELETE FROM panel_password_recovery WHERE token_hash = ?').bind(hash).run();
       console.error('BistroHub password recovery email delivery failed', { provider: config.provider, httpStatus });
     }
   };
@@ -88,10 +99,17 @@ export async function requestRecovery(request, env, username, language, now = Da
 
 export async function recoveryTokenValid(env, token, now = Date.now()) {
   if (!env.DB || !validToken(token)) return false;
+  const tokenHash = await tokenDigest(token);
+  const extra = await env.DB.prepare(`SELECT r.account_id, (r.used_at IS NULL AND r.expires_at > ? AND EXISTS(
+    SELECT 1 FROM panel_admin_accounts a WHERE a.id = r.account_id AND a.active = 1 AND a.revision = r.password_revision)) AS valid
+    FROM panel_admin_password_recovery r WHERE r.token_hash = ?`).bind(now, tokenHash).first();
+  // A stale or disabled extra account's token must never enter the owner path.
+  if (extra) return extra.valid === 1;
   const row = await env.DB.prepare(`SELECT r.token_hash FROM panel_password_recovery r
     WHERE r.token_hash = ? AND r.used_at IS NULL AND r.expires_at > ?
+      AND NOT EXISTS(SELECT 1 FROM panel_admin_password_recovery extra WHERE extra.token_hash = r.token_hash)
       AND r.password_revision = COALESCE((SELECT revision FROM panel_password WHERE id = 1), 0)`)
-    .bind(await tokenDigest(token), now).first();
+    .bind(tokenHash, now).first();
   return !!row;
 }
 
@@ -101,7 +119,25 @@ export async function resetPassword(request, env, token, password, now = Date.no
   if (!await allow(env, await ipKey(request, env, 'reset'), 10, TTL, now)) return { status: 429, message: 'Muitas solicitações de recuperação. Tente novamente mais tarde.' };
   if (!validToken(token)) return { status: 400, message: 'Link de recuperação inválido ou expirado. Solicite um novo link.' };
   const tokenHash = await tokenDigest(token);
+  const extra = await env.DB.prepare('SELECT account_id FROM panel_admin_password_recovery WHERE token_hash = ?').bind(tokenHash).first();
   const salt = hex(crypto.getRandomValues(new Uint8Array(16))), hash = await digest(password, salt);
+  if (extra) {
+    const result = await env.DB.batch([
+      env.DB.prepare(`UPDATE panel_admin_accounts SET salt = ?, hash = ?, iterations = 100000,
+        revision = revision + 1, attempts = 0, blocked_until = 0
+        WHERE id = ? AND active = 1 AND EXISTS(SELECT 1 FROM panel_admin_password_recovery r
+          WHERE r.token_hash = ? AND r.account_id = panel_admin_accounts.id AND r.used_at IS NULL
+            AND r.expires_at > ? AND r.password_revision = panel_admin_accounts.revision) RETURNING revision`)
+        .bind(salt, hash, extra.account_id, tokenHash, now),
+      env.DB.prepare(`UPDATE panel_admin_password_recovery SET used_at = ?
+        WHERE token_hash = ? AND account_id = ? AND used_at IS NULL AND expires_at > ?
+          AND EXISTS(SELECT 1 FROM panel_admin_accounts a WHERE a.id = panel_admin_password_recovery.account_id
+            AND a.active = 1 AND a.salt = ? AND a.hash = ? AND a.revision = panel_admin_password_recovery.password_revision + 1) RETURNING used_at`)
+        .bind(now, tokenHash, extra.account_id, now, salt, hash),
+    ]);
+    if (result[0].results?.length !== 1 || result[1].results?.length !== 1) return { status: 400, message: 'Link de recuperação inválido ou expirado. Solicite um novo link.' };
+    return { status: 303 };
+  }
   // All steps run in one D1 transaction. Later writes are guarded by the exact
   // salt/hash generated here, so only the successful reset consumes the token or
   // clears failed logins. The revision comparison also resolves concurrent links.
@@ -109,6 +145,7 @@ export async function resetPassword(request, env, token, password, now = Date.no
     env.DB.prepare(`INSERT INTO panel_password(id, salt, hash, iterations, revision)
       SELECT 1, ?, ?, 100000, r.password_revision + 1 FROM panel_password_recovery r
       WHERE r.token_hash = ? AND r.used_at IS NULL AND r.expires_at > ?
+        AND NOT EXISTS(SELECT 1 FROM panel_admin_password_recovery extra WHERE extra.token_hash = r.token_hash)
         AND r.password_revision = COALESCE((SELECT revision FROM panel_password WHERE id = 1), 0)
       ON CONFLICT(id) DO UPDATE SET salt = excluded.salt, hash = excluded.hash,
         iterations = excluded.iterations, revision = excluded.revision RETURNING revision`).bind(salt, hash, tokenHash, now),

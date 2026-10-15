@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Administrador adicional em homologação — 14/10/2026
+
+- Proprietário autorizou um novo administrador com o mesmo acesso completo da conta atual, preservando os acessos existentes. Confirmou explicitamente somente homologação e corrigiu o endereço antes do cadastro; credenciais e e-mail da conta real ficam fora do Git.
+- Preparado suporte a contas administrativas independentes: senha PBKDF2, identidade e revisão nas sessões, idioma persistente por conta, bloqueio progressivo próprio e vínculo de tablets. Renovação conserva a identidade; troca de senha altera somente a conta autenticada. O proprietário original e seu alias de recuperação mantêm o contrato anterior.
+- Recuperação adicional usa destinatário cadastrado e tabela de tokens separada, sem misturar revisões ou redefinir a senha do proprietário. Requer o provedor de envio já configurado; nenhum e-mail real é solicitado no cadastro. Cadastro de gestor continua separado de conta administrativa.
+- Validação concluída: **264 testes aprovados**, incluindo 12 cenários de administradores adicionais e 13 de recuperação isolada; lint, TypeScript e empacotamento do Worker de homologação aprovados. Revisões de autenticação e recuperação não encontraram bloqueadores.
+- Publicação e verificação do cadastro real serão registradas após o backup e a aplicação da estrutura no D1 de homologação. Alteração exclusiva do servidor: não exige outro APK e não modifica produção.
+
 ## Impressoras e expansão Android, Windows e web — 11/10/2026
 
 - Proprietário pediu POS de 80 mm com Ethernet RJ45 e Wi-Fi como opção, sem depender de Bluetooth. Aceita adaptação de novos modelos e determinou que o BistroHub operacional também terá Windows e versão web futuramente, além do Android. Essa expansão corresponde às telas operacionais; os portais administrativo/gestor existentes continuam separados.

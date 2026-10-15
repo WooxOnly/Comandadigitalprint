@@ -19,6 +19,7 @@ const COOKIE = '__Host-comanda_panel';
 const CSRF_COOKIE = '__Host-comanda_csrf';
 const LANGUAGE_COOKIE = '__Host-bistro_admin_language';
 const LANGUAGE_CHOICE_COOKIE = '__Host-bistro_admin_language_choice';
+const LOGIN_ACCOUNT_COOKIE = '__Host-bistro_admin_login_account';
 const encode = (value) => new TextEncoder().encode(value);
 const hex = (value) => Array.from(new Uint8Array(value), (byte) => byte.toString(16).padStart(2, '0')).join('');
 const unhex = (value) => Uint8Array.from(value.match(/../g) || [], (part) => parseInt(part, 16));
@@ -52,6 +53,25 @@ async function panelPasswordState(env) {
   return env.DB ? env.DB.prepare('SELECT salt, hash, iterations, revision FROM panel_password WHERE id = 1').first() : null;
 }
 
+async function additionalAccount(env, id) {
+  return env.DB ? env.DB.prepare('SELECT id, username, salt, hash, iterations, revision, language FROM panel_admin_accounts WHERE id = ? AND active = 1').bind(id).first() : null;
+}
+
+function ownerIdentifier(username, env) {
+  const email = env.ADMIN_RECOVERY_EMAIL;
+  return username === (env.ADMIN_PANEL_USER || 'admin') || (typeof email === 'string' && email.includes('@') && username.trim().toLowerCase() === email.toLowerCase());
+}
+
+async function loginAccountId(username, env) {
+  if (!env.DB || typeof username !== 'string' || username.length > 120 || ownerIdentifier(username, env)) return null;
+  const row = await env.DB.prepare('SELECT id FROM panel_admin_accounts WHERE username = ? AND active = 1').bind(username.trim().toLowerCase()).first();
+  return row?.id || null;
+}
+
+function validPasswordState(state) {
+  return /^[0-9a-f]{32}$/.test(state.salt || '') && /^[0-9a-f]{64}$/.test(state.hash || '') && Number.isSafeInteger(state.iterations) && state.iterations >= 100000 && state.iterations <= 1000000;
+}
+
 async function passwordDigest(password, salt, iterations) {
   const key = await crypto.subtle.importKey('raw', encode(password), 'PBKDF2', false, ['deriveBits']);
   return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(salt), iterations }, key, 256));
@@ -64,11 +84,12 @@ function equalHex(left, right) {
   return difference === 0;
 }
 
-async function issueSession(env, now) {
+async function issueSession(env, now, principal) {
   const key = await sessionKey(env);
   if (!key) throw new Error('Panel secret missing');
-  const state = await panelPasswordState(env);
-  const payload = hex(encode(JSON.stringify({ user: env.ADMIN_PANEL_USER || 'admin', revision: state?.revision || 0, expires: now + IDLE_MS, nonce: crypto.randomUUID() })));
+  const state = principal?.accountId ? await additionalAccount(env, principal.accountId) : await panelPasswordState(env);
+  if ((principal?.accountId && !state) || (principal && principal.revision !== (state?.revision || 0))) throw new Error('Panel session changed');
+  const payload = hex(encode(JSON.stringify({ user: principal?.accountId ? state.username : env.ADMIN_PANEL_USER || 'admin', ...(principal?.accountId ? { accountId: principal.accountId } : {}), revision: state?.revision || 0, expires: now + IDLE_MS, nonce: crypto.randomUUID() })));
   const signature = hex(await crypto.subtle.sign('HMAC', key, encode('panel-session:' + payload)));
   return cookieHeader(payload + '.' + signature, IDLE_MS / 1000);
 }
@@ -82,21 +103,33 @@ async function validSession(request, env, now) {
   if (!key || !await crypto.subtle.verify('HMAC', key, unhex(signature), encode('panel-session:' + payload))) return null;
   try {
     const data = JSON.parse(new TextDecoder().decode(unhex(payload)));
+    if (!Number.isFinite(data.expires) || data.expires <= now || data.expires > now + IDLE_MS) return null;
+    if (Object.hasOwn(data, 'accountId')) {
+      if (typeof data.accountId !== 'string' || !data.accountId || data.accountId.length > 120) return null;
+      const account = await additionalAccount(env, data.accountId);
+      return account && data.user === account.username && data.revision === account.revision
+        ? { accountId: account.id, username: account.username, revision: account.revision } : null;
+    }
     const state = await panelPasswordState(env);
-    if (data.user !== (env.ADMIN_PANEL_USER || 'admin') || data.revision !== (state?.revision || 0) || !Number.isFinite(data.expires) || data.expires <= now || data.expires > now + IDLE_MS) return null;
-    return true;
+    if (data.user !== (env.ADMIN_PANEL_USER || 'admin') || data.revision !== (state?.revision || 0)) return null;
+    return { username: env.ADMIN_PANEL_USER || 'admin', revision: state?.revision || 0 };
   } catch { return null; }
 }
 
 async function credentialsMatch(username, password, env) {
-  if (!env.ADMIN_VIEW_TOKEN || username.length > 120 || password.length > 256) return false;
+  if (!env.ADMIN_VIEW_TOKEN || typeof username !== 'string' || typeof password !== 'string' || username.length > 120 || password.length > 256) return false;
   const owner = env.ADMIN_PANEL_USER || 'admin';
-  const recoveryEmail = env.ADMIN_RECOVERY_EMAIL;
-  if (username !== owner && !(typeof recoveryEmail === 'string' && recoveryEmail.includes('@') && username.trim().toLowerCase() === recoveryEmail.toLowerCase())) return false;
+  if (!ownerIdentifier(username, env)) {
+    const id = await loginAccountId(username, env);
+    const account = id ? await additionalAccount(env, id) : null;
+    if (!account || !validPasswordState(account)) return false;
+    return equalHex(await passwordDigest(password, account.salt, account.iterations), account.hash)
+      ? { accountId: account.id, username: account.username, revision: account.revision } : false;
+  }
   const state = await panelPasswordState(env);
   if (state) {
-    if (!/^[0-9a-f]{32}$/.test(state.salt) || !/^[0-9a-f]{64}$/.test(state.hash) || !Number.isSafeInteger(state.iterations) || state.iterations < 100000 || state.iterations > 1000000) throw new Error('Invalid panel password state');
-    return equalHex(await passwordDigest(password, state.salt, state.iterations), state.hash);
+    if (!validPasswordState(state)) throw new Error('Invalid panel password state');
+    return equalHex(await passwordDigest(password, state.salt, state.iterations), state.hash) ? { username: owner, revision: state.revision } : false;
   }
   const expected = encode(owner + '\0' + env.ADMIN_VIEW_TOKEN);
   const provided = encode(owner + '\0' + password);
@@ -104,7 +137,7 @@ async function credentialsMatch(username, password, env) {
   const left = new Uint8Array(a), right = new Uint8Array(b);
   let difference = 0;
   for (let index = 0; index < left.length; index++) difference |= left[index] ^ right[index];
-  return difference === 0;
+  return difference === 0 ? { username: owner, revision: 0 } : false;
 }
 
 function htmlResponse(content, nonce, status = 200, extra = {}) {
@@ -132,39 +165,50 @@ function recoveryResponse(nonce, language, options = {}, status = 200) {
 const blockedMessage = 'Muitas tentativas. Tente novamente em {count} segundos.';
 const retrySeconds = (blockedUntil, now) => Math.max(1, Math.ceil((blockedUntil - now) / 1000));
 
-async function panelLanguage(env) {
+async function panelLanguage(env, principal) {
+  if (principal?.accountId) return (await additionalAccount(env, principal.accountId))?.language || null;
   const preference = env.DB ? await env.DB.prepare('SELECT language FROM panel_preferences WHERE id = 1').first() : null;
   return validLanguage(preference?.language) ? preference.language : null;
 }
-async function savePanelLanguage(env, language) {
+async function savePanelLanguage(env, language, principal) {
+  if (principal?.accountId) {
+    await env.DB.prepare('UPDATE panel_admin_accounts SET language = ? WHERE id = ? AND active = 1 AND revision = ?').bind(language, principal.accountId, principal.revision).run();
+    return;
+  }
   await env.DB.prepare('INSERT INTO panel_preferences(id, language) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET language = excluded.language').bind(language).run();
 }
 
-async function loginLimit(env, now) {
+async function loginLimit(env, now, accountId = null) {
   if (!env.DB) return null;
-  const state = await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
+  const state = accountId
+    ? await env.DB.prepare('SELECT blocked_until FROM panel_admin_accounts WHERE id = ? AND active = 1').bind(accountId).first()
+    : await env.DB.prepare('SELECT blocked_until FROM panel_login WHERE id = 1').first();
   return state?.blocked_until > now ? state.blocked_until : null;
 }
 
-async function recordLogin(env, valid, now) {
+async function recordLogin(env, valid, now, accountId = null) {
   if (!env.DB) return null;
+  const table = accountId ? 'panel_admin_accounts' : 'panel_login';
+  const condition = accountId ? 'id = ? AND active = 1' : 'id = 1';
+  const identity = accountId ? [accountId] : [];
   if (valid) {
-    await env.DB.prepare('UPDATE panel_login SET attempts = 0, blocked_until = 0 WHERE id = 1').run();
+    await env.DB.prepare(`UPDATE ${table} SET attempts = 0, blocked_until = 0 WHERE ${condition}`).bind(...identity).run();
     return null;
   }
   // The first five failures have no wait. Failure six waits thirty seconds;
   // each subsequent group of three adds thirty seconds. Increment and set
   // the deadline atomically; blocked requests do not advance or extend it.
-  const state = await env.DB.prepare('UPDATE panel_login SET attempts = attempts + 1, blocked_until = CASE WHEN (attempts + 1) >= 6 AND (attempts + 1) % 3 = 0 THEN ? + (((attempts + 1) / 3) - 1) * 30000 ELSE 0 END WHERE id = 1 AND blocked_until <= ? RETURNING blocked_until').bind(now, now).first();
-  return state ? state.blocked_until > now ? state.blocked_until : null : loginLimit(env, now);
+  const state = await env.DB.prepare(`UPDATE ${table} SET attempts = attempts + 1, blocked_until = CASE WHEN (attempts + 1) >= 6 AND (attempts + 1) % 3 = 0 THEN ? + (((attempts + 1) / 3) - 1) * 30000 ELSE 0 END WHERE ${condition} AND blocked_until <= ? RETURNING blocked_until`).bind(now, ...identity, now).first();
+  return state ? state.blocked_until > now ? state.blocked_until : null : loginLimit(env, now, accountId);
 }
 
 export async function provisionableStores(username, password, env, now = Date.now()) {
   if (!env.DB) return { error: 'UNAVAILABLE', status: 503 };
-  const blockedUntil = await loginLimit(env, now);
+  const accountId = await loginAccountId(username, env);
+  const blockedUntil = await loginLimit(env, now, accountId);
   if (blockedUntil) return { error: 'RATE_LIMIT', status: 429, retryAfterSeconds: retrySeconds(blockedUntil, now) };
   const valid = await credentialsMatch(username, password, env);
-  const nextBlock = await recordLogin(env, valid, now);
+  const nextBlock = await recordLogin(env, valid, now, accountId);
   if (nextBlock) return { error: 'RATE_LIMIT', status: 429, retryAfterSeconds: retrySeconds(nextBlock, now) };
   if (!valid) return { error: 'BAD_LOGIN', status: 401 };
   const { results: stores } = await env.DB.prepare('SELECT stores.id, stores.name, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE stores.active = 1 ORDER BY store_codes.code').all();
@@ -182,7 +226,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
   const sameOrigin = origin === url.origin;
   const nonce = crypto.randomUUID();
   let language = requestLanguage(request, readCookie, LANGUAGE_COOKIE, 'pt');
-  if (browserLogin) language = await panelLanguage(env) || language;
+  if (browserLogin) language = await panelLanguage(env, browserLogin) || language;
   const reply = (value, status = 200, extra = {}) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status, extra);
   if (pathname === '/admin/recover' || pathname === '/admin/reset-password') {
     const reset = pathname === '/admin/reset-password';
@@ -226,7 +270,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
     try {
       let input; try { input = JSON.parse(await readBody(request, 512)); } catch (error) { if (error.status) throw error; return reply({ error: 'Idioma inválido.' }, 400); }
       if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 || !validLanguage(input.language)) return reply({ error: 'Idioma inválido.' }, 400);
-      if (browserLogin) await savePanelLanguage(env, input.language);
+      if (browserLogin) await savePanelLanguage(env, input.language, browserLogin);
       const response = reply({ language: input.language, savedToAccount: !!browserLogin });
       response.headers.append('Set-Cookie', cookie(LANGUAGE_COOKIE, input.language, 31536000));
       response.headers.append('Set-Cookie', cookie(LANGUAGE_CHOICE_COOKIE, browserLogin ? '' : input.language, browserLogin ? 0 : 3600));
@@ -242,19 +286,26 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       const form = await request.formData();
       const csrf = readCookie(request, CSRF_COOKIE);
       if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return loginResponse(nonce, 'A sessão de login expirou. Tente novamente.', 403, language);
-      const blockedUntil = await loginLimit(env, now);
-      if (blockedUntil) return loginResponse(nonce, blockedMessage, 429, language, retrySeconds(blockedUntil, now));
       const username = String(form.get('username') || '');
       const password = String(form.get('password') || '');
+      const accountId = await loginAccountId(username, env);
+      const renderLogin = (message, status, seconds = 0) => {
+        const response = loginResponse(nonce, message, status, language, seconds);
+        response.headers.append('Set-Cookie', cookie(LOGIN_ACCOUNT_COOKIE, accountId || '', accountId ? 3600 : 0));
+        return response;
+      };
+      const blockedUntil = await loginLimit(env, now, accountId);
+      if (blockedUntil) return renderLogin(blockedMessage, 429, retrySeconds(blockedUntil, now));
       const valid = await credentialsMatch(username, password, env);
-      const nextBlock = await recordLogin(env, valid, now);
-      if (nextBlock) return loginResponse(nonce, blockedMessage, 429, language, retrySeconds(nextBlock, now));
-      if (!valid) return loginResponse(nonce, 'Usuário ou senha incorretos.', 401, language);
+      const nextBlock = await recordLogin(env, valid, now, accountId);
+      if (nextBlock) return renderLogin(blockedMessage, 429, retrySeconds(nextBlock, now));
+      if (!valid) return renderLogin('Usuário ou senha incorretos.', 401);
       const choice = readCookie(request, LANGUAGE_CHOICE_COOKIE);
-      language = validLanguage(choice) ? choice : await panelLanguage(env) || language;
-      await savePanelLanguage(env, language);
+      language = validLanguage(choice) ? choice : await panelLanguage(env, valid) || language;
+      await savePanelLanguage(env, language, valid);
       const headers = new Headers({ Location: '/admin', 'Cache-Control': 'no-store' });
-      headers.append('Set-Cookie', await issueSession(env, now));
+      headers.append('Set-Cookie', await issueSession(env, now, valid));
+      headers.append('Set-Cookie', cookie(LOGIN_ACCOUNT_COOKIE, accountId || '', accountId ? 3600 : 0));
       headers.append('Set-Cookie', cookie(LANGUAGE_COOKIE, language, 31536000));
       headers.append('Set-Cookie', cookie(LANGUAGE_CHOICE_COOKIE, '', 0));
       return new Response(null, { status: 303, headers });
@@ -270,7 +321,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
 
   if (pathname === '/admin' && request.method === 'GET') {
     if (!browserLogin) {
-      const blockedUntil = await loginLimit(env, now);
+      const blockedUntil = await loginLimit(env, now, readCookie(request, LOGIN_ACCOUNT_COOKIE));
       if (blockedUntil) return loginResponse(nonce, blockedMessage, 200, language, retrySeconds(blockedUntil, now));
       const message = url.searchParams.has('changed') ? 'Senha do painel alterada. Entre novamente.' : url.searchParams.has('expired') ? 'Sessão encerrada após uma hora sem atividade. Entre novamente.' : url.searchParams.has('loggedout') ? 'Você saiu do painel.' : '';
       return loginResponse(nonce, message, 200, language);
@@ -286,12 +337,12 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       const { results } = await env.DB.prepare("SELECT SUBSTR(key, 6) AS username FROM store_records WHERE store_id = ? AND key LIKE 'user:%' AND json_extract(data, '$.active') = 1 ORDER BY key").bind(store.id).all();
       store.cashUsers = results.map(row => row.username);
     }
-    return htmlResponse(panelPage(nonce, stores, scope.storeId, language, groups, selectedGroupId), nonce, 200, { 'Set-Cookie': await issueSession(env, now), 'Content-Language': language });
+    return htmlResponse(panelPage(nonce, stores, scope.storeId, language, groups, selectedGroupId), nonce, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin), 'Content-Language': language });
   }
 
   if (pathname === '/admin/session' && request.method === 'GET') {
     if (!browserLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
-    return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now), 'Cache-Control': 'no-store' } });
+    return new Response(null, { status: 204, headers: { 'Set-Cookie': await issueSession(env, now, browserLogin), 'Cache-Control': 'no-store' } });
   }
 
   if (pathname === '/admin/change-password' && request.method === 'POST') {
@@ -310,7 +361,14 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       if (next !== body.confirmPassword) return reply({ error: 'A confirmação não corresponde à nova senha.' }, 400);
       if (next.length < 8) return reply({ error: 'A nova senha deve ter pelo menos 8 caracteres.' }, 400);
       if (next === current) return reply({ error: 'Escolha uma senha diferente da atual.' }, 400);
-      if (!await credentialsMatch(env.ADMIN_PANEL_USER || 'admin', current, env)) return reply({ error: 'Senha atual incorreta.' }, 403);
+      if (!await credentialsMatch(browserLogin.username, current, env)) return reply({ error: 'Senha atual incorreta.' }, 403);
+      if (browserLogin.accountId) {
+        const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+        const hash = await passwordDigest(next, salt, PANEL_ITERATIONS);
+        const result = await env.DB.prepare('UPDATE panel_admin_accounts SET salt = ?, hash = ?, iterations = ?, revision = revision + 1 WHERE id = ? AND active = 1 AND revision = ?').bind(salt, hash, PANEL_ITERATIONS, browserLogin.accountId, browserLogin.revision).run();
+        if (result.meta?.changes !== 1) return reply({ error: 'A senha mudou em outra sessão. Entre novamente.' }, 409);
+        return reply({ ok: true }, 200, { 'Set-Cookie': cookieHeader('', 0) });
+      }
       const previous = await panelPasswordState(env);
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
       const hash = await passwordDigest(next, salt, PANEL_ITERATIONS);
@@ -330,7 +388,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
         const scope = await adminScope(env, url), filter = adminScopeFilter(scope, 'stores.id');
         const { results } = await env.DB.prepare(`SELECT stores.id, stores.name, stores.active, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE ${filter.sql} ORDER BY store_codes.code`).bind(...filter.values).all();
         for (const store of results) { store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id); store.cashSettings = await cashSettings(env, store.id); }
-        return reply(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+        return reply(results, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin) });
       } catch (error) { return reply({ error: error.status ? error.message : 'Não foi possível consultar as lojas.' }, error.status || 503); }
     }
     if (!sameOrigin) return reply({ error: 'Origem inválida.' }, 403);
@@ -358,7 +416,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
         if (body.modules !== undefined) await env.DB.prepare('INSERT INTO store_modules(store_id, preorders, cash) VALUES(?, ?, ?) ON CONFLICT(store_id) DO UPDATE SET preorders = excluded.preorders, cash = excluded.cash').bind(id, Number(body.modules.preorders), Number(body.modules.cash)).run();
         if (body.modules?.preparation !== undefined) await env.DB.prepare('INSERT INTO store_preparation_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.preparation)).run();
         if (body.access !== undefined) await env.DB.prepare('INSERT INTO store_access_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.access)).run();
-        await env.DB.prepare('INSERT INTO store_admin_activity(store_id, created_at, actor, action) VALUES(?, ?, ?, ?)').bind(id, new Date().toISOString(), 'owner', 'Empresa, módulos e permissões atualizados pelo portal').run();
+        await env.DB.prepare('INSERT INTO store_admin_activity(store_id, created_at, actor, action) VALUES(?, ?, ?, ?)').bind(id, new Date().toISOString(), browserLogin.accountId ? browserLogin.username : 'owner', 'Empresa, módulos e permissões atualizados pelo portal').run();
         if (body.modules?.customers !== undefined) await env.DB.prepare('INSERT INTO store_customer_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.customers)).run();
         if (body.cashSettings !== undefined) await env.DB.prepare('INSERT INTO store_cash_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.cashSettings)).run();
       };
@@ -395,7 +453,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
           if (body.modules !== undefined) created.modules = await storeModules(env, id);
           if (body.cashSettings !== undefined) created.cashSettings = await cashSettings(env, id);
           if (body.access !== undefined) created.access = await storeAccess(env, id);
-          return reply(created, 201, { 'Set-Cookie': await issueSession(env, now) });
+          return reply(created, 201, { 'Set-Cookie': await issueSession(env, now, browserLogin) });
         }
       }
       return reply({ error: 'Não foi possível gerar um identificador único.' }, 409);
@@ -432,7 +490,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       const condition = kind === 'printing' ? "event IN ('print.failed', 'print_test.failed')" : "event NOT LIKE 'print.%' AND event NOT LIKE 'print_test.%' AND (event LIKE '%.failed' OR event IN ('runtime.error', 'runtime.fatal'))";
       const filter = adminScopeFilter(await adminScope(env, url), 'store_diagnostics.store_id');
       const { results } = await env.DB.prepare(`SELECT store_diagnostics.store_id, stores.name AS store_name, device_id, created_at, event, code, order_id FROM store_diagnostics JOIN stores ON stores.id = store_diagnostics.store_id WHERE ${filter.sql} AND ${condition} ORDER BY received_at DESC LIMIT 100`).bind(...filter.values).all();
-      return reply(results, 200, { 'Set-Cookie': await issueSession(env, now) });
+      return reply(results, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin) });
     } catch (error) { return reply({ error: 'Registros temporariamente indisponíveis.' }, error.status || 503); }
   }
 
@@ -457,7 +515,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
     const revision = state?.revision ?? 0;
     if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid rotation state');
     const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, revision, selectedStoreId);
-    const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now) } : {};
+    const extra = privateRoute && browserLogin ? { 'Set-Cookie': await issueSession(env, now, browserLogin) } : {};
     return reply(privateRoute ? { storeId: selectedStoreId, username: credential.username, password, nextRotation: credential.nextRotation } : credential, 200, extra);
   } catch (error) { return reply({ error: 'Serviço temporariamente indisponível.' }, error.status || 503); }
 }
