@@ -117,23 +117,23 @@ async function fits(page, label, controls = false) {
   let cases=0;const errors=[];
   try {
     const context=await browser.newContext({ignoreHTTPSErrors:true,locale:'en-US'}),page=await context.newPage();page.on('pageerror',error=>{errors.push(error.message);console.error('PAGEERROR',error.message)});
-    if(process.env.LAYOUT_ONLY!=='tablet'){await page.goto(base+'/admin');await page.locator('[name=username]').fill('admin');await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await page.locator('button[type=submit]').click();await page.waitForSelector('#clients');
+    if(process.env.LAYOUT_ONLY!=='tablet'){await page.goto(base+'/admin');await page.locator('[name=username]').fill('admin');await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await page.locator('button[type=submit]').click();await page.waitForSelector('#home');await page.goto(base+'/admin#clients');
     for(const language of ['pt','en','es']){
-      await selectPortalLanguage(page,language);await page.waitForSelector('#clients');
-      await page.goto(base+'/admin');assert.equal(await page.locator('#clients').isVisible(),true);assert.equal(await page.locator('#store-picker').count(),0);
+      await page.goto(base+'/admin#clients');await selectPortalLanguage(page,language);await page.waitForSelector('#clients');
+      await page.goto(base+'/admin#clients');assert.equal(await page.locator('#clients').isVisible(),true);assert.equal(await page.locator('#store-picker').count(),0);
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin clients ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
       await page.locator('#clients a[href="/admin?groupId=11111111-1111-4111-8111-111111111111"]').click();await page.waitForSelector('#locations');
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin group locations ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
       await page.locator('#locations a[href*="storeId=seabra-1"]').click();await page.waitForSelector('#stores');
       assert.equal(await page.locator('.edit-store').count(),1);assert.equal(await page.locator('#new-panel-password').getAttribute('minlength'),'8');
-      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['password','errors','printing','activity','stores','account']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
+      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['home','clients','password','client-password','errors','printing','activity','stores','account']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
       await page.goto(base+'/admin/gestores?groupId=11111111-1111-4111-8111-111111111111');assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'),language);
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin provisioning ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
       await page.locator('#client-name').fill('Grupo '+language);await page.locator('#stores input').first().check();await page.locator('#client-form button').click();await page.waitForFunction(message=>document.querySelector('#message').textContent===message,portalTranslation(language,'Cliente salvo.'));
       await page.goto(base+'/admin');
     }
     const another=await browser.newContext({ignoreHTTPSErrors:true,locale:'pt-BR'}),second=await another.newPage();second.on('pageerror',error=>errors.push(error.message));
-    await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#clients');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
+    await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#home');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
     await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
     for(const language of ['pt','en','es']){
       await selectPortalLanguage(page,language);await page.waitForFunction(()=>document.querySelector('#consult')&&!document.querySelector('#consult').disabled);

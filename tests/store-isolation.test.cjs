@@ -57,7 +57,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   const call = (path, data, token) => cloudResponse(new Request('https://example.com/cloud' + path, { method: data === undefined ? 'GET' : 'POST', headers: { ...(data === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: 'Bearer ' + token } : {}) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), env);
   const first = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-1');
   const second = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-2');
-  assert.notEqual(first.password, second.password);
+  assert.equal(first.password, second.password);
   assert.equal((await call('/provision', { username: 'admin', password: 'wrong' })).status, 401);
   const provisioned = await call('/provision', { username: 'admin', password: env.ADMIN_VIEW_TOKEN });
   assert.equal(provisioned.status, 200);
@@ -68,7 +68,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   assert.deepEqual(await (await call('/store?storeId=seabra-2')).json(), { storeId: 'seabra-2', name: 'Seabra 2', modules: { preorders: false, cash: false } });
   assert.equal((await call('/store?storeId=missing')).status, 404);
   assert.equal((await call('/store?storeId=invalid_')).status, 400);
-  assert.equal((await call('/login', { storeId: 'seabra-2', username: 'admin', password: first.password })).status, 401);
+  assert.equal((await call('/login', { storeId: 'seabra-2', username: 'admin', password: 'wrong-password' })).status, 401);
   const a = await (await call('/login', { storeId: 'seabra-1', username: 'admin', password: first.password })).json();
   const b = await (await call('/login', { storeId: 'seabra-2', username: 'admin', password: second.password })).json();
   assert.equal(a.storeId, 'seabra-1'); assert.equal(b.storeId, 'seabra-2');
@@ -99,7 +99,7 @@ test('store sessions isolate logins, changes, retries, menus and diagnostics', a
   assert.deepEqual((await (await call('/provision', { username: 'admin', password: env.ADMIN_VIEW_TOKEN })).json()).stores.map((store) => store.id), ['seabra-1']);
 });
 
-test('one panel session selects stores inside the portal for logs and weekly password actions', async (t) => {
+test('one panel session scopes logs to stores while weekly password actions stay global', async (t) => {
   const { adminResponse, weeklyAdmin } = await import('../server/cloudflare/admin-auth.mjs');
   const db = database(); t.after(() => db.close());
   db.prepare('INSERT INTO stores(id, name, active) VALUES(?, ?, 1)').run('seabra-2', 'Seabra 2');
@@ -121,8 +121,8 @@ test('one panel session selects stores inside the portal for logs and weekly pas
   assert.equal(before.storeId, 'seabra-2');
   assert.equal(before.password, (await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, Date.now(), 0, 'seabra-2')).password);
   assert.equal((await request('/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', 'POST')).status, 200);
-  assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-2'").get().revision, 1);
-  assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 0);
+  assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-2'").get(), undefined);
+  assert.equal(db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id = 'seabra-1'").get().revision, 1);
   assert.deepEqual((await (await request('/admin/stores')).json()).map((store) => store.id), ['seabra-1', 'seabra-2']);
   assert.deepEqual((await (await request('/admin/stores')).json()).map((store) => store.code), [1, 2]);
   assert.equal((await adminResponse(new Request('https://example.com/admin/stores', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://other.example', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Seabra 3' }) }), env)).status, 403);

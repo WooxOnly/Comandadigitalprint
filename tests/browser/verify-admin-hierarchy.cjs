@@ -69,16 +69,16 @@ async function choose(page, language) {
       page.on('pageerror', error => errors.push(error.message));
       try {
         await page.goto(base + '/admin'); await choose(page, language);
-        await page.locator('[name=username]').fill('admin'); await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN); await page.locator('button[type=submit]').click(); await visible(page, 'clients'); await choose(page, language);
+        await page.locator('[name=username]').fill('admin'); await page.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN); await page.locator('button[type=submit]').click(); await visible(page, 'home'); await choose(page, language);
         for (const viewport of viewports) {
-          await page.setViewportSize(viewport); await page.goto(base + '/admin#errors'); await visible(page, 'clients');
-          assert.equal(await page.locator('.store-nav').count(), 0); assert.equal(await page.locator('.nav a').count(), 2);
+          await page.setViewportSize(viewport); await page.goto(base + '/admin#errors'); await visible(page, 'home');
+          assert.equal(await page.locator('.store-nav').count(), 0); assert.equal(await page.locator('.nav a').count(), 4);
           assert.equal(await page.locator('.nav [data-view=account]').textContent(), translate(language, 'Minha conta'));
           await fits(page, 'clients ' + language + ' ' + viewport.width); cases++;
           await page.locator('.nav [data-view=account]').click(); await visible(page, 'account');
           assert.equal(await page.locator('#new-panel-password').getAttribute('minlength'), '8');
           assert.equal(await page.locator('.store-nav').count(), 0); await fits(page, 'account ' + language + ' ' + viewport.width); cases++;
-          await page.locator('.nav a[href="/admin"]').click(); await visible(page, 'clients');
+          await page.locator('.nav a[href="/admin#clients"]').click(); await visible(page, 'clients');
           for (const client of clients) {
             const beforeSelection = diagnostics().length;
             await page.locator('#clients a[href="/admin?groupId=' + client.groupId + '"]').click(); await visible(page, 'locations');
@@ -90,7 +90,7 @@ async function choose(page, language) {
             assert.equal(await page.locator('.scope-path').getByText(client.name, { exact: true }).count(), 1);
             assert.equal(await page.locator('.scope-path').getByText(client.groupName, { exact: true }).count(), 1);
             assert.equal(await page.evaluate(() => window.untrusted), undefined, 'Administrative names are escaped');
-            for (const [view, label] of [['errors', 'Logs do sistema'], ['printing', 'Logs de impressão'], ['activity', 'Histórico de alterações'], ['password', 'Gerenciar senha'], ['stores', 'Configurações da loja']]) {
+            for (const [view, label] of [['errors', 'Logs do sistema'], ['printing', 'Logs de impressão'], ['activity', 'Histórico de alterações'], ['client-password', 'Gerenciar senhas do cliente'], ['stores', 'Configurações da loja']]) {
               const link = page.locator('.store-nav [data-view=' + view + ']');
               assert.equal(await link.textContent(), translate(language, label)); await link.click(); await visible(page, view);
               if (['errors', 'printing', 'activity'].includes(view)) {
@@ -107,23 +107,34 @@ async function choose(page, language) {
               assert.equal(request.clientId, null); assert.equal(request.groupId, owner.groupId);
             }
             await page.locator('.scope-path a[href="/admin?groupId=' + client.groupId + '"]').click(); await visible(page, 'locations');
-            await page.locator('.scope-path a[href="/admin"]').click(); await visible(page, 'clients');
+            await page.locator('.scope-path a[href="/admin#clients"]').click(); await visible(page, 'clients');
           }
         }
-        // Preserve the weekly-password intent across explicit customer/store selection.
+        // Administrator passwords are available globally without choosing a customer.
         await page.setViewportSize({ width: 1280, height: 720 });
-        await page.goto(base + '/admin#password');
-        assert.equal(await page.locator('#store-selection-notice').isVisible(), true);
-        await page.locator('#clients a[href="/admin?groupId=' + clients[0].groupId + '"]').click(); await visible(page, 'locations');
-        assert.equal(new URL(page.url()).hash, '#password');
-        await page.locator('#locations a[href*="storeId=seabra-1"]').click(); await visible(page, 'password');
+        await page.goto(base + '/admin#password'); await visible(page,'password');
+        assert.equal(await page.locator('.store-context:visible').count(),0);
         await page.locator('#view').click(); await page.waitForFunction(() => document.querySelector('#password-result').textContent.includes('admin'));
         await page.locator('#view-settings-password').click();
         const dimensions = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scrollHeight: document.documentElement.scrollHeight, weekly: document.querySelector('#password-result').getBoundingClientRect().bottom, settings: document.querySelector('#settings-password-result').getBoundingClientRect().bottom }));
         assert.ok(dimensions.scrollHeight <= dimensions.height + 1, 'Both password cards and results fit a 1280×720 desktop: ' + JSON.stringify(dimensions));
         await page.screenshot({ path: path.join(directory, language + '-compact-password-1280x720.png') }); cases++;
+        // Customer app credentials use the real owner form and synchronized records.
+        await page.goto(base+'/admin?groupId='+clients[0].groupId+'&storeId=seabra-1#client-password');
+        await visible(page,'client-password');await page.waitForFunction(()=>document.querySelector('#app-user-password').required);
+        const appUsername='qa-'+language;
+        await page.locator('#app-username').fill(appUsername);await page.locator('#app-user-password').fill('a');
+        await page.locator('#app-user-form button').click();
+        await page.waitForFunction(text=>document.querySelector('#app-user-result').textContent===text,translate(language,'Usuário salvo.'));
+        assert.equal(await page.locator('#app-user-picker').inputValue(),appUsername);
+        assert.equal(await page.locator('#app-username').getAttribute('readonly'),'');
+        assert.equal(await page.locator('#app-user-password').inputValue(),'');
+        assert.ok((await page.locator('#client-password a[href*="/admin/gestores"]').getAttribute('href')).includes(clients[0].groupId));
+        await page.locator('.nav [data-view=password]').click();await visible(page,'password');
+        assert.equal(await page.locator('.scope-path:visible').count(),0);assert.equal(await page.locator('.store-nav:visible').count(),0);
+        cases++;
         // Exercise the actual new-customer and store forms, not just REST fixtures.
-        await page.goto(base + '/admin');
+        await page.goto(base + '/admin#clients');
         await page.locator('#client-name').fill('QA individual ' + language); await page.locator('#client-kind').selectOption('single');
         await page.locator('#client-create button[type=submit]').click(); await visible(page, 'locations');
         const individualId = new URL(page.url()).searchParams.get('groupId'); assert.ok(individualId);
@@ -137,7 +148,7 @@ async function choose(page, language) {
         assert.equal(await page.locator('#client-kind').inputValue(), 'single');
         await page.locator('#client-kind').selectOption('group'); await page.locator('#client-form button').click();
         await page.waitForFunction(text => document.querySelector('#message').textContent === text, translate(language, 'Cliente salvo.'));
-        await page.locator('.manager-actions a').first().click(); await visible(page, 'locations');
+        await page.locator('.manager-actions a[href*="/admin?groupId="]').click(); await visible(page, 'locations');
         assert.equal(await page.locator('#locations a[href="#new-store"]').count(), 1, 'An explicitly upgraded group can add locations'); cases++;
       } finally { await context.close(); }
     }

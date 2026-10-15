@@ -57,7 +57,7 @@ async function login(request, env) {
   if (rate.attempts > 5) fail(429, 'RATE_LIMIT');
   let credential, revision = 0;
   if (username === 'admin') {
-    const rotation = await env.DB.prepare('SELECT revision FROM store_admin_rotation WHERE store_id = ?').bind(store.id).first();
+    const rotation = await env.DB.prepare('SELECT revision FROM store_admin_rotation WHERE store_id = ?').bind(DEFAULT_STORE_ID).first();
     const current = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, rotation?.revision || 0, store.id);
     const { password: ignored, ...publicCredential } = current;
     if (input.password !== current.password) fail(401, 'BAD_LOGIN');

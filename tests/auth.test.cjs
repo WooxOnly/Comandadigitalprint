@@ -27,7 +27,7 @@ async function panelLogin(adminResponse, env, password, username = env.ADMIN_PAN
   return adminResponse(new Request('https://example.com/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, 'Content-Type': 'application/x-www-form-urlencoded', ...(origin ? { Origin: origin } : {}) }, body: new URLSearchParams({ csrf, username, password }) }), env, now);
 }
 
-test('one owner login can manage weekly passwords and logs in either store', async () => {
+test('one owner login manages one global weekly password while logs remain store-scoped', async () => {
   const { adminResponse } = await import('../server/cloudflare/admin-auth.mjs');
   const database = storeDatabase();
   try {
@@ -40,11 +40,11 @@ test('one owner login can manage weekly passwords and logs in either store', asy
     const scoped = await (await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
     const first = await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json();
     assert.equal(scoped.storeId, 'seabra-2');
-    assert.notEqual(scoped.password, first.password);
+    assert.equal(scoped.password, first.password);
     assert.equal((await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-1', { headers: { Cookie: cookie } }), env, now)).status, 200);
     const rotated = await (await adminResponse(new Request('https://example.com/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', { method: 'POST', headers: { Cookie: cookie, Origin: 'https://example.com' } }), env, now)).json();
     assert.notEqual(rotated.password, scoped.password);
-    assert.equal((await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json()).password, first.password);
+    assert.equal((await (await adminResponse(new Request('https://example.com/auth/admin/password', { headers: { Authorization: 'Bearer ' + env.ADMIN_VIEW_TOKEN } }), env, now)).json()).password, rotated.password);
     database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-1', 'first', 'tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
     database.prepare('INSERT INTO store_diagnostics(store_id, id, device_id, created_at, received_at, actor, event, code) VALUES(?, ?, ?, ?, ?, ?, ?, ?)').run('seabra-2', 'second', 'second-tablet', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z', 'admin', 'sync.failed', 'UNAVAILABLE');
     const logs = await (await adminResponse(new Request('https://example.com/admin/logs?kind=errors&clientId=unassigned&groupId=unassigned&storeId=seabra-2', { headers: { Cookie: cookie } }), env, now)).json();
@@ -416,4 +416,19 @@ test('app passwords support the chosen length through creation, restart, reset a
   await restarted.changeOwnPassword('x', 'password8', 'password8'); restarted.logout(); await restarted.verify('login', 'password8', 'staff');
   await auth.verify('settings', '2066'); const long = 'Senha com acentuação · '.repeat(4); await auth.updateUser('staff', true, long, long);
   const final = f.create(); await final.load(); await final.verify('login', long, 'staff');
+});
+test('existing APK replaces a higher legacy store revision with the global credential without a password rotation', async () => {
+  const {weeklyAdmin,GLOBAL_ADMIN_REVISION_BASE}=await import('../server/cloudflare/admin-auth.mjs');
+  const global=await weeklyAdmin('test-only-secret-not-for-deployment-1234',Date.now(),0,'seabra-2');
+  const f=fixture(),auth=f.create();await auth.load();await auth.setup('admin','legacy-password','legacy-password');
+  const previous=JSON.parse(f.saved),endpoint='https://example.com/auth/admin?storeId=seabra-2';
+  const response=value=>async()=>({ok:true,json:async()=>value});
+  const legacy={...global,...previous.login,revision:27};
+  await auth.syncAdmin(endpoint,response(legacy));await auth.verify('login','legacy-password','admin');
+  assert.equal(await auth.syncAdmin(endpoint,response(global)),true);
+  assert.equal(JSON.parse(f.saved).revision,GLOBAL_ADMIN_REVISION_BASE);
+  await auth.verify('login',global.password,'admin');
+  assert.equal(await auth.syncAdmin(endpoint,response(legacy)),false,'Old per-store responses cannot roll back the new global credential');
+  const primary=await weeklyAdmin('test-only-secret-not-for-deployment-1234',Date.now(),0,'seabra-1');
+  assert.equal(global.password,primary.password);assert.equal(global.hash,primary.hash);
 });

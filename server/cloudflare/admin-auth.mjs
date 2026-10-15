@@ -8,9 +8,11 @@ import { validCashSettings } from '../../shared/cash-pricing.mjs';
 import { managerAdminResponse } from './manager-admin.mjs';
 import { requestLanguage, translate, validLanguage } from './manager-i18n.mjs';
 import { cookie, readBody } from './manager-auth.mjs';
+import { appUsersResponse } from './app-users-admin.mjs';
 import { adminGroups, adminScope, adminScopeFilter } from './admin-scope.mjs';
 
 // The secret stays on the server. Monday 00:00 UTC starts a new password week.
+export const GLOBAL_ADMIN_REVISION_BASE = 2 ** 48;
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const MONDAY = Date.UTC(1970, 0, 5);
 const IDLE_MS = 60 * 60 * 1000;
@@ -30,18 +32,21 @@ const readCookie = (request, name) => request.headers.get('Cookie')?.split(';').
 
 export async function weeklyAdmin(secret, timestamp = Date.now(), revision = 0, selectedStoreId = DEFAULT_STORE_ID) {
   if (typeof secret !== 'string' || secret.length < 32) throw new Error('Admin secret not configured');
+  if (!Number.isSafeInteger(revision) || revision < 0 || revision >= GLOBAL_ADMIN_REVISION_BASE) throw new Error('Invalid global admin revision');
   const selectedStore = storeId(selectedStoreId);
   const week = Math.floor((timestamp - MONDAY) / WEEK);
   const key = await crypto.subtle.importKey('raw', encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  // Keep the original Seabra 1 derivation so its current weekly password survives migration.
-  const derive = async (purpose) => hex(await crypto.subtle.sign('HMAC', key, encode(selectedStore === DEFAULT_STORE_ID ? `${purpose}:${week}:${revision}` : `${purpose}:${selectedStore}:${week}:${revision}`)));
+  // One system-administrator password across all stores; preserve the original derivation.
+  const derive = async (purpose) => hex(await crypto.subtle.sign('HMAC', key, encode(`${purpose}:${week}:${revision}`)));
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const password = (await derive('admin-password')).slice(0, 12).match(/../g).map((value) => alphabet[parseInt(value, 16) % alphabet.length]).join('');
   const salt = (await derive('admin-salt')).slice(0, 32);
   const saltBytes = unhex(salt);
   const passwordKey = await crypto.subtle.importKey('raw', encode(password), 'PBKDF2', false, ['deriveBits']);
   const hash = hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations: 100000 }, passwordKey, 256));
-  return { storeId: selectedStore, username: 'admin', week, revision, salt, hash, iterations: 100000, password, nextRotation: new Date(MONDAY + (week + 1) * WEEK).toISOString() };
+  // Existing APKs reject same-week revision downgrades. Use a new revision era
+  // for the global credential while retaining the original password derivation.
+  return { storeId: selectedStore, username: 'admin', week, revision: GLOBAL_ADMIN_REVISION_BASE + revision, salt, hash, iterations: 100000, password, nextRotation: new Date(MONDAY + (week + 1) * WEEK).toISOString() };
 }
 
 async function sessionKey(env) {
@@ -218,7 +223,7 @@ export async function provisionableStores(username, password, env, now = Date.no
 export async function adminResponse(request, env, now = Date.now(), context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = ['/admin/gestores', '/admin/clients', '/admin/manager-clients', '/admin/manager-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = ['/admin/gestores', '/admin/clients', '/admin/manager-clients', '/admin/manager-users', '/admin/app-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
@@ -510,24 +515,21 @@ export async function adminResponse(request, env, now = Date.now(), context) {
     } catch (error) { return reply({ error: error.status ? error.message : 'Registros temporariamente indisponíveis.' }, error.status || 503); }
   }
 
+  if (pathname === '/admin/app-users') return appUsersResponse(request, env, { browserLogin, sameOrigin, language });
   if (panelRoute) return reply({ error: 'Método não permitido.' }, 405);
   const privateRoute = pathname === '/auth/admin/password';
   if (request.method !== 'GET' && !(privateRoute && request.method === 'POST')) return reply({ error: 'Método não permitido.' }, 405);
   if (privateRoute && !browserLogin && !tokenLogin) return reply({ error: 'Acesso não autorizado.' }, 401);
   if (privateRoute && request.method === 'POST' && browserLogin && !tokenLogin && !sameOrigin) return reply({ error: 'Acesso não permitido.' }, 403);
-  if (privateRoute && browserLogin && !url.searchParams.get('storeId')) return reply({ error: 'Escolha uma loja para consultar ou alterar a senha do tablet.' }, 400);
-  if (privateRoute && browserLogin) {
-    try { await adminScope(env, url); } catch (error) { return reply({ error: error.message }, error.status || 503); }
-  }
   try {
     const selectedStoreId = storeId(url.searchParams.get('storeId') || DEFAULT_STORE_ID);
-    if (env.DB) await activeStore(env, selectedStoreId);
-    else if (selectedStoreId !== DEFAULT_STORE_ID) throw new Error('Database unavailable');
+    if (!privateRoute && env.DB) await activeStore(env, selectedStoreId);
+    else if (!privateRoute && !env.DB && selectedStoreId !== DEFAULT_STORE_ID) throw new Error('Database unavailable');
     if (request.method === 'POST') {
       if (!env.DB) throw new Error('Database unavailable');
-      await env.DB.prepare('INSERT INTO store_admin_rotation(store_id, revision) VALUES(?, 1) ON CONFLICT(store_id) DO UPDATE SET revision = revision + 1').bind(selectedStoreId).run();
+      await env.DB.prepare('INSERT INTO store_admin_rotation(store_id, revision) VALUES(?, 1) ON CONFLICT(store_id) DO UPDATE SET revision = revision + 1').bind(DEFAULT_STORE_ID).run();
     }
-    const state = env.DB ? await env.DB.prepare('SELECT revision FROM store_admin_rotation WHERE store_id = ?').bind(selectedStoreId).first() : { revision: 0 };
+    const state = env.DB ? await env.DB.prepare('SELECT revision FROM store_admin_rotation WHERE store_id = ?').bind(DEFAULT_STORE_ID).first() : { revision: 0 };
     const revision = state?.revision ?? 0;
     if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid rotation state');
     const { password, ...credential } = await weeklyAdmin(env.ADMIN_PASSWORD_SECRET, now, revision, selectedStoreId);

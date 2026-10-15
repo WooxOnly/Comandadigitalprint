@@ -86,14 +86,21 @@ test('diagnostics and activity require an explicit location and cannot cross cus
   }
   assert.equal((await f.request('/admin/logs?kind=errors&groupId='+first+'&storeId=seabra-2')).status,400);
 });
-test('browser password consultation and rotation require an explicit location and keep other rotations untouched', async t => {
+test('browser password consultation is global and rotating updates every store', async t => {
   const f = await setup(t);
-  assert.equal((await f.request('/auth/admin/password')).status, 400);
-  assert.equal((await f.request('/auth/admin/password', {})).status, 400);
-  assert.equal((await f.request('/auth/admin/password?storeId=seabra-2', {})).status, 400);
-  assert.equal((await f.request('/auth/admin/password?clientId=unassigned&groupId=unassigned&storeId=seabra-2', {})).status, 200);
-  assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-1'").get().revision, 0);
-  assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-2'").get().revision, 1);
+  const before = await (await f.request('/auth/admin/password')).json();
+  const rotated = await (await f.request('/auth/admin/password', {})).json();
+  assert.notEqual(before.password,rotated.password);
+  const second = await (await f.request('/auth/admin/password?storeId=seabra-2')).json();
+  assert.equal(second.password,rotated.password);
+  assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-1'").get().revision,1);
+  assert.equal(f.db.prepare("SELECT revision FROM store_admin_rotation WHERE store_id='seabra-2'").get(),undefined);
+  for(const storeId of ['seabra-1','seabra-2']){
+    assert.equal((await f.call('/login',{storeId,username:'admin',password:rotated.password})).status,200);
+    assert.equal((await f.call('/login',{storeId,username:'admin',password:before.password})).status,401);
+    const publicAuth=await(await f.adminResponse(new Request(origin+'/auth/admin?storeId='+storeId),f.env)).json();
+    assert.equal(publicAuth.storeId,storeId);assert.equal(publicAuth.revision,2**48+1);
+  }
 });
 test('owner web password accepts eight characters, rejects seven and still requires current password and confirmation', async t => {
   const f = await setup(t), currentPassword = f.env.ADMIN_VIEW_TOKEN;
@@ -114,4 +121,27 @@ test('manager web account creation and reset accept eight characters and preserv
   assert.equal((await f.request('/admin/manager-users', { ...user, password: '1234567' })).status, 400);
   const reset = await f.request('/admin/manager-users', { ...user, password: '87654321' }); assert.equal(reset.status, 200); assert.equal(row().hash, await digest('87654321', row().salt));
   assert.match(await (await f.request('/admin/gestores?groupId=' + clientId)).text(), /minlength='8'/);
+});
+test('owner manages independent app users with CAS, protected hashes, synchronization and revoked sessions', async t => {
+  const f=await setup(t),group=f.group('Cliente',['seabra-1']),path='/admin/app-users?groupId='+group+'&storeId=seabra-1';
+  assert.equal((await f.adminResponse(new Request(origin+path),f.env)).status,401);
+  assert.equal((await f.adminResponse(new Request(origin+path,{method:'POST',headers:{Cookie:f.cookie,Origin:'https://foreign.example','Content-Type':'application/json'},body:'{}'}),f.env)).status,403);
+  assert.equal((await f.request('/admin/app-users?groupId='+group)).status,400);
+  assert.equal((await f.request('/admin/app-users?groupId='+group+'&storeId=seabra-2')).status,400);
+  assert.equal((await f.request(path,{username:'admin',active:true,password:'a',revision:0})).status,400);
+  assert.equal((await f.request(path,{username:'cliente',active:true,password:'',revision:0})).status,400);
+  assert.equal((await f.request(path,{username:'cliente',active:true,password:'a',revision:0})).status,200);
+  const listing=await(await f.request(path)).json(),user=listing.users[0];
+  assert.deepEqual(Object.keys(user).sort(),['active','revision','username']);assert.equal(user.username,'cliente');
+  const login=await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'a'});assert.equal(login.status,200);const session=await login.json();
+  assert.equal((await f.call('/login',{storeId:'seabra-2',username:'cliente',password:'a'})).status,401);
+  assert.equal((await f.request(path,{username:'cliente',active:true,password:'b',revision:0})).status,409);
+  assert.equal((await f.request(path,{username:'cliente',active:true,password:'',revision:user.revision})).status,200);
+  assert.equal((await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'a'})).status,200);
+  assert.equal((await f.call('/changes?cursor=0&features=operations-v1',undefined,session.token)).status,401,'Changing a user revokes previous online sessions');
+  const current=(await(await f.request(path)).json()).users[0];
+  assert.equal((await f.request(path,{username:'cliente',active:false,password:'b',revision:current.revision})).status,200);
+  assert.equal((await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'b'})).status,401);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM store_events WHERE store_id='seabra-1' AND key='user:cliente'").get().n,3);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM manager_users').get().n,0,'App access never creates a metrics account');
 });
