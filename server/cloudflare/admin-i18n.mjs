@@ -67,6 +67,8 @@ export const ADMIN_TRANSLATIONS = Object.fromEntries([
   ['Código {code}', 'Code {code}', 'Código {code}'],
   ['Identificador dos tablets: {id}', 'Tablet identifier: {id}', 'Identificador de los tablets: {id}'],
   ['Nome da loja {code}', 'Location name {code}', 'Nombre del local {code}'],
+  ['Salvar', 'Save', 'Guardar'],
+  ['Desfazer', 'Undo', 'Deshacer'],
   ['Salvar empresa', 'Save business', 'Guardar empresa'],
   ['Usa módulo de encomendas', 'Uses the Preorders module', 'Utiliza el módulo de Encargos'],
   ['Usa módulo de caixa (USD)', 'Uses the Cash Management module (USD)', 'Utiliza el módulo de Caja (USD)'],

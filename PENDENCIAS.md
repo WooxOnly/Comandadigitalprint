@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Salvar e desfazer alterações da loja — 15/10/2026
+
+- “Salvar empresa” substituído por **Salvar**, com **Desfazer** ao lado, em PT-BR/EN/ES. Ambos começam desabilitados e só habilitam quando algum campo difere dos valores carregados. Reverter manualmente todas as alterações também os desabilita.
+- Desfazer restaura nome, módulos, taxa, gerentes, reimpressão e permissões, incluindo o bloqueio dos campos de Caixa, sem enviar requisições. Durante o salvamento ambos ficam bloqueados; falhas preservam o rascunho e permitem tentar novamente ou desfazer. Salvamento bem-sucedido recarrega os valores persistidos.
+- **25 testes existentes aprovados**, lint, TypeScript e `git diff --check` aprovados. Chromium privado aprovou **45 cenários** em três idiomas: estado inicial, mudança e reversão manual, desfazer todos os campos, falha de gravação com rascunho preservado, bloqueio durante requisição, regressão do Caixa e três dimensões sem rolagem horizontal. Publicação de homologação será registrada após concluir. Mudança somente do portal; não requer APK ou migração.
+
 ## Caixa: módulo e configurações no mesmo bloco — 14/10/2026
 
 - Opção **Usa módulo de caixa (USD)** movida para o bloco **Configuração do Caixa**, tanto no cadastro quanto na edição de loja. Taxa, aplicação de sales tax e seleção de gerentes ficam em fieldset nativamente desabilitado enquanto o módulo estiver desligado; o próprio seletor do módulo permanece utilizável.
