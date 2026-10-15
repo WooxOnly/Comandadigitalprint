@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Idioma somente após desbloquear os Ajustes — 15/10/2026
+
+- Seletor de idioma removido da tela **Acesso protegido** dos Ajustes. Dentro dos Ajustes, as bandeiras continuam disponíveis somente após a senha de Configurações ser verificada. Mantidos os seletores de entrada e vinculação inicial do tablet, conforme pedidos anteriores, e o idioma já salvo.
+- Sem alteração da senha por hora, verificação, bloqueio ao sair/segundo plano ou permissões. Atualizado o roteiro responsivo existente para conferir ausência das bandeiras antes do desbloqueio e preservação do rascunho durante rotação, mantendo a conferência das bandeiras dentro dos Ajustes.
+- **20 testes existentes aprovados**, lint e TypeScript aprovados. Conferência Chromium com telas reais via React Native Web aprovada em PT-BR/EN/ES e seis dimensões. Android físico permanece para teste do proprietário. Destinos isolados de homologação conferidos; nenhuma alteração do Worker ou banco é necessária. Nova build de APK será registrada após aceitação pelo EAS.
+
 ## Salvar e desfazer alterações da loja — 15/10/2026
 
 - “Salvar empresa” substituído por **Salvar**, com **Desfazer** ao lado, em PT-BR/EN/ES. Ambos começam desabilitados e só habilitam quando algum campo difere dos valores carregados. Reverter manualmente todas as alterações também os desabilita.

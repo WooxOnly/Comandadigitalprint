@@ -7,7 +7,6 @@ const { execFileSync } = require('node:child_process');
 const { fixture } = require('../helpers/business-fixture.cjs');
 const { buildTabletPreview } = require('./tablet-preview.cjs');
 const viewports = [{width:600,height:960},{width:960,height:600},{width:800,height:1280},{width:1280,height:800},{width:390,height:844},{width:844,height:390}];
-const flagNames = { pt: 'Português', en: 'English', es: 'Español' };
 async function selectPortalLanguage(page, language) {
   const picker = page.locator('#language');
   await picker.waitFor();
@@ -155,20 +154,11 @@ async function fits(page, label, controls = false) {
         if(route==='/settings-access'){
           await page.getByText(appTranslation('Acesso protegido',language),{exact:true}).waitFor();
           await page.getByLabel(appTranslation('Senha de Configurações',language),{exact:true}).fill('draft-settings-password');
-          const otherLanguage={pt:'en',en:'es',es:'pt'}[language];
-          await page.getByRole('radio',{name:flagNames[otherLanguage],exact:true}).click();
-          await page.getByText(appTranslation('Acesso protegido',otherLanguage),{exact:true}).waitFor();
-          assert.equal(await page.getByRole('radio',{name:flagNames[otherLanguage],exact:true}).getAttribute('aria-checked'),'true');
-          assert.equal(await page.evaluate(()=>localStorage.getItem('qa-language')),otherLanguage);
-          assert.equal(await page.getByLabel(appTranslation('Senha de Configurações',otherLanguage),{exact:true}).inputValue(),'draft-settings-password');
-          assert.equal(await page.getByText(appTranslation('Desbloquear',otherLanguage),{exact:true}).count(),1);
-          assert.equal(await page.getByText(appTranslation('Salvar configurações',otherLanguage),{exact:true}).count(),0,'Changing language must not unlock settings');
-          await page.getByRole('radio',{name:flagNames[language],exact:true}).click();
-          await page.getByText(appTranslation('Acesso protegido',language),{exact:true}).waitFor();
-          await page.getByLabel(appTranslation('Senha de Configurações',language),{exact:true}).fill('');
+          assert.equal(await page.getByRole('radio').count(),0,'Settings language selection requires unlocking first');
+          assert.equal(await page.getByText(appTranslation('Salvar configurações',language),{exact:true}).count(),0,'Settings remain locked');
         }
         if(route==='/link')await page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true}).click();
-        if(['/link','/login','/settings-access','/printer'].includes(route)){
+        if(['/link','/login','/printer'].includes(route)){
           const flags=page.getByRole('radio').filter({has:page.locator('img')});
           assert.equal(await flags.count(),3);
           assert.equal(await page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true}).getAttribute('aria-checked'),'true');
@@ -177,6 +167,10 @@ async function fits(page, label, controls = false) {
         }
         if(route==='/menu')await page.getByText('Produto sintético com descrição longa e acentuação · '+'Detalhes e opções '.repeat(8),{exact:true}).first().click();
         for(const viewport of viewports){await page.setViewportSize(viewport);await page.waitForTimeout(40);await fits(page,`APK components ${language} ${route} ${viewport.width}x${viewport.height}`,true);cases++;if(route==='/link'&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${language}-${viewport.width}x${viewport.height}.png`)});if(['/login','/settings-access','/printer'].includes(route)&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${route.slice(1)}-${language}-${viewport.width}x${viewport.height}.png`)});}
+        if(route==='/settings-access'){
+          assert.equal(await page.getByRole('radio').count(),0);
+          assert.equal(await page.getByLabel(appTranslation('Senha de Configurações',language),{exact:true}).inputValue(),'draft-settings-password','Rotation preserves the protected access draft');
+        }
       }
       await page.evaluate(()=>location.hash='/order');await page.waitForTimeout(100);
       const customer=page.locator('input[aria-label="'+appTranslation('Nome do cliente, opcional',language)+'"]');await customer.fill('Rotação · São José · Español');
