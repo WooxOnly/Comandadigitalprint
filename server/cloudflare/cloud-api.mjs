@@ -1,4 +1,4 @@
-import { storeAccess, requireAccess } from './operations.mjs';
+import { storeAccess, requireAccess, preparationSettings } from './operations.mjs';
 import { PREPARATION_TIMES, PREPARATION_ACTORS } from '../../shared/preparation-times.mjs';
 import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
 import { activeStore, DEFAULT_STORE_ID, storeModules } from './stores.mjs';
@@ -96,6 +96,17 @@ export async function cloudResponse(request, env) {
       return response;
     }
     const actor = await session(request, env);
+    if (url.pathname === '/cloud/preparation-settings' && request.method === 'GET') return reply(await preparationSettings(env, actor.storeId));
+    if (url.pathname === '/cloud/preparation-reprint' && request.method === 'POST') {
+      if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
+      if (!(await preparationSettings(env, actor.storeId)).allowReprint) fail(403, 'PREPARATION_REPRINT_DISABLED');
+      await requireAccess(env, actor, 'reprint');
+      const input = await body(request);
+      if (typeof input?.orderId !== 'string' || !input.orderId || input.orderId.length > 160) fail(400, 'INVALID_DATA');
+      const order = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, 'order:' + input.orderId).first();
+      if (!order) fail(404, 'ORDER_NOT_FOUND');
+      return reply({ allowed: true });
+    }
     if (url.pathname === '/cloud/access' && request.method === 'GET') return reply(await storeAccess(env, actor.storeId));
     if (url.pathname === '/cloud/customers/history') return await customerHistoryResponse(request, env, actor);
     if (url.pathname === '/cloud/cash/report') return await cashReportResponse(request, env, actor);

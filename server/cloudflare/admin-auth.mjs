@@ -1,4 +1,4 @@
-import { storeAccess, validAccessUsers } from './operations.mjs';
+import { preparationSettings, storeAccess, validAccessUsers } from './operations.mjs';
 import { validAccess } from '../../shared/operations-validation.mjs';
 import { loginPage, panelPage, recoveryPage } from './admin-panel.mjs';
 import { recoveryReady, requestRecovery, recoveryTokenValid, resetPassword } from './password-recovery.mjs';
@@ -331,7 +331,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
     let scope;
     try { scope = await adminScope(env, url); } catch (error) { return reply({ error: error.message }, error.status || 503); }
     for (const store of stores.filter(store => store.id === scope.storeId)) {
-      store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id);
+      store.preparationSettings = await preparationSettings(env, store.id); store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id);
       store.cashSettings = await cashSettings(env, store.id);
       const { results } = await env.DB.prepare("SELECT SUBSTR(key, 6) AS username FROM store_records WHERE store_id = ? AND key LIKE 'user:%' AND json_extract(data, '$.active') = 1 ORDER BY key").bind(store.id).all();
       store.cashUsers = results.map(row => row.username);
@@ -386,7 +386,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       try {
         const scope = await adminScope(env, url), filter = adminScopeFilter(scope, 'stores.id');
         const { results } = await env.DB.prepare(`SELECT stores.id, stores.name, stores.active, store_codes.code FROM stores JOIN store_codes ON store_codes.store_id = stores.id WHERE ${filter.sql} ORDER BY store_codes.code`).bind(...filter.values).all();
-        for (const store of results) { store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id); store.cashSettings = await cashSettings(env, store.id); }
+        for (const store of results) { store.preparationSettings = await preparationSettings(env, store.id); store.modules = await storeModules(env, store.id); store.access = await storeAccess(env, store.id); store.cashSettings = await cashSettings(env, store.id); }
         return reply(results, 200, { 'Set-Cookie': await issueSession(env, now, browserLogin) });
       } catch (error) { return reply({ error: error.status ? error.message : 'Não foi possível consultar as lojas.' }, error.status || 503); }
     }
@@ -399,6 +399,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       try { body = JSON.parse(raw); } catch { return reply({ error: 'Formulário inválido.' }, 400); }
       const name = typeof body?.name === 'string' ? body.name.trim() : '';
       if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) return reply({ error: 'Informe um nome de loja com até 80 caracteres.' }, 400);
+      if (body.preparationSettings !== undefined && (!body.preparationSettings || typeof body.preparationSettings !== 'object' || Array.isArray(body.preparationSettings) || Object.keys(body.preparationSettings).length !== 1 || typeof body.preparationSettings.allowReprint !== 'boolean')) return reply({ error: 'Configuração de preparo inválida.' }, 400);
       if (body.modules !== undefined && !validModules(body.modules)) return reply({ error: 'Módulos inválidos.' }, 400);
       if (body.access !== undefined && !validAccess(body.access)) return reply({ error: 'Permissões inválidas.' }, 400);
       if (body.cashSettings !== undefined && !validCashSettings(body.cashSettings)) return reply({ error: 'Configuração de caixa inválida.' }, 400);
@@ -421,6 +422,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       if (request.method === 'POST' && body.cashSettings?.managers.length) return reply({ error: 'Cadastre os usuários da empresa antes de escolher gerentes.' }, 400);
       if (request.method === 'POST' && body.access && Object.values(body.access).some(names => names?.length)) return reply({ error: 'Cadastre usuários antes de conceder permissões.' }, 400);
       const saveModules = async id => {
+        if (body.preparationSettings !== undefined) await env.DB.prepare('INSERT INTO store_preparation_settings(store_id, allow_reprint) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET allow_reprint = excluded.allow_reprint').bind(id, Number(body.preparationSettings.allowReprint)).run();
         if (body.modules !== undefined) await env.DB.prepare('INSERT INTO store_modules(store_id, preorders, cash) VALUES(?, ?, ?) ON CONFLICT(store_id) DO UPDATE SET preorders = excluded.preorders, cash = excluded.cash').bind(id, Number(body.modules.preorders), Number(body.modules.cash)).run();
         if (body.modules?.preparation !== undefined) await env.DB.prepare('INSERT INTO store_preparation_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').bind(id, Number(body.modules.preparation)).run();
         if (body.access !== undefined) await env.DB.prepare('INSERT INTO store_access_settings(store_id, data) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(body.access)).run();

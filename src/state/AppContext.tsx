@@ -63,6 +63,7 @@ function useAppState() {
   const [printedDestinations, setPrintedDestinations] = useState<string[]>([]);
   const printCompleted = useRef(new Set<string>());
   const previewNew = useRef(false);
+  const previewSource = useRef<'history' | 'preparation'>('history');
   const [printing, setPrinting] = useState(false);
   const [printDispatcher] = useState(createPrintDispatcher);
   const { width: windowWidth, fontScale } = useWindowDimensions();
@@ -279,9 +280,11 @@ function useAppState() {
     setTimeout(() => setFeedback(null), 4000);
   }
 
-  async function printSavedOrder(order: SavedOrder, isNew = false) {
+  async function printSavedOrder(order: SavedOrder, isNew = false, source: 'history' | 'preparation' = 'history') {
     if (!isNew && !allowed('reprint')) { Alert.alert(t('Acesso restrito'), t('Usuário sem permissão para esta ação.')); return; }
     if (printDispatcher.busy) { showFeedback('Impressão em andamento', 'Aguarde a impressão em andamento.', 'error'); return; }
+    if (source === 'preparation') { try { await cloud.authorizePreparationReprint(order.id); } catch (error) { Alert.alert(t('Acesso restrito'), t(error instanceof Error ? error.message : 'Reimpressão no preparo não habilitada para esta loja.')); return; } }
+    previewSource.current = source;
     printCompleted.current = new Set(); setPrintedDestinations([]); previewNew.current = isNew;
     if (isNew && printerSettings.automatic === true) await executePrint(order, true, true);
     else setPreviewOrder(order);
@@ -298,7 +301,7 @@ function useAppState() {
     try {
       const plan = await printDispatcher.run(order, printerSettings, printCompleted.current, {
         automatic,
-        onPlan: async jobs => { if (!isNew) checkAccess('reprint'); await cloud.activity(isNew ? 'print' : 'reprint', order.id, jobs.map(job => job.label).join(', ')); },
+        onPlan: async jobs => { if (!isNew) checkAccess('reprint'); if (previewSource.current === 'preparation') await cloud.authorizePreparationReprint(order.id); await cloud.activity(isNew ? 'print' : 'reprint', order.id, (previewSource.current === 'preparation' ? 'Painel de preparo · ' : '') + jobs.map(job => job.label).join(', ')); },
         send: job => printOrder(job.order, job.settings, language), onSent: () => setPrintedDestinations([...printCompleted.current]),
       });
       if (!plan) return;

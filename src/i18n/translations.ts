@@ -1,6 +1,23 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Fila de preparo": ["Kitchen queue","Cola de cocina"],
+  "Ordem de emissão": ["Ordered by time placed","Orden por hora del pedido"],
+  "Filtros e avisos": ["Filters and alerts","Filtros y avisos"],
+  "Itens e observações nos detalhes": ["Items and notes in details","Artículos y notas en los detalles"],
+  "Detalhes": ["Details","Detalles"],
+  "Pedidos anteriores": ["Previous orders","Pedidos anteriores"],
+  "Próximos pedidos": ["Next orders","Siguientes pedidos"],
+  "Filtrar por dia: ligado": ["Day filter: on","Filtro por día: activado"],
+  "Filtrar por dia: desligado": ["Day filter: off","Filtro por día: desactivado"],
+  "Iniciar": ["Start","Iniciar"],
+  "Finalizar": ["Complete","Finalizar"],
+  "Entre na nuvem para reimprimir pelo painel de preparo.": ["Sign in online to reprint from the kitchen display.","Inicia sesión en línea para reimprimir desde la pantalla de cocina."],
+  "Reimpressão no preparo não habilitada para esta loja.": ["Kitchen reprinting is not enabled for this location.","La reimpresión en cocina no está habilitada para este local."],
+  "Não foi possível autorizar a reimpressão. Confira a conexão e as permissões.": ["Unable to authorize reprinting. Check your connection and permissions.","No se pudo autorizar la reimpresión. Comprueba la conexión y los permisos."],
+  "Configuração de preparo inválida.": ["Invalid kitchen settings.","Configuración de cocina no válida."],
+  "Permitir reimpressão no painel de preparo": ["Allow reprinting from the kitchen display","Permitir la reimpresión desde la pantalla de cocina"],
+  "Também respeita as permissões de reimpressão de cada usuário. A impressora deve estar configurada no tablet da cozinha.": ["User reprint permissions also apply. Configure the printer on the kitchen tablet.","También se aplican los permisos de reimpresión de cada usuario. Configura la impresora en la tableta de cocina."],
   'Pendências': ['Pending items', 'Pendientes'],
   'Fechar': ['Close', 'Cerrar'],
   'Revise os itens esgotados antes de enviar.': ['Review sold-out items before sending.', 'Revisa los productos agotados antes de enviar.'],

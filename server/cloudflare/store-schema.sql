@@ -22,6 +22,11 @@ CREATE TABLE IF NOT EXISTS store_customer_modules (
 CREATE TABLE IF NOT EXISTS store_preparation_modules (
   store_id TEXT PRIMARY KEY REFERENCES stores(id), enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1))
 );
+-- Kitchen reprinting is opt-in per location, separate from user permissions.
+CREATE TABLE IF NOT EXISTS store_preparation_settings (
+  store_id TEXT PRIMARY KEY REFERENCES stores(id),
+  allow_reprint INTEGER NOT NULL DEFAULT 0 CHECK (allow_reprint IN (0, 1))
+);
 -- Manager accounts belong to clients/groups and are provisioned only by the
 -- owner's administrative panel. Revisions immediately revoke existing sessions.
 CREATE TABLE IF NOT EXISTS manager_clients (

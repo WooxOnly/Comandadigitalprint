@@ -1,12 +1,12 @@
 import { inspectBackupSnapshot } from './backupRecovery';
 import { DEFAULT_ACCESS, validAccess, allowedAccess } from '../../shared/operations-validation.mjs';
 import type { AccessAction, AccessSettings } from './access';
-import { DEFAULT_STORE_MODULES, validStoreModules, type StoreModules, type CashOverview, type CashReport } from './business';
+import { DEFAULT_STORE_MODULES, validStoreModules, type StoreModules, type CashOverview, type CashReport, type PreparationSettings, DEFAULT_PREPARATION_SETTINGS } from './business';
 import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; operationsVersion?: 1; access?: AccessSettings; storeId: string; storeName?: string; modules?: StoreModules; cashOverview?: CashOverview; cashAttempt?: Record<string, unknown>; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { version: 1; operationsVersion?: 1; preparationSettings?: PreparationSettings; access?: AccessSettings; storeId: string; storeName?: string; modules?: StoreModules; cashOverview?: CashOverview; cashAttempt?: Record<string, unknown>; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
 type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
@@ -137,6 +137,13 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80 || (store.modules !== undefined && !validStoreModules(store.modules))) throw new CloudError('INVALID_DATA');
         await serial(() => persist({ ...state, storeName: store.name, modules: { ...DEFAULT_STORE_MODULES, ...store.modules } }));
         try { const access = await request('/access', undefined, token); if (!validAccess(access)) throw new CloudError('INVALID_DATA'); await serial(() => persist({ ...state, access })); } catch (error) { if (!(error instanceof CloudError) || error.status !== 404) throw error; }
+        let kitchen = DEFAULT_PREPARATION_SETTINGS;
+        if (state.modules?.preparation) {
+          const value = await request('/preparation-settings', undefined, token);
+          if (!value || typeof value.allowReprint !== 'boolean') throw new CloudError('INVALID_DATA');
+          kitchen = { allowReprint: value.allowReprint };
+        }
+        await serial(() => persist({ ...state, preparationSettings: kitchen }));
         // Upload individual immutable orders: retries cannot duplicate an order.
         for (const sent of Object.values(state.pending)) {
           if (session?.token !== token) return;
@@ -199,6 +206,18 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     access() { return state?.access ?? DEFAULT_ACCESS as AccessSettings; },
     allowed(action: AccessAction, username = actor()) { return allowedAccess(state?.access ?? DEFAULT_ACCESS, action, username); },
     async activity(kind: 'print' | 'reprint' | 'restore', target: string, details = '') { const id = uuid(); await write({ ['activity:' + id]: { id, kind, target, details, createdAt: new Date().toISOString() } }); },
+    preparationSettings() { return state?.preparationSettings ?? DEFAULT_PREPARATION_SETTINGS; },
+    async authorizePreparationReprint(orderId: string) {
+      if (!session) throw new Error('Entre na nuvem para reimprimir pelo painel de preparo.');
+      try { const response = await request('/preparation-reprint', { orderId }); if (response.allowed !== true) throw new CloudError('INVALID_DATA'); }
+      catch (error) {
+        if (error instanceof CloudError && error.status === 401) throw new Error('Entre na nuvem para reimprimir pelo painel de preparo.');
+        if (error instanceof CloudError && error.code === 'ORDER_NOT_FOUND') throw new Error('Pedido não encontrado.');
+        if (error instanceof CloudError && ['PREPARATION_REPRINT_DISABLED', 'MODULE_DISABLED'].includes(error.code)) throw new Error('Reimpressão no preparo não habilitada para esta loja.');
+        if (error instanceof CloudError && error.code === 'ACCESS_DENIED') throw new Error('Usuário sem permissão para esta ação.');
+        throw new Error('Não foi possível autorizar a reimpressão. Confira a conexão e as permissões.');
+      }
+    },
     modules() { return state?.modules ?? DEFAULT_STORE_MODULES; },
     cashOverview() { return state?.cashOverview ?? null; },
     pendingCashCommand() { return state?.cashAttempt ?? null; },

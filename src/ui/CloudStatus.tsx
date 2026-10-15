@@ -6,7 +6,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../state/AuthContext';
 import { styles } from './theme';
 
-export function CloudStatus() {
+export function CloudStatus({ compact = false }: { compact?: boolean }) {
   const { t, locale } = useLanguage();
   const { logout } = useAuth();
   const [state, setState] = useState(cloud.status());
@@ -33,7 +33,7 @@ export function CloudStatus() {
     void cloud.sync();
   }
   return <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
-    <Pressable accessibilityRole="button" onPress={action}><Text style={styles.helperText}>{t(label)}{state.pending ? ` · ${state.pending}` : ''}</Text></Pressable>
-    {state.lastSync && <Text style={styles.mutedText}>{t('Última sincronização')}: {new Date(state.lastSync).toLocaleString(locale)}</Text>}
+    <Pressable accessibilityRole="button" onPress={action}><Text numberOfLines={compact ? 1 : undefined} style={styles.helperText}>{t(label)}{state.pending ? ` · ${state.pending}` : ''}</Text></Pressable>
+    {!compact && state.lastSync && <Text style={styles.mutedText}>{t('Última sincronização')}: {new Date(state.lastSync).toLocaleString(locale)}</Text>}
   </View>;
 }

@@ -20,3 +20,8 @@ export async function requireAvailable(env, storeId, items) {
     if (row && !JSON.parse(row.data).available) fail(409, 'PRODUCT_UNAVAILABLE');
   }
 }
+
+export async function preparationSettings(env, storeId) {
+  const row = await env.DB.prepare('SELECT allow_reprint FROM store_preparation_settings WHERE store_id = ?').bind(storeId).first();
+  return { allowReprint: row?.allow_reprint === 1 };
+}

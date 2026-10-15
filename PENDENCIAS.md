@@ -1,5 +1,15 @@
 # Pendências e preferências
 
+## Painel de preparo em grade e reimpressão por loja — 14/10/2026
+
+- Proprietário pediu referência de KDS com pelo menos seis pedidos visíveis no tablet de 11 polegadas, por data/hora de emissão, detalhes e reimpressão configurável no portal. Implementado **3 × 2 horizontal / 2 × 3 vertical**, paginação de seis, desempate estável por ID e comparação de instantes com fusos. Pendentes de dias anteriores permanecem na fila; dia, concluídos, atraso e avisos sonoros têm filtros em janela separada. Cabeçalho e navegação compactados apenas nesta tela.
+- Detalhes exibem todos os itens, sabores, adicionais, observações, datas e marcos/atores de preparo, sem mudar o pedido. Reimpressão manual reutiliza a prévia, fila, roteamento e proteção de repetição existentes; não altera status nem cria pedido novo.
+- Nova política em **Configurações da loja → Painel de preparo → Permitir reimpressão no painel de preparo**, desligada por padrão. Também exige módulo Preparo e permissão do usuário. Configuração sincronizada/cacheada no tablet; autorização online antes da prévia e novamente antes de enviar, incluindo revogação durante a prévia. Nenhuma impressão automática é disparada ao abrir detalhes ou alterar status.
+- Migração incremental em `server/cloudflare/preparation-settings-schema.sql` adiciona somente a política sem reaplicar importações legadas. Esquema geral inclui a tabela para instalações novas. Não ativar módulos ou reimpressão de lojas automaticamente.
+- PT-BR/EN/ES completos. Quatro testes específicos aprovados: cronologia/fusos/status/período; opção por loja; autorização por módulo/usuário/loja e revogação; sincronização/cache e falha offline. **258 testes globais aprovados**, incluindo impressão e socket TCP; lint, TypeScript e empacotamento do Worker aprovados.
+- Chromium com componentes reais do APK aprovou 27 cenários específicos em cinco dimensões × três idiomas: seis cartões visíveis, paginação cronológica, detalhes completos, ocultação por política e chamada manual da prévia com origem Preparo. Conferência geral do APK aprovou **318 verificações** em seis dimensões/três idiomas, incluindo rotação, formulários e recibos. Teste Android/11 polegadas, som e saída de papel físicos continuam com o proprietário; não apresentar emulação como teste em aparelho real.
+- Esta entrega exige novo APK de homologação. Publicação e link da build serão registrados após solicitar ao Expo; o APK anterior não recebe a grade ao atualizar o portal. Produção permanece fora do escopo da publicação.
+
 ## Clientes, navegação compacta e dados para homologação — 14/10/2026
 
 - Fluxo esclarecido pelo proprietário: **Clientes → cadastro de loja única ou grupo de lojas → loja escolhida**. O grupo Seabra Food não tem cliente/empresa acima. Não criar camada administrativa obrigatória acima dos grupos existentes; preservar IDs, vínculos e contas gestoras.

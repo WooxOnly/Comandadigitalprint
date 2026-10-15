@@ -17,6 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const storeName = useStoreName();
   const path = usePathname();
   const currentTab = TABS.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/'))) || TABS[0];
+  const kitchen = path === '/preparation';
   const moduleTitle = path === '/backups' ? 'Recuperação de dados' : path === '/preparation' ? 'Painel de preparo' : path === '/customers' ? 'Cadastro de Clientes' : path === '/preorders' ? 'Encomendas' : path === '/cash' ? 'Caixa' : path === '/cash-reports' ? 'Relatórios do Caixa' : null;
   const screen = moduleTitle ? null : currentTab.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
@@ -26,25 +27,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!isReady && <Text style={styles.helperText}>{t("Carregando dados salvos…")}</Text>}
         <StatusBar style="dark" />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide]}>
-            <Pressable onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, pressed && styles.pressed]}>
+          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
+            <Pressable onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
               <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
-              <Text style={styles.title}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
+              <Text style={[styles.title, kitchen && { fontSize: 18 }]}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
-            {isWide && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
+            {isWide && !kitchen && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
           </View>
 
-          <CloudStatus />
+          <CloudStatus compact={kitchen} />
           <View style={styles.flex}>{children}</View>
 
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}
 
-          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground}><View style={[styles.bottomNav, isWide && styles.bottomNavWide]}>
-            {TABS.map((tab) => <Pressable key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, pressed && styles.pressed]}>
-              <Text style={[styles.bottomNavIcon, isWide && styles.bottomNavIconWide, screen === tab.screen && styles.activeBottomNavText]}>{tab.icon}</Text>
+          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground}><View style={[styles.bottomNav, isWide && styles.bottomNavWide, kitchen && { paddingVertical: 3, maxWidth: 760 }]}>
+            {TABS.map((tab) => <Pressable key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
+              <Text style={[styles.bottomNavIcon, isWide && styles.bottomNavIconWide, screen === tab.screen && styles.activeBottomNavText, kitchen && { fontSize: 16 }]}>{tab.icon}</Text>
               <Text style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
             </Pressable>)}
           </View></View>
