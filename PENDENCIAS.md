@@ -5,7 +5,7 @@
 - Opção **Usa módulo de caixa (USD)** movida para o bloco **Configuração do Caixa**, tanto no cadastro quanto na edição de loja. Taxa, aplicação de sales tax e seleção de gerentes ficam em fieldset nativamente desabilitado enquanto o módulo estiver desligado; o próprio seletor do módulo permanece utilizável.
 - Ativação libera os campos imediatamente; alternar sem salvar preserva os valores do formulário. Ao salvar com o módulo desligado, o payload omite `cashSettings`, preservando no servidor a taxa e os gerentes anteriormente salvos. Campos desabilitados deixam de bloquear a validação dos demais módulos.
 - Mensagem de orientação em PT-BR, EN e ES. **25 testes existentes aprovados**, lint e TypeScript aprovados. Conferência Chromium privada aprovou **21 cenários** em três idiomas: agrupamento, bloqueio, alternância com valores preservados, edição ativa, payload inativo omitido, cadastro novo e três dimensões sem rolagem horizontal. Mudança exclusiva do portal: sem alteração do APK ou migração de dados.
-- Publicação de homologação e conferência online serão registradas após concluir.
+- Publicado somente em homologação: commit `03538788c22b657b7cc118bf0e6492b0eb09da09`, Worker `b9c43fd7-a02c-4411-a4a6-9fecdf4d8710`, mantendo variáveis remotas. GitHub Actions aprovado: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/38664268006 . Conferência online autenticada confirmou agrupamento e campos bloqueados com Caixa desligado; configurações e módulos permaneceram inalterados. `/health` respondeu HTTP 200/`ok:true`. Produção preservada; sem nova build de APK. Evidência privada sem credenciais em `/tmp/bistro-live-cash-group-result.json`.
 
 ## Painel de preparo em grade e reimpressão por loja — 14/10/2026
 
