@@ -3,7 +3,7 @@ export const ROLE_LABELS = Object.freeze({ admin: 'Admin', manager: 'Gerente', c
 export function validRole(role) { return APP_ROLES.includes(role); }
 // Existing accounts retain their credentials; missing profiles start restricted.
 export function appRole(username, role) { return !username ? null : username === 'admin' ? 'admin' : role === undefined ? 'cashier' : validRole(role) ? role : null; }
-const screens = { admin: ['home','order','menu','history','printer','backups','preparation','preorders','customers','cash','cash-reports'], manager: ['home','order','menu','history','preparation','preorders','customers','cash','cash-reports'], cashier: ['home','order','history','preorders','cash'], cook: ['preparation'] };
+const screens = { admin: ['home','order','menu','history','printer','backups','preparation','preorders','customers','cash','cash-reports'], manager: ['home','order','menu','history','preparation','preorders','customers','cash','cash-reports'], cashier: ['home','order','history','preorders','customers','cash'], cook: ['preparation'] };
 const moduleFor = { preparation: 'preparation', preorders: 'preorders', customers: 'customers', cash: 'cash', 'cash-reports': 'cash' };
 export function roleScreen(role, screen, modules) {
   return validRole(role) && !!screens[role]?.includes(screen) && (!modules || !moduleFor[screen] || !!modules[moduleFor[screen]]);
@@ -24,7 +24,7 @@ export function roleWrite(role, key, value) {
   if (key === 'menu' || key.startsWith('product-option:')) return role === 'manager';
   if (key.startsWith('order:') || key.startsWith('preorder:')) return ['manager','cashier'].includes(role);
   if (key.startsWith('preparation:')) return ['manager','cook'].includes(role);
-  if (key.startsWith('customer:')) return role === 'manager';
+  if (key.startsWith('customer:')) return ['manager','cashier'].includes(role);
   if (key.startsWith('activity:')) return value?.kind === 'restore' ? false : ['manager','cashier','cook'].includes(role);
   return false;
 }

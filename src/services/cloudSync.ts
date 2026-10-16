@@ -1,6 +1,6 @@
 import { appRole, roleAction, roleWrite, roleScreen } from '../../shared/app-roles.mjs';
 import { inspectBackupSnapshot } from './backupRecovery';
-import { DEFAULT_ACCESS, validAccess, allowedAccess } from '../../shared/operations-validation.mjs';
+import { DEFAULT_ACCESS, validAccess } from '../../shared/operations-validation.mjs';
 import type { AccessAction, AccessSettings } from './access';
 import { DEFAULT_STORE_MODULES, validStoreModules, type StoreModules, type CashOverview, type CashReport, type PreparationSettings, DEFAULT_PREPARATION_SETTINGS } from './business';
 import { validCloudValue } from '../../shared/cloud-validation.mjs';
@@ -21,7 +21,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   let offlineActor = '';
   const actor = () => session?.username || offlineActor || state?.reader || '';
   const roleOf = (username = actor()) => {const user=state?.values['user:' + username]?.value as { role?: string; active?: boolean } | undefined;return user?.active===false ? null : appRole(username,user?.role)};
-  const can = (action: AccessAction, username = actor()) => roleAction(roleOf(username), action) && (['admin','manager'].includes(roleOf(username) || '') || allowedAccess(state?.access ?? DEFAULT_ACCESS, action, username));
+  const can = (action: AccessAction, username = actor()) => roleAction(roleOf(username), action);
   let rejectedSession = false;
   let loading: Promise<void> | undefined;
   let lock: Promise<unknown> = Promise.resolve();
@@ -98,7 +98,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         if (key.startsWith('preparation:') && !state.modules?.preparation) throw new CloudError('MODULE_DISABLED');
         if (key.startsWith('customer:') && !state.modules?.customers) throw new CloudError('MODULE_DISABLED');
         if (key.startsWith('preorder:') && !state.modules?.preorders) throw new CloudError('MODULE_DISABLED');
-        if (key === 'menu' && state.modules?.cash && !(session && (['admin','manager'].includes(roleOf() || '') || state.cashOverview?.settings?.managers.includes(session.username)))) {
+        if (key === 'menu' && state.modules?.cash && !['admin','manager'].includes(roleOf() || '')) {
           const menu = (state.values.menu?.value ?? []) as { id: string; price: number }[];
           if ((value as { id: string; price: number }[]).some(product => !menu.some(previous => previous.id === product.id && previous.price === product.price))) throw new CloudError('MANAGER_REQUIRED');
         }
@@ -202,7 +202,12 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
         status = Object.values(state.pending).some((p) => p.conflict) ? 'CONFLICT' : Object.keys(state.pending).length ? 'PENDING' : 'SYNCED';
-      } catch (error) { if (error instanceof CloudError && error.status === 401) rejectedSession = true; status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE'; }
+      } catch (error) {
+        // An older request may finish after logout or a different login.
+        if (session?.token !== token) return;
+        if (error instanceof CloudError && error.status === 401) rejectedSession = true;
+        status = error instanceof CloudError && error.status === 401 ? 'LOGIN_REQUIRED' : 'UNAVAILABLE';
+      }
       finally { emit(); }
     })().catch(() => { status = 'STORAGE_ERROR'; emit(); }).finally(() => { running = undefined; });
     return running;
@@ -247,7 +252,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       });
     },
     async recoverFromCloud() {
-      await load(); if (!roleScreen(roleOf(),'customers')) throw new CloudError('ACCESS_DENIED'); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
       if (!can('restore')) throw new CloudError('ACCESS_DENIED');
       if (running) await running;
       await serial(() => persist({ ...state, cursor: 0 }));
@@ -326,6 +331,15 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       await load();
       await serial(async () => {
         const item = state.pending[key]; if (!item?.conflict) return;
+        // Resolving can discard a draft or replace its base revision. Apply the
+        // current operator's permissions before either choice changes the queue.
+        const ownPassword = key === 'user:' + actor() &&
+          (item.value as { active?: boolean }).active === (item.conflict.value as { active?: boolean }).active &&
+          appRole(actor(), (item.value as { role?: string }).role) === appRole(actor(), (item.conflict.value as { role?: string }).role);
+        if (!ownPassword && !roleWrite(roleOf(),key,item.value)) throw new CloudError('ACCESS_DENIED');
+        if ((key === 'menu' || key.startsWith('product-option:')) && !can('menu')) throw new CloudError('ACCESS_DENIED');
+        if ((['printer','order-settings','logo'].includes(key) || key.startsWith('printer:')) && !can('settings')) throw new CloudError('ACCESS_DENIED');
+        if (key.startsWith('activity:') && ['reprint','restore'].includes((item.value as { kind: string }).kind) && !can((item.value as { kind: AccessAction }).kind)) throw new CloudError('ACCESS_DENIED');
         const pending = { ...state.pending }, values = { ...state.values };
         if (keepLocal) {
           if (key.startsWith('order:')) {

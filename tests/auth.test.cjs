@@ -344,7 +344,8 @@ test('admin panel reveals the same settings code using the browser local time', 
   const { panelPage } = await import('../server/cloudflare/admin-panel.mjs');
   const html = panelPage('test-nonce', [{ id: 'seabra-1', name: 'Synthetic store', code: 1 }], 'seabra-1', 'pt', [], 'unassigned', [], 'unassigned');
   assert.ok(html.includes('Consultar senha de Ajustes'));
-  const script = html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
+  const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]).find(value => value.includes('#view-settings-password'));
+  assert.ok(script, 'The administrative password script is present');
   const elements = new Map();
   const element = (selector) => {
     if (!elements.has(selector)) elements.set(selector, { textContent: '', handlers: {}, addEventListener(event, callback) { this.handlers[event] = callback; } });

@@ -1,8 +1,7 @@
 import { buildPrintPlan } from '../services/printerRouting';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, ScrollView, Text, useWindowDimensions, View, SafeAreaView } from './ThemedNative';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { buildOrderHtml, type PrintableOrder } from '../../printerService';
 import { useLanguage } from '../i18n/LanguageContext';

@@ -22,10 +22,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#214B40",
+          "backgroundColor": "#F5F3EF",
           "image": "./assets/chef-foreground.png",
-          "imageWidth": 180,
-          "resizeMode": "contain"
+          "imageWidth": 96,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#101B15",
+            "image": "./assets/chef-foreground.png"
+          }
         }
       ],
       "expo-secure-store",

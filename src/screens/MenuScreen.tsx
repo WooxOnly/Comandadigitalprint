@@ -2,12 +2,11 @@ import { useAppRole } from '../ui/useAppRole';
 import { useAccess } from '../ui/useAccess';
 import { searchCatalog } from '../services/catalogOptions';
 import { useBusiness } from '../state/BusinessContext';
-import { useAuth } from '../state/AuthContext';
 import { ProductPriceInput } from '../ui/ProductPriceInput';
 import { formatMoney } from '../services/business';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
@@ -15,10 +14,10 @@ import { styles, COLORS } from '../ui/theme';
 
 export default function MenuScreen() {
   const { t, locale } = useLanguage();
-  const { modules, overview } = useBusiness(), { currentUser } = useAuth();
+  const { modules } = useBusiness();
   const role = useAppRole();
   const canEdit = useAccess('menu');
-  const canChangePrice = canEdit && ( !modules.cash || ['admin','manager'].includes(role || '') || currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser));
+  const canChangePrice = canEdit && ['admin','manager'].includes(role || '');
   const { width, fontScale } = useWindowDimensions();
   const { productOptions, updateProductOption, menu, updateMenuProduct, removeMenuProduct, addMenuProduct, saveMenu } = useApp();
   const [search, setSearch] = useState('');

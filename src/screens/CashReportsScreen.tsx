@@ -1,6 +1,6 @@
 import { useAppRole } from '../ui/useAppRole';
 import { useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View } from '../ui/ThemedNative';
 import { useBusiness } from '../state/BusinessContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ScreenFrame } from '../ui/ScreenFrame';

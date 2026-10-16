@@ -1,8 +1,10 @@
+import { AppearanceSelector } from '../ui/AppearanceSelector';
 import { useAppRole } from '../ui/useAppRole';
+import { useState } from 'react';
 import { useStoreModules } from '../ui/useStoreModules';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../state/AuthContext';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { router } from 'expo-router';
 import { useApp } from '../state/AppContext';
@@ -12,12 +14,16 @@ import { styles, navigationTabs, ROUTES, COLORS } from '../ui/theme';
 
 export default function HomeScreen() {
   const { logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { width, fontScale } = useWindowDimensions();
+  const [gridWidth, setGridWidth] = useState(0);
   const { history, isWide } = useApp();
   const modules = useStoreModules();
   const role = useAppRole();
+  const columns = width < 360 || fontScale >= 1.4 ? 1 : isWide ? 4 : 2;
+  const tileWidth = gridWidth ? Math.floor((gridWidth - 12 * (columns - 1)) / columns * 100) / 100 : undefined;
   return <ScreenFrame><View>
+                  <AppearanceSelector language={language} />
                   <View style={[styles.hero, isWide && styles.heroWide]}>
                     <Text style={styles.heroEyebrow}>{t("BOM ATENDIMENTO COMEÇA AQUI")}</Text>
                     <Text style={[styles.heroTitle, isWide && styles.heroTitleWide]}>{t("Tudo pronto para o próximo pedido.")}</Text>
@@ -27,9 +33,9 @@ export default function HomeScreen() {
                     </Pressable>
                   </View>
                   <Text style={[styles.sectionTitle, isWide && styles.sectionTitleWide]}>{t("Acesso rápido")}</Text>
-                  <View style={styles.mainMenu}>
+                  <View style={styles.mainMenu} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>
                     {navigationTabs(modules, role).filter((tab) => tab.screen !== 'home').map((tab) => (
-                      <Pressable testID={'home-module-' + tab.screen} key={tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, (width < 360 || fontScale >= 1.4) && styles.mainMenuButtonCompact, pressed && styles.pressed]}>
+                      <Pressable testID={'home-module-' + tab.screen} key={tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} accessibilityRole="button" style={({ pressed }) => [styles.mainMenuButton, isWide && styles.mainMenuButtonWide, columns === 1 && styles.mainMenuButtonCompact, tileWidth !== undefined && { flexBasis: tileWidth, flexGrow: 0 }, pressed && styles.pressed]}>
                         <View style={[styles.menuIconBadge, isWide && styles.menuIconBadgeWide]}><NavigationIcon icon={tab.icon} size={isWide ? 22 : 25} color={COLORS.primary} /></View>
                         <Text style={styles.mainMenuTitle}>{tab.screen === 'printer' ? t("Configurações") : t(['preparation', 'customers'].includes(tab.screen) ? tab.title : tab.label)}</Text>
                         <Text style={styles.mainMenuHint}>{tab.screen === 'history' ? history.length + (history.length === 1 ? t(" pedido salvo") : t(" pedidos salvos")) : t(tab.hint)}</Text>

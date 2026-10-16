@@ -1,4 +1,4 @@
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, View } from './ThemedNative';
 import { randomUUID } from 'expo-crypto';
 import { printPrinterTest } from '../../printerService';
 import { useApp } from '../state/AppContext';

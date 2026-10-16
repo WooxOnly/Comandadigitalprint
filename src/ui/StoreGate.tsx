@@ -1,19 +1,22 @@
+import { AppearanceSelector } from './AppearanceSelector';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View, SafeAreaView } from './ThemedNative';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ADMIN_CREDENTIAL_ENDPOINT } from '../config/auth';
 import { bindStoreId, loadStoreId, validStoreId } from '../config/store';
 import { appStorage } from '../services/cloudStorage';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { LanguageSelector } from './LanguageSelector';
 import { styles, COLORS } from './theme';
+import { licenseTabletId, offlineLicenseForLink, tabletLicenseService } from '../services/licenseRuntime';
+import { translate } from '../i18n/translations';
 
 type Language = 'pt' | 'en' | 'es';
 type StoreOption = { id: string; name: string; code: number };
 const copy = {
-  pt: { title: 'Vincular este tablet à loja', hint: 'Entre com a conta do painel administrativo para escolher a loja. Isso é necessário apenas no primeiro acesso.', username: 'Usuário ou e-mail do painel', password: 'Senha do painel', enter: 'Ver lojas', choose: 'Escolha a loja deste tablet', bind: 'Vincular tablet', retry: 'Tentar novamente', required: 'Informe o usuário e a senha do painel.', select: 'Escolha uma loja antes de vincular.', invalid: 'Usuário ou senha incorretos.', blocked: (seconds: number) => `Muitas tentativas. Tente novamente em ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'}.`, retryReady: 'Você já pode tentar novamente.', empty: 'Nenhuma loja ativa foi encontrada.', network: 'Conecte à internet para vincular este tablet pela primeira vez.', storage: 'Não foi possível ler ou salvar o vínculo da loja neste aparelho.' },
-  en: { title: 'Link this tablet to a store', hint: 'Sign in with the admin portal account to choose a store. This is only needed the first time.', username: 'Portal username or email', password: 'Portal password', enter: 'View stores', choose: 'Choose this tablet’s store', bind: 'Link tablet', retry: 'Try again', required: 'Enter the portal username and password.', select: 'Choose a store before linking.', invalid: 'Incorrect username or password.', blocked: (seconds: number) => `Too many attempts. Try again in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`, retryReady: 'You can try again now.', empty: 'No active stores were found.', network: 'Connect to the internet to link this tablet for the first time.', storage: 'Could not read or save this tablet’s store binding.' },
-  es: { title: 'Vincular esta tableta a una tienda', hint: 'Ingrese con la cuenta del portal administrativo para elegir una tienda. Solo se necesita la primera vez.', username: 'Usuario o correo del portal', password: 'Contraseña del portal', enter: 'Ver tiendas', choose: 'Elija la tienda de esta tableta', bind: 'Vincular tableta', retry: 'Intentar de nuevo', required: 'Ingrese el usuario y la contraseña del portal.', select: 'Elija una tienda antes de vincular.', invalid: 'Usuario o contraseña incorrectos.', blocked: (seconds: number) => `Demasiados intentos. Inténtalo de nuevo en ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'}.`, retryReady: 'Ya puedes volver a intentarlo.', empty: 'No se encontraron tiendas activas.', network: 'Conéctese a internet para vincular esta tableta por primera vez.', storage: 'No se pudo leer o guardar la vinculación de esta tableta.' },
+  pt: { title: 'Vincular este tablet à loja', hint: 'Entre com a conta do painel administrativo para escolher a loja. No primeiro acesso, também é possível usar um código temporário offline.', username: 'Usuário ou e-mail do painel', password: 'Senha do painel', enter: 'Ver lojas', choose: 'Escolha a loja deste tablet', bind: 'Vincular tablet', retry: 'Tentar novamente', required: 'Informe o usuário e a senha do painel.', select: 'Escolha uma loja antes de vincular.', invalid: 'Usuário ou senha incorretos.', blocked: (seconds: number) => `Muitas tentativas. Tente novamente em ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'}.`, retryReady: 'Você já pode tentar novamente.', empty: 'Nenhuma loja ativa foi encontrada.', network: 'Conecte à internet para vincular este tablet pela primeira vez.', storage: 'Não foi possível ler ou salvar o vínculo da loja neste aparelho.' },
+  en: { title: 'Link this tablet to a store', hint: 'Sign in with the admin portal account to choose a store. On first use, you can also use a temporary offline code.', username: 'Portal username or email', password: 'Portal password', enter: 'View stores', choose: 'Choose this tablet’s store', bind: 'Link tablet', retry: 'Try again', required: 'Enter the portal username and password.', select: 'Choose a store before linking.', invalid: 'Incorrect username or password.', blocked: (seconds: number) => `Too many attempts. Try again in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`, retryReady: 'You can try again now.', empty: 'No active stores were found.', network: 'Connect to the internet to link this tablet for the first time.', storage: 'Could not read or save this tablet’s store binding.' },
+  es: { title: 'Vincular esta tableta a una tienda', hint: 'Ingrese con la cuenta del portal administrativo para elegir una tienda. En el primer acceso también puedes usar un código temporal sin conexión.', username: 'Usuario o correo del portal', password: 'Contraseña del portal', enter: 'Ver tiendas', choose: 'Elija la tienda de esta tableta', bind: 'Vincular tableta', retry: 'Intentar de nuevo', required: 'Ingrese el usuario y la contraseña del portal.', select: 'Elija una tienda antes de vincular.', invalid: 'Usuario o contraseña incorrectos.', blocked: (seconds: number) => `Demasiados intentos. Inténtalo de nuevo en ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'}.`, retryReady: 'Ya puedes volver a intentarlo.', empty: 'No se encontraron tiendas activas.', network: 'Conéctese a internet para vincular esta tableta por primera vez.', storage: 'No se pudo leer o guardar la vinculación de esta tableta.' },
 };
 const PROVISION_ENDPOINT = ADMIN_CREDENTIAL_ENDPOINT.replace('/auth/admin', '/cloud/provision');
 
@@ -26,6 +29,10 @@ export function StoreGate({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [offlineCode, setOfflineCode] = useState('');
+  const [deviceId, setDeviceId] = useState('');
+  const [offlineMode, setOfflineMode] = useState(false);
+  const t = (source: string) => translate(source, language);
   const [blockedUntil, setBlockedUntil] = useState(0);
   const [clockTime, setClockTime] = useState(Date.now);
   const requestInFlight = useRef(false);
@@ -48,6 +55,7 @@ export function StoreGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    void licenseTabletId().then(id => { if (mounted) setDeviceId(id); }).catch(() => {});
     void loadStoreId().then((id) => { if (mounted) setMode(id ? 'ready' : 'select'); }, () => { if (mounted) setMode('error'); });
     return () => { mounted = false; };
   }, []);
@@ -106,11 +114,25 @@ export function StoreGate({ children }: { children: ReactNode }) {
     finally { setBusy(false); requestInFlight.current = false; }
   }
 
+  async function bindOffline() {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true; setBusy(true); setMessage('');
+    try {
+      const claim = await offlineLicenseForLink(offlineCode);
+      await bindStoreId(claim.storeId);
+      await tabletLicenseService().applyCode(offlineCode);
+      await appStorage.setItem('@comandadigitalprint/language', language);
+      setOfflineCode(''); setMode('ready');
+    } catch { setMessage(t('Código inválido, vencido ou destinado a outro tablet.')); }
+    finally { setBusy(false); requestInFlight.current = false; }
+  }
+
   if (mode === 'ready') return children;
-  return <SafeAreaProvider><SafeAreaView style={styles.container}>
+  return <SafeAreaProvider><SafeAreaView testID="app-surface" style={styles.container}>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <View style={[styles.panel, { width: '100%', maxWidth: 460 }]}>
+          <AppearanceSelector language={language} />
           {mode === 'select' && <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />}
           <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', borderRadius: 16, marginBottom: 12 }} />
           <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 18 }]}>BistroHub</Text>
@@ -120,7 +142,11 @@ export function StoreGate({ children }: { children: ReactNode }) {
           </> : <>
             <Text style={styles.panelTitle}>{words.title}</Text>
             <Text style={styles.settingsIntro}>{words.hint}</Text>
-            {stores ? <>
+            {offlineMode ? <>
+              <Text style={styles.fieldLabel}>{t('Identificador do tablet')}</Text><Text selectable style={styles.settingsIntro}>{deviceId}</Text>
+              <Text style={styles.settingsIntro}>{t('Conecte à internet ou solicite ao administrador um código temporário para este tablet.')}</Text>
+              <Text style={styles.fieldLabel}>{t('Código temporário')}</Text><TextInput accessibilityLabel={t('Código temporário')} value={offlineCode} onChangeText={setOfflineCode} multiline maxLength={4096} autoCapitalize="none" autoCorrect={false} editable={!busy} style={[styles.input, { minHeight: 88 }]} />
+            </> : stores ? <>
               <Text style={styles.fieldLabel}>{words.choose}</Text>
               {stores.map((store) => <Pressable key={store.id} onPress={() => { setSelectedId(store.id); setMessage(''); }} accessibilityRole="radio" accessibilityState={{ checked: selectedId === store.id }} style={[styles.noteChip, { marginBottom: 8, alignSelf: 'stretch' }, selectedId === store.id && styles.selectedCategory]}><Text style={[styles.noteChipText, selectedId === store.id && styles.selectedCategoryText]}>{String(store.code).padStart(3, '0')} · {store.name}</Text></Pressable>)}
             </> : <>
@@ -130,7 +156,8 @@ export function StoreGate({ children }: { children: ReactNode }) {
               <TextInput value={password} onChangeText={setPassword} editable={!busy} autoCapitalize="none" autoCorrect={false} secureTextEntry maxLength={256} accessibilityLabel={words.password} style={styles.input} onSubmitEditing={() => void authorize()} />
             </>}
             {(remainingSeconds > 0 || !!message) && <Text accessibilityLiveRegion={remainingSeconds > 0 ? 'none' : 'polite'} style={styles.errorText}>{remainingSeconds > 0 ? words.blocked(remainingSeconds) : message}</Text>}
-            <Pressable disabled={submitDisabled} aria-disabled={submitDisabled} onPress={() => void (stores ? bind() : authorize())} style={[styles.sendButton, submitDisabled && styles.pressed]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>{stores ? words.bind : words.enter}</Text>}</Pressable>
+            <Pressable disabled={busy || (offlineMode ? !deviceId || !offlineCode.trim() : submitDisabled)} aria-disabled={busy || (offlineMode ? !deviceId || !offlineCode.trim() : submitDisabled)} onPress={() => void (offlineMode ? bindOffline() : stores ? bind() : authorize())} style={[styles.sendButton, (busy || (offlineMode ? !deviceId || !offlineCode.trim() : submitDisabled)) && styles.pressed]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>{offlineMode ? t('Aplicar código temporário') : stores ? words.bind : words.enter}</Text>}</Pressable>
+            {!stores && <Pressable disabled={busy} onPress={() => { setOfflineMode(value => !value); setMessage(''); }} style={[styles.noteChip, { marginTop: 12 }]}><Text style={styles.noteChipText}>{t(offlineMode ? 'Voltar à entrada' : 'Liberação temporária offline')}</Text></Pressable>}
           </>}
         </View>
       </ScrollView>

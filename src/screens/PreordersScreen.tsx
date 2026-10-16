@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { agendaWindow, localDayText, preorderTiming, shiftAgenda } from '../services/preorderAgenda';

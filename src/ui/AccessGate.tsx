@@ -1,7 +1,8 @@
+import { AppearanceSelector } from './AppearanceSelector';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View, SafeAreaView } from './ThemedNative';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { styles } from './theme';
@@ -13,7 +14,7 @@ export function PasswordField({ label, value, onChangeText }: { label: string; v
   return <><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={128} style={styles.input} /></>;
 }
 function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlock?: () => void }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const auth = useAuth();
   const storeName = useStoreName();
   const [username, setUsername] = useState('admin');
@@ -42,6 +43,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
       <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
+        {!settings && <AppearanceSelector language={language} />}
         {!settings && <LanguageSettings compact />}
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
@@ -73,7 +75,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
 }
 export function LoginGate({ children }: { children: ReactNode }) {
   const { signedIn } = useAuth();
-  return signedIn ? children : <SafeAreaProvider><SafeAreaView style={styles.container}><AccessForm /></SafeAreaView></SafeAreaProvider>;
+  return signedIn ? children : <SafeAreaProvider><SafeAreaView testID="app-surface" style={styles.container}><AccessForm /></SafeAreaView></SafeAreaProvider>;
 }
 export function SettingsGate({ children }: { children: ReactNode }) {
   const { service } = useAuth();

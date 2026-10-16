@@ -1,7 +1,7 @@
 import { useStoreModules } from '../ui/useStoreModules';
 import { formatMoney } from '../services/business';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from '../ui/ThemedNative';
 import { describeExtra } from '../../orderItems';
 import { itemName, translatedNote } from '../i18n/translations';
 import { useLanguage } from '../i18n/LanguageContext';

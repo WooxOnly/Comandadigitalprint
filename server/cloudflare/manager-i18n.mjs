@@ -7,6 +7,9 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  'Aparência': ['Appearance', 'Apariencia'],
+  'Claro': ['Light', 'Claro'],
+  'Escuro': ['Dark', 'Oscuro'],
   'Ative o módulo de caixa para editar estas configurações.': ['Enable Cash Management to edit these settings.', 'Activa el módulo de Caja para editar esta configuración.'],
   "Fila de preparo": ["Kitchen queue","Cola de cocina"],
   "Ordem de emissão": ["Ordered by time placed","Orden por hora del pedido"],

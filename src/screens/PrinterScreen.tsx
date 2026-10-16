@@ -6,7 +6,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { LanguageSettings } from '../ui/LanguageSettings';
 import { UserSettings } from '../ui/UserSettings';
 import { TabletSettings } from '../ui/TabletSettings';
-import { Keyboard, Switch, Text, View } from 'react-native';
+import { Keyboard, Switch, Text, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from '../ui/KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';

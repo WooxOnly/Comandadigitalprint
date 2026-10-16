@@ -1,7 +1,7 @@
 import { useAppRole } from '../ui/useAppRole';
 import { useAccess } from '../ui/useAccess';
 import { useRef, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, View } from '../ui/ThemedNative';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useAuth } from '../state/AuthContext';
@@ -46,7 +46,7 @@ export default function CashScreen() {
   const operation = useRef<{ signature: string; id: string } | null>(null);
   const session = overview?.sessions.find(record => !record.closedAt);
   const money = (cents: number) => formatMoney(cents, locale);
-  const canManage = ['admin','manager'].includes(role || '') || currentUser === 'admin' || !!overview?.settings?.managers.includes(currentUser);
+  const canManage = ['admin','manager'].includes(role || '');
   const taxRateBps = overview?.settings?.tax.enabled ? overview.settings.tax.rateBps : 0;
   const extras = () => ({ tipCents: parseMoney(tip), deliveryFeeCents: parseMoney(deliveryFee) });
   function paymentsInput(totalCents: number) {

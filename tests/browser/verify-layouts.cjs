@@ -6,7 +6,7 @@ const https = require('node:https'), fs = require('node:fs'), os = require('node
 const { execFileSync } = require('node:child_process');
 const { fixture } = require('../helpers/business-fixture.cjs');
 const { buildTabletPreview } = require('./tablet-preview.cjs');
-const viewports = [{width:600,height:960},{width:960,height:600},{width:800,height:1280},{width:1280,height:800},{width:390,height:844},{width:844,height:390}];
+const viewports = [{width:320,height:568},{width:600,height:960},{width:960,height:600},{width:800,height:1280},{width:1280,height:800},{width:390,height:844},{width:844,height:390}];
 async function selectPortalLanguage(page, language) {
   const picker = page.locator('#language');
   await picker.waitFor();
@@ -18,6 +18,29 @@ async function selectPortalLanguage(page, language) {
     await Promise.all([page.waitForEvent('framenavigated', frame => frame === page.mainFrame()), choice.click()]);
   }
   assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'), language);
+}
+async function verifyLatestManagerQuery(page) {
+  await page.waitForFunction(()=>!document.querySelector('#consult').disabled);
+  let firstReady, secondReady, releaseFirst, releaseSecond;
+  const firstStarted=new Promise(resolve=>firstReady=resolve),secondStarted=new Promise(resolve=>secondReady=resolve);
+  const firstGate=new Promise(resolve=>releaseFirst=resolve),secondGate=new Promise(resolve=>releaseSecond=resolve);
+  let requests=0;
+  const pattern='**/gestor/api/production?*';
+  await page.route(pattern,async route=>{
+    const index=++requests,response=await route.fetch(),data=await response.json();
+    if(index===1){data.summary.count=987654;firstReady();await firstGate;}
+    if(index===2){secondReady();await secondGate;}
+    await route.fulfill({response,json:data});
+  });
+  try {
+    await page.locator('#from').fill('2026-10-01');await page.locator('#to').fill('2026-10-02');await page.locator('#consult').click();await firstStarted;
+    await page.locator('#from').fill('2026-10-03');await page.locator('#to').fill('2026-10-04');
+    await page.locator('#filters').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    releaseFirst();await secondStarted;
+    assert.equal((await page.locator('#metrics').innerText()).replace(/\D/g,'').includes('987654'),false,'An outdated report must not appear while the latest query is pending');
+    releaseSecond();await page.waitForFunction(()=>!document.querySelector('#consult').disabled);
+    assert.equal(requests,2);assert.equal(await page.locator('#from').inputValue(),'2026-10-03');
+  } finally {releaseFirst();releaseSecond();await page.unroute(pattern);}
 }
 async function verifyLoginCooldowns(browser, base, errors, directory) {
   const { loginPage } = await import('../../server/cloudflare/admin-panel.mjs');
@@ -135,6 +158,7 @@ async function fits(page, label, controls = false) {
     const another=await browser.newContext({ignoreHTTPSErrors:true,locale:'pt-BR'}),second=await another.newPage();second.on('pageerror',error=>errors.push(error.message));
     await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#home');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
     await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
+    await verifyLatestManagerQuery(page);cases++;
     for(const language of ['pt','en','es']){
       await selectPortalLanguage(page,language);await page.waitForFunction(()=>document.querySelector('#consult')&&!document.querySelector('#consult').disabled);
       for(const area of ['production','sales']){await page.locator('#area-'+area).click();await page.waitForFunction(()=>!document.querySelector('#consult').disabled);for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`manager ${language} ${area} ${viewport.width}x${viewport.height}`,true);cases++;}}

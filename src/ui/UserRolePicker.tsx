@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Text, View } from './ThemedNative';
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '../../shared/app-roles.mjs';
 import { useLanguage } from '../i18n/LanguageContext';
 import { KeyboardPressable as Pressable } from './KeyboardControls';

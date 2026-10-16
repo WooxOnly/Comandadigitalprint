@@ -81,6 +81,6 @@ test('all administrative pages translate visible labels, escape original names a
       }
     }
     assert.ok(pages[1].includes('&lt;script&gt;Pedidos&lt;/script&gt;')); assert.ok(!pages[1].includes('<script>Pedidos</script>'));
-    assert.ok(pages[1].includes('<span data-original-text>hora</span>'));
+    assert.ok(!pages[1].includes('<span data-original-text>hora</span>'), 'Legacy permission checklists no longer render user names in store settings');
   }
 });

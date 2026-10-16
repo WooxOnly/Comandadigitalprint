@@ -1,3 +1,4 @@
+import { tabletLicense, requireStoreLicense } from './licenses.mjs';
 import { appRole, roleScreen, roleWrite, roleRead } from '../../shared/app-roles.mjs';
 import { storeAccess, requireAccess, preparationSettings } from './operations.mjs';
 import { PREPARATION_TIMES, PREPARATION_ACTORS } from '../../shared/preparation-times.mjs';
@@ -84,6 +85,10 @@ export async function cloudResponse(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith('/cloud/')) return null;
   try {
+    if (url.pathname === '/cloud/license' && request.method === 'GET') {
+      const store = await activeStore(env, url.searchParams.get('storeId'));
+      return reply(await tabletLicense(request, env, store.id, url.searchParams.get('deviceId')));
+    }
     if (url.pathname === '/cloud/store' && request.method === 'GET') {
       const store = await activeStore(env, url.searchParams.get('storeId'));
       const modules = await storeModules(env, store.id);
@@ -100,6 +105,7 @@ export async function cloudResponse(request, env) {
       return response;
     }
     const actor = await session(request, env);
+    await requireStoreLicense(env, actor.storeId);
     const requiredScreen = { '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
     if (requiredScreen && !roleScreen(actor.role, requiredScreen)) fail(403, 'ACCESS_DENIED');
     if (url.pathname === '/cloud/preparation-settings' && request.method === 'GET') return reply(await preparationSettings(env, actor.storeId));

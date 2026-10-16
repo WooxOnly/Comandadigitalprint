@@ -1,5 +1,5 @@
 import { searchCatalog } from '../services/catalogOptions';
-import { Text, View } from 'react-native';
+import { Text, View } from './ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { useLanguage } from '../i18n/LanguageContext';

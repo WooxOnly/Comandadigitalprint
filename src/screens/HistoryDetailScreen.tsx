@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Text, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { describeExtra } from '../../orderItems';
 import { useLanguage } from '../i18n/LanguageContext';

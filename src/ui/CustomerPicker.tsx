@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View } from './ThemedNative';
 import { useBusiness } from '../state/BusinessContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';

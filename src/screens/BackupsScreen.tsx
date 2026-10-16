@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, View } from '../ui/ThemedNative';
 import { cloud, ensureLocalBackup, listVerifiedBackups, recoverLocalBackup } from '../services/cloudStorage';
 import { useAccess } from '../ui/useAccess';
 import { ScreenFrame } from '../ui/ScreenFrame';

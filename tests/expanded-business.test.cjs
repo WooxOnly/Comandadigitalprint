@@ -87,7 +87,11 @@ test('optional customer links capture names, include all tablets in history and 
   for (let index = 0; index < 2; index++) { const session = open(); await f.cash(session); assert.equal((await f.cash(sale(session, { customerId: record.id }))).status, 200); }
   const history = await (await f.call('/customers/history?customerId=' + record.id, undefined, f.a.token)).json(); assert.equal(history.sales.length, 2); assert.equal(history.preorders.length, 1); assert.ok(history.sales.every(sale => sale.totalCents === 2333));
   const employee = await staff(f);
-  assert.equal((await f.call('/customers/history?customerId=' + record.id, undefined, employee.token)).status,403,'Cashier profile cannot access the customer registry');
+  const employeeResponse = await f.call('/customers/history?customerId=' + record.id, undefined, employee.token);
+  assert.equal(employeeResponse.status, 200);
+  const employeeHistory = await employeeResponse.json();
+  assert.equal(employeeHistory.sales.length, 2);
+  assert.ok(employeeHistory.sales.every(sale => sale.totalCents === undefined), 'Cashier customer access does not grant financial reports');
   f.modules(f.a.storeId, true, true, false);
   assert.equal((await write(f, { ...order, status: 'ready' }, 'preorder:', revision)).status, 200);
   const session = open(); await f.cash(session); assert.equal((await f.cash(sale(session, { customerId: record.id }))).value.error, 'MODULE_DISABLED');

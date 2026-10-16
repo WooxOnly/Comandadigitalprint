@@ -23,7 +23,7 @@ const sizes=[{width:600,height:960},{width:960,height:600},{width:800,height:128
     await page.waitForFunction(flag=>{const el=document.querySelector('[data-testid="nav-'+flag+'"]'),bar=document.querySelector('[data-testid="bottom-navigation"]');const r=el.getBoundingClientRect(),b=bar.getBoundingClientRect();return r.left>=b.left-1&&r.right<=b.right+1;},flag);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);const rect=await page.getByTestId('nav-'+flag).boundingBox();assert.ok(rect.height>=44);cases++;
    }
-   // Navigation never removes the six-card KDS layout or detaches the active tab.
+   // Navigation never removes the eight-card KDS layout or detaches the active tab.
    await page.getByTestId('nav-preparation').click();await page.screenshot({path:path.join(directory,language+'-'+size.width+'x'+size.height+'.png')});
   }
   for(const [route,tab] of [['/cash-reports','cash'],['/history/detail','history'],['/backups','printer']]){await page.evaluate(route=>location.hash=route,route);await page.waitForFunction(tab=>document.querySelector('[data-testid="nav-'+tab+'"]')?.getAttribute('aria-selected')==='true',tab);cases++;}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Text } from './ThemedNative';
 import { KeyboardTextInput as TextInput } from './KeyboardControls';
 import { styles } from './theme';
 import { parseMoney } from '../services/business';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, View } from './ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { appStorage, cloud } from '../services/cloudStorage';
 import { useLanguage } from '../i18n/LanguageContext';

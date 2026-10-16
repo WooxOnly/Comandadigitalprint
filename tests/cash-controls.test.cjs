@@ -47,15 +47,15 @@ test('owner portal configures tax and managers per company and rejects inactive 
   const response = await f.adminResponse(new Request('https://example.com/admin/stores', { headers: { Cookie: cookie } }), f.env), stores = await response.json();
   assert.deepEqual(stores.find(s => s.id === 'seabra-2').cashSettings, { tax: { enabled: false, rateBps: 0 }, managers: [] });
   const html = await (await f.adminResponse(new Request('https://example.com/admin?groupId=unassigned&storeId=seabra-1', { headers: { Cookie: cookie } }), f.env)).text();
-  assert.match(html, /name="taxRate"/); assert.match(html, /name="cashManager" value="manager" checked/);
+  assert.match(html, /name="taxRate"/); assert.doesNotMatch(html, /name="cashManager"/); assert.doesNotMatch(html, /<legend>Permissões por usuário<\/legend>/);
   for (const match of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) new Script(match[1]);
   f.db.exec(fs.readFileSync('server/cloudflare/store-schema.sql', 'utf8'));
   assert.equal(JSON.parse(f.db.prepare("SELECT data FROM store_cash_settings WHERE store_id = 'seabra-1'").get().data).tax.rateBps, 725);
 });
 
-test('only admins and portal-appointed active managers can discount, reverse or read reports', async t => {
+test('only Admin and Manager profiles can discount, reverse or read reports', async t => {
   const f = await fixture(t); f.modules('seabra-1', false, true);
-  const manager = await staff(f, 'manager'), clerk = await staff(f, 'cashier'); setSettings(f, undefined, ['manager']);
+  const manager = await staff(f, 'manager'), clerk = await staff(f, 'cashier'); setSettings(f, undefined, ['manager', 'cashier']);
   const session = opening(); await f.cash(session, clerk);
   const discounted = { ...sale(session), discount: { kind: 'amount', value: 100, reason: 'Promoção' } };
   assert.equal((await f.cash(discounted, clerk)).value.error, 'MANAGER_REQUIRED');

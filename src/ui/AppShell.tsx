@@ -1,3 +1,4 @@
+import { useAppearance } from './AppearanceContext';
 import { roleScreen, pathScreen } from '../../shared/app-roles.mjs';
 import { useAppRole } from './useAppRole';
 import { useAuth } from '../state/AuthContext';
@@ -5,8 +6,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
+import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewRef, Text, useWindowDimensions, View, SafeAreaView } from './ThemedNative';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { TOPPINGS } from '../../menuData';
 import { describeExtra } from '../../orderItems';
 import { useApp } from '../state/AppContext';
@@ -19,6 +20,7 @@ import { useStoreModules } from './useStoreModules';
 import { useStoreName } from './useStoreName';
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, language } = useLanguage();
+  const { theme } = useAppearance();
   const storeName = useStoreName();
   const path = usePathname();
   const modules = useStoreModules();
@@ -35,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const screen = activeTab?.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
   const { width, fontScale } = useWindowDimensions();
-  const navScroll = useRef<ScrollView>(null);
+  const navScroll = useRef<ScrollViewRef>(null);
   const minTabWidth = tabs.length > TABS.length ? (fontScale >= 1.4 ? 124 : 100) : 0;
   const navWidth = Math.max(Math.min(width, tabs.length > TABS.length ? 1160 : kitchen ? 760 : isWide ? 640 : 760), minTabWidth * tabs.length + (minTabWidth ? 16 + 4 * (tabs.length - 1) : 0));
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.screen === screen));
@@ -43,9 +45,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { navScroll.current?.scrollTo({ x: selectedOffset, animated: false }); }, [selectedOffset]);
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView testID="app-surface" style={styles.container}>
         {!isReady && <Text style={styles.helperText}>{t("Carregando dados salvos…")}</Text>}
-        <StatusBar style="dark" />
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
             <Pressable disabled={role !== 'admin'} accessible={role === 'admin'} onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>

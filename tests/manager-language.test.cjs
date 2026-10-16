@@ -148,7 +148,7 @@ test('all manager screens translate static text and keep scripts valid, CSP inta
     const pages = [managerLoginPage('test-nonce', 'csrf', '', language), managerPortalPage('test-nonce', session, language)];
     for (const content of pages) {
       assert.ok(content.includes("<html lang='" + LANGUAGES[language] + "'>"));
-      for (const script of content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) { assert.equal(script[1], " nonce='test-nonce'"); new Script(script[2]); }
+      for (const script of content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) { assert.match(script[1], /^ nonce=['"]test-nonce['"]$/); new Script(script[2]); }
       if (language !== 'pt') for (const text of textNodes(content)) if (Object.hasOwn(TRANSLATIONS, text)) assert.ok(TRANSLATIONS[text].includes(text), `Untranslated ${language}: ${text}`);
     }
     assert.ok(pages[1].includes('&lt;script&gt;Vendas&lt;/script&gt; · Pedidos'));

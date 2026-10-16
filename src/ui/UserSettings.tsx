@@ -3,7 +3,7 @@ import { UserRolePicker } from './UserRolePicker';
 import { useEffect, useState } from 'react';
 import { logError } from '../services/diagnostics';
 import { cloud } from '../services/cloudStorage';
-import { Alert, Keyboard, Switch, Text, View } from 'react-native';
+import { Alert, Keyboard, Switch, Text, View } from './ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';

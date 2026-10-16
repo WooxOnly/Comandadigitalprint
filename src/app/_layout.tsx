@@ -1,3 +1,6 @@
+import { LicenseGate } from '../ui/LicenseGate';
+import { AppearanceProvider, useAppearance } from '../ui/AppearanceContext';
+import { darkColor } from '../../shared/appearance.mjs';
 import { LanguageProvider, useLanguage } from '../i18n/LanguageContext';
 import { AuthProvider } from '../state/AuthContext';
 import { LoginGate } from '../ui/AccessGate';
@@ -12,17 +15,18 @@ import { StoreGate } from '../ui/StoreGate';
 import { BusinessProvider } from '../state/BusinessContext';
 
 export default function RootLayout() {
-  return <StoreGate><ReadyApp /></StoreGate>;
+  return <AppearanceProvider><StoreGate><ReadyApp /></StoreGate></AppearanceProvider>;
 }
 function ReadyApp() {
   useEffect(startDiagnostics, []);
   useEffect(() => startLocalBackupScheduler((error) => logError('backup.failed', error)), []);
-  return <LanguageProvider><AuthProvider><AppProvider><BusinessProvider><LoginGate><Navigation /></LoginGate></BusinessProvider></AppProvider></AuthProvider></LanguageProvider>;
+  return <LanguageProvider><AuthProvider><AppProvider><BusinessProvider><LicenseGate><LoginGate><Navigation /></LoginGate></LicenseGate></BusinessProvider></AppProvider></AuthProvider></LanguageProvider>;
 }
 function Navigation() {
+  const { theme } = useAppearance();
   const { t } = useLanguage();
   return <AppShell>
-    <Tabs initialRouteName="index" backBehavior="initialRoute" tabBar={() => null} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: COLORS.background } }}>
+    <Tabs initialRouteName="index" backBehavior="initialRoute" tabBar={() => null} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: theme === 'dark' ? darkColor(COLORS.background, 'backgroundColor') : COLORS.background } }}>
       <Tabs.Screen name="index" options={{ title: t('Início') }} />
       <Tabs.Screen name="order" options={{ title: t('Pedido') }} />
       <Tabs.Screen name="menu" options={{ title: t('Cardápio') }} />

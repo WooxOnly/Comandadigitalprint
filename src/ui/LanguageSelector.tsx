@@ -1,4 +1,4 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from './ThemedNative';
 import { type Language } from '../i18n/translations';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { COLORS, styles } from './theme';

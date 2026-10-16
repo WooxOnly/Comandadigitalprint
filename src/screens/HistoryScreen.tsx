@@ -1,15 +1,17 @@
 import { useLanguage } from '../i18n/LanguageContext';
 import { router } from 'expo-router';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { useApp } from '../state/AppContext';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles } from '../ui/theme';
 import { orderNumberLabel } from '../services/orderNumber';
+import { useAccess } from '../ui/useAccess';
 
 export default function HistoryScreen() {
   const { t, locale } = useLanguage();
   const { history, printSavedOrder } = useApp();
+  const canReprint = useAccess('reprint');
   const { width } = useWindowDimensions();
   const compact = width < 680;
   return <ScreenFrame><View>
@@ -21,7 +23,7 @@ export default function HistoryScreen() {
                       {!compact && <Text style={styles.historyCount}>{order.items.length} {order.items.length === 1 ? t("item") : t("itens")}</Text>}
                       <View style={styles.historyInlineActions}>
                         <Pressable accessibilityRole="button" accessibilityLabel={t('Ver detalhes')} style={[styles.addButton, compact && styles.historyIconButton]} onPress={() => router.push({ pathname: '/history/[id]', params: { id: order.id } })}><Text style={[styles.addButtonText, compact && styles.historyIconText]}>{compact ? '⋯' : t('Ver detalhes')}</Text></Pressable>
-                        <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} style={[styles.addButton, compact && styles.historyIconButton]} onPress={() => printSavedOrder(order)}><Text style={[styles.addButtonText, compact && styles.historyIconText]}>{compact ? '↻' : t('Reimprimir')}</Text></Pressable>
+                        <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={!canReprint} accessibilityState={{ disabled: !canReprint }} style={[styles.addButton, compact && styles.historyIconButton, !canReprint && styles.pressed]} onPress={() => printSavedOrder(order)}><Text style={[styles.addButtonText, compact && styles.historyIconText]}>{compact ? '↻' : t('Reimprimir')}</Text></Pressable>
                       </View>
                     </View>
                   </View>)}

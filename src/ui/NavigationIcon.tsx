@@ -1,4 +1,4 @@
-import { Image, Text, type ImageSourcePropType } from 'react-native';
+import { Image, Text, type ImageSourcePropType } from './ThemedNative';
 
 export function NavigationIcon({ icon, size, color }: { icon: string | { source: ImageSourcePropType }; size: number; color: string }) {
   return typeof icon === 'string'

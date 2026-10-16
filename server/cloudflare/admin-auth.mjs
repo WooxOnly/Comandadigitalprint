@@ -1,3 +1,4 @@
+import { licenseAdminResponse } from './licenses.mjs';
 import { preparationSettings, storeAccess, validAccessUsers } from './operations.mjs';
 import { validAccess } from '../../shared/operations-validation.mjs';
 import { loginPage, panelPage, recoveryPage } from './admin-panel.mjs';
@@ -223,7 +224,7 @@ export async function provisionableStores(username, password, env, now = Date.no
 export async function adminResponse(request, env, now = Date.now(), context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const panelRoute = ['/admin/gestores', '/admin/clients', '/admin/manager-clients', '/admin/manager-users', '/admin/app-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
+  const panelRoute = ['/admin/license', '/admin/gestores', '/admin/clients', '/admin/manager-clients', '/admin/manager-users', '/admin/app-users', '/admin/language', '/admin/recover', '/admin/reset-password'].includes(pathname) || pathname === '/admin' || pathname === '/admin/login' || pathname === '/admin/logout' || pathname === '/admin/session' || pathname === '/admin/logs' || pathname === '/admin/activity' || pathname === '/admin/stores' || pathname === '/admin/change-password';
   if (!panelRoute && pathname !== '/auth/admin' && pathname !== '/auth/admin/password') return null;
   const browserLogin = await validSession(request, env, now);
   const tokenLogin = !!env.ADMIN_VIEW_TOKEN && request.headers.get('Authorization') === 'Bearer ' + env.ADMIN_VIEW_TOKEN;
@@ -282,6 +283,8 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       return response;
     } catch (error) { return reply({ error: error.status ? error.message : 'Serviço temporariamente indisponível.' }, error.status || 503); }
   }
+  const licenseAdmin = await licenseAdminResponse(request, env, { browserLogin, sameOrigin, language, now });
+  if (licenseAdmin) return licenseAdmin;
   const managerAdmin = await managerAdminResponse(request, env, { browserLogin, sameOrigin, nonce, language });
   if (managerAdmin) return managerAdmin;
 

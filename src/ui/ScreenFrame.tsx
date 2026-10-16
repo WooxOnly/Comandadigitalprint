@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View } from './ThemedNative';
 import { useApp } from '../state/AppContext';
 import { styles } from './theme';
 export function ScreenFrame({ children }: { children: ReactNode }) {
