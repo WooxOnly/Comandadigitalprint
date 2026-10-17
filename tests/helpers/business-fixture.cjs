@@ -23,14 +23,15 @@ async function fixture(t) {
   const modules = (storeId, preorders, cash, customers = false, preparation = false) => { db.prepare('INSERT INTO store_modules(store_id, preorders, cash) VALUES(?, ?, ?) ON CONFLICT(store_id) DO UPDATE SET preorders = excluded.preorders, cash = excluded.cash').run(storeId, Number(preorders), Number(cash)); db.prepare('INSERT INTO store_customer_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').run(storeId, Number(customers)); db.prepare('INSERT INTO store_preparation_modules(store_id, enabled) VALUES(?, ?) ON CONFLICT(store_id) DO UPDATE SET enabled = excluded.enabled').run(storeId, Number(preparation)); };
   const cash = async (data, s = a) => { const response = await call('/cash', data, s.token); return { status: response.status, value: await response.json() }; };
   function tablet(saved = new Map(), s = a) {
-    let offline = false, loseCashAck = false;
+    let offline = false, loseCashAck = false, loseCancellationAck = false;
     const cloud = createCloudSync({ getItem: async key => saved.get(key) ?? null, setItem: async (key, value) => saved.set(key, value) }, 'https://example.com/cloud', randomUUID, async () => ({}), async (url, options) => {
       if (offline) throw Error('offline');
       const response = await cloudResponse(new Request(url, options), env);
+      if (loseCancellationAck && url.endsWith('/preorders/cancel')) { loseCancellationAck = false; throw Error('lost acknowledgement'); }
       if (loseCashAck && url.endsWith('/cash')) { loseCashAck = false; throw Error('lost acknowledgement'); }
       return response;
     }, s.storeId);
-    return { cloud, saved, session: s, set offline(value) { offline = value; }, set loseCashAck(value) { loseCashAck = value; } };
+    return { cloud, saved, session: s, set offline(value) { offline = value; }, set loseCashAck(value) { loseCashAck = value; }, set loseCancellationAck(value) { loseCancellationAck = value; } };
   }
   return { db, env, call, cash, a, b, modules, tablet, adminResponse };
 }

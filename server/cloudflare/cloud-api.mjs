@@ -1,3 +1,4 @@
+import { cancellationUsers, cancelPreorder } from './preorder-cancellation.mjs';
 import { tabletLicense, requireStoreLicense } from './licenses.mjs';
 import { appRole, roleScreen, roleWrite, roleRead } from '../../shared/app-roles.mjs';
 import { storeAccess, requireAccess, preparationSettings } from './operations.mjs';
@@ -106,8 +107,15 @@ export async function cloudResponse(request, env) {
     }
     const actor = await session(request, env);
     await requireStoreLicense(env, actor.storeId);
-    const requiredScreen = { '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
+    const requiredScreen = { '/cloud/preorders/cancellation-users': 'preorders', '/cloud/preorders/cancel': 'preorders', '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
     if (requiredScreen && !roleScreen(actor.role, requiredScreen)) fail(403, 'ACCESS_DENIED');
+    if (url.pathname === '/cloud/preorders/cancellation-users' && request.method === 'GET') return reply(await cancellationUsers(env, actor));
+    if (url.pathname === '/cloud/preorders/cancel' && request.method === 'POST') {
+      return reply(await cancelPreorder(env, actor, await body(request), async (username, password) => {
+        const verification = await login(new Request(new URL('/cloud/login', request.url), { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': request.headers.get('CF-Connecting-IP') || 'unknown' }, body: JSON.stringify({ storeId: actor.storeId, username, password }) }), env);
+        return verification.json();
+      }));
+    }
     if (url.pathname === '/cloud/preparation-settings' && request.method === 'GET') return reply(await preparationSettings(env, actor.storeId));
     if (url.pathname === '/cloud/preparation-reprint' && request.method === 'POST') {
       if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
@@ -158,6 +166,7 @@ export async function cloudResponse(request, env) {
       const input = await body(request);
       if (input?.storeId && input.storeId !== actor.storeId) fail(403, 'STORE_FORBIDDEN');
       if(typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && typeof input.value === 'object' && !Array.isArray(input.value) && input.value.role === undefined){const previous=await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId,input.key).first();if(previous?.data && JSON.parse(previous.data).role!==undefined)input.value.role=JSON.parse(previous.data).role;}
+      if (typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && input.value.cancelPreorders === undefined) { const previous = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first(); if (previous && JSON.parse(previous.data).cancelPreorders !== undefined) input.value.cancelPreorders = JSON.parse(previous.data).cancelPreorders; }
       if (!input || !validCloudValue(input.key, input.value) || !/^[a-zA-Z0-9-]{16,80}$/.test(input.id || '') || !Number.isSafeInteger(input.base) || input.base < 0) fail(400, 'INVALID_DATA');
       if(!input.key.startsWith('user:') && !roleWrite(actor.role,input.key,input.value)) fail(403,'ACCESS_DENIED');
       if (input.key.startsWith('customer:') && !(await storeModules(env, actor.storeId)).customers) fail(403, 'MODULE_DISABLED');
@@ -171,7 +180,7 @@ export async function cloudResponse(request, env) {
         if (input.key !== 'user:' + actor.username) fail(403, 'ADMIN_REQUIRED');
         const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
         const previous = existing && JSON.parse(existing.data);
-        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
+        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || (input.value.cancelPreorders === true) !== (previous.cancelPreorders === true) || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
       }
       const data = JSON.stringify(input.value);
       const prior = await env.DB.prepare('SELECT key, data, seq FROM store_events WHERE store_id = ? AND mutation = ?').bind(actor.storeId, input.id).first();
@@ -181,8 +190,11 @@ export async function cloudResponse(request, env) {
       }
       if (input.key.startsWith('preorder:')) {
         if (input.value.delivery && input.value.status === 'completed' && input.value.delivery.status !== 'delivered') fail(400, 'DELIVERY_NOT_COMPLETED');
-        const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        const existing = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        if ((existing?.revision || 0) !== input.base) return reply({ error: 'CONFLICT', current: existing ? { key: input.key, value: JSON.parse(existing.data), revision: existing.revision } : null }, 409);
         const previous = existing ? JSON.parse(existing.data) : null;
+        if ((input.value.status === 'cancelled' && previous?.status !== 'cancelled') || JSON.stringify(input.value.cancellation) !== JSON.stringify(previous?.cancellation)) fail(403, 'CANCELLATION_AUTH_REQUIRED');
+        if (previous && ['completed','cancelled'].includes(previous.status) && JSON.stringify(input.value) !== existing.data) fail(409, 'PREORDER_FINISHED');
         if (previous?.delivery?.status === 'delivered' && JSON.stringify(previous.delivery) !== JSON.stringify(input.value.delivery)) fail(409, 'DELIVERY_ALREADY_COMPLETED');
         if (previous?.delivery?.status === 'out' && (!input.value.delivery || input.value.delivery.status === 'pending' || input.value.delivery.dispatchedAt !== previous.delivery.dispatchedAt)) fail(409, 'INVALID_DELIVERY_TRANSITION');
       }

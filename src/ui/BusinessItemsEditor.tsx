@@ -6,11 +6,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { formatMoney, parseMoney, type BusinessItem } from '../services/business';
 import { styles } from './theme';
 import { useState } from 'react';
-import { randomUUID } from 'expo-crypto';
+import { businessItemFromSelection } from '../services/businessItemCustomization';
 
 export function BusinessItemsEditor({ items, onChange, priced, disabled = false, priceEditable = true }: { items: BusinessItem[]; onChange: (items: BusinessItem[]) => void; priced: boolean; disabled?: boolean; priceEditable?: boolean }) {
-  const { menu, productOptions } = useApp();
-  const { t, locale } = useLanguage();
+  const { menu, productOptions, openProduct } = useApp();
+  const { t, locale, language } = useLanguage();
   const [search, setSearch] = useState('');
   return <View style={{ gap: 8 }}>
     <Text style={styles.sectionTitle}>{t('Itens')}</Text>
@@ -26,8 +26,8 @@ export function BusinessItemsEditor({ items, onChange, priced, disabled = false,
       <TextInput editable={!disabled} value={item.note} style={styles.input} maxLength={4000} multiline accessibilityLabel={t('Observações')} onChangeText={note => onChange(items.map((entry, i) => i === index ? { ...entry, note } : entry))} />
     </View>)}
     <TextInput editable={!disabled} value={search} onChangeText={setSearch} style={styles.input} placeholder={t('Buscar produto')} accessibilityLabel={t('Buscar produto')} />
-    <Text style={styles.helperText}>{t('Nos módulos, use as observações para informar sabores e adicionais. O preço unitário é o valor final do item.')}</Text>
-    {searchCatalog(menu, productOptions, search).slice(0, 30).map(product => <Pressable accessibilityRole="button" disabled={disabled || items.length >= 200 || productOptions[product.id]?.available === false} key={product.id} style={styles.productCard} onPress={() => onChange([...items, { id: randomUUID(), productId: product.id, name: product.name, category: product.category, quantity: 1, note: '', ...(priced ? { unitPriceCents: Math.round(product.price * 100) } : {}) }])}>
+    <Text style={styles.helperText}>{t('Toque no produto para escolher opções e observações.')}</Text>
+    {searchCatalog(menu, productOptions, search).slice(0, 30).map(product => <Pressable accessibilityRole="button" disabled={disabled || items.length >= 200 || productOptions[product.id]?.available === false} key={product.id} style={styles.productCard} onPress={() => openProduct(product, item => onChange([...items, businessItemFromSelection(item, menu, priced, language)]))}>
       <Text style={[styles.cardTitle, { flex: 1 }]}>{productOptions[product.id]?.favorite ? '★ ' : ''}{product.name}{productOptions[product.id]?.available === false ? ` · ${t('Esgotado')}` : ''}{priced ? ` · ${formatMoney(Math.round(product.price * 100), locale)}` : ''}</Text><Text style={styles.productArrowText}>+</Text>
     </Pressable>)}
     {items.length >= 200 && <Text style={styles.errorText}>{t('Limite de itens atingido.')}</Text>}

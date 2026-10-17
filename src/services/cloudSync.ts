@@ -7,7 +7,7 @@ import { validCloudValue } from '../../shared/cloud-validation.mjs';
 
 export type CloudRecord = { key: string; value: unknown; revision: number };
 type Pending = { key: string; value: unknown; base: number; id: string; conflict?: CloudRecord };
-type State = { version: 1; operationsVersion?: 1; preparationSettings?: PreparationSettings; access?: AccessSettings; storeId: string; storeName?: string; modules?: StoreModules; cashOverview?: CashOverview; cashAttempt?: Record<string, unknown>; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
+type State = { cancellationAttempt?: { id: string; orderId: string; base: number }; version: 1; operationsVersion?: 1; preparationSettings?: PreparationSettings; access?: AccessSettings; storeId: string; storeName?: string; modules?: StoreModules; cashOverview?: CashOverview; cashAttempt?: Record<string, unknown>; deviceId: string; tabletNumber?: number; reader?: string; values: Record<string, CloudRecord>; pending: Record<string, Pending>; cursor: number; lastSync: string | null };
 type Store = { getItem: (key: string) => Promise<string | null>; setItem: (key: string, value: string) => Promise<void> };
 type Session = { token: string; username: string; storeId: string };
 const STATE_KEY = '@comandadigitalprint/cloud-v1';
@@ -20,7 +20,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   let state: State;
   let offlineActor = '';
   const actor = () => session?.username || offlineActor || state?.reader || '';
-  const roleOf = (username = actor()) => {const user=state?.values['user:' + username]?.value as { role?: string; active?: boolean } | undefined;return user?.active===false ? null : appRole(username,user?.role)};
+  const roleOf = (username = actor()) => {const user=state?.values['user:' + username]?.value as { role?: string; active?: boolean; cancelPreorders?: boolean } | undefined;return user?.active===false ? null : appRole(username,user?.role)};
   const can = (action: AccessAction, username = actor()) => roleAction(roleOf(username), action);
   let rejectedSession = false;
   let loading: Promise<void> | undefined;
@@ -89,14 +89,15 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       for (const [key, value] of Object.entries(entries)) {
         if (!validCloudValue(key, value)) throw new CloudError('INVALID_DATA');
         if (JSON.stringify(values[key]?.value) === JSON.stringify(value)) continue;
-        const previous = values[key]?.value as { role?: string; active?: boolean } | undefined, nextUser = value as { role?: string; active?: boolean };
-        const ownPassword = key === 'user:' + actor() && !!previous && previous.active === nextUser.active && appRole(actor(),previous.role) === appRole(actor(),nextUser.role);
+        const previous = values[key]?.value as { role?: string; active?: boolean; cancelPreorders?: boolean } | undefined, nextUser = value as { role?: string; active?: boolean; cancelPreorders?: boolean };
+        const ownPassword = key === 'user:' + actor() && !!previous && previous.active === nextUser.active && (previous.cancelPreorders === true) === (nextUser.cancelPreorders === true) && appRole(actor(),previous.role) === appRole(actor(),nextUser.role);
         if (!ownPassword && !roleWrite(roleOf(),key,value)) throw new CloudError('ACCESS_DENIED');
         if ((key === 'menu' || key.startsWith('product-option:')) && !can('menu')) throw new CloudError('ACCESS_DENIED');
         if ((['printer', 'order-settings', 'logo'].includes(key) || key.startsWith('printer:')) && !can('settings')) throw new CloudError('ACCESS_DENIED');
         if (key.startsWith('activity:') && ['reprint', 'restore'].includes((value as { kind: string }).kind) && !can((value as { kind: AccessAction }).kind)) throw new CloudError('ACCESS_DENIED');
         if (key.startsWith('preparation:') && !state.modules?.preparation) throw new CloudError('MODULE_DISABLED');
         if (key.startsWith('customer:') && !state.modules?.customers) throw new CloudError('MODULE_DISABLED');
+        if (key.startsWith('preorder:') && ((value as { status?: string }).status === 'cancelled' || JSON.stringify((value as { cancellation?: unknown }).cancellation) !== JSON.stringify((values[key]?.value as { cancellation?: unknown } | undefined)?.cancellation))) throw new CloudError('CANCELLATION_AUTH_REQUIRED');
         if (key.startsWith('preorder:') && !state.modules?.preorders) throw new CloudError('MODULE_DISABLED');
         if (key === 'menu' && state.modules?.cash && !['admin','manager'].includes(roleOf() || '')) {
           const menu = (state.values.menu?.value ?? []) as { id: string; price: number }[];
@@ -126,7 +127,9 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
           if (!validCloudValue(record.key, record.value) || !Number.isSafeInteger(record.revision) || record.revision < 1) throw new CloudError('INVALID_DATA');
           if (!state.pending[record.key] && record.revision > (values[record.key]?.revision ?? 0)) values[record.key] = record;
         }
-        await persist({ ...state, values, cursor: result.cursor });
+        const attempt = state.cancellationAttempt;
+        const terminal = attempt && ['cancelled', 'completed'].includes((values['preorder:' + attempt.orderId]?.value as { status?: string })?.status || '');
+        await persist({ ...state, values, cursor: result.cursor, ...(terminal ? { cancellationAttempt: undefined } : {}) });
       });
       more = result.more;
     }
@@ -271,6 +274,29 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       if (result.storeId !== storeId() || !Array.isArray(result.days) || !Array.isArray(result.products) || !Array.isArray(result.methods) || !Array.isArray(result.closings) || !Array.isArray(result.movements) || !result.totals) throw new CloudError('INVALID_DATA');
       return result as CashReport;
     },
+    async cancellationUsers(): Promise<{ users: { username: string; role: string }[] }> {
+      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      if (!roleScreen(roleOf(), 'preorders') || !state.modules?.preorders) throw new CloudError('ACCESS_DENIED');
+      return request('/preorders/cancellation-users');
+    },
+    async cancelPreorder(orderId: string, username: string, password: string) {
+      await load(); if (!session) throw new CloudError('LOGIN_REQUIRED');
+      if (!roleScreen(roleOf(), 'preorders') || !state.modules?.preorders) throw new CloudError('ACCESS_DENIED');
+      await sync();
+      return serial(async () => {
+        const key = 'preorder:' + orderId, current = state.values[key];
+        if (!current || state.pending[key] || !current.revision) throw new CloudError('PREORDER_NOT_SYNCED');
+        if (state.cancellationAttempt && state.cancellationAttempt.orderId !== orderId) throw new CloudError('CANCELLATION_PENDING');
+        const attempt = state.cancellationAttempt ?? { id: uuid(), orderId, base: current.revision };
+        await persist({ ...state, cancellationAttempt: attempt });
+        let result: { record: CloudRecord };
+        try { result = await request('/preorders/cancel', { ...attempt, username, password }); }
+        catch (error) { if (error instanceof CloudError && [400,401,403,404,409].includes(error.status)) await persist({ ...state, cancellationAttempt: undefined }); throw error; }
+        if (result.record?.key !== key || !validCloudValue(key, result.record.value) || !Number.isSafeInteger(result.record.revision) || result.record.revision < 1) throw new CloudError('INVALID_DATA');
+        await persist({ ...state, values: { ...state.values, [key]: result.record }, cancellationAttempt: undefined });
+        return result.record.value;
+      });
+    },
     async cashCommand(input: Record<string, unknown>) {
       await load(); if (!roleScreen(roleOf(),'cash')) throw new CloudError('ACCESS_DENIED');
       return serial(async () => {
@@ -335,6 +361,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         // current operator's permissions before either choice changes the queue.
         const ownPassword = key === 'user:' + actor() &&
           (item.value as { active?: boolean }).active === (item.conflict.value as { active?: boolean }).active &&
+          ((item.value as { cancelPreorders?: boolean }).cancelPreorders === true) === ((item.conflict.value as { cancelPreorders?: boolean }).cancelPreorders === true) &&
           appRole(actor(), (item.value as { role?: string }).role) === appRole(actor(), (item.conflict.value as { role?: string }).role);
         if (!ownPassword && !roleWrite(roleOf(),key,item.value)) throw new CloudError('ACCESS_DENIED');
         if ((key === 'menu' || key.startsWith('product-option:')) && !can('menu')) throw new CloudError('ACCESS_DENIED');

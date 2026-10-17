@@ -1,5 +1,17 @@
 # Pendências e preferências
 
+## Retomada e conclusão das correções de Encomendas — 17/10/2026
+
+- Código recuperado do commit `10210de` após reinício do ambiente. Correções recentes reconstruídas; nunca considerar a antiga compilação Android como entrega desta etapa.
+- Data da retirada/entrega sempre em mês/dia/ano, inclusive na agenda; mês, dia, ano, hora e minuto separados. Mês/dia/hora/minuto aceitam um ou dois dígitos, com zero à esquerda ao sair; ano usa quatro dígitos para evitar ambiguidade. Horário de 24 horas do tablet. Campos obrigatórios com asterisco, validação de preenchimento, datas reais, futuro e horário inexistente na transição de horário de verão.
+- Adicionar produtos em Encomendas abre o mesmo diálogo de opções e observações do Pedido. Sabores, extras e observações são preservados na encomenda, sem inserir o produto na comanda do dia. Botões e título identificam o contexto.
+- Cancelamento exige selecionar usuário e informar sua senha, com autorização no servidor e auditoria de autorizador, operador solicitante e instante. Admin/Gerente sempre autorizam; Caixa depende da permissão individual **Cancelar encomendas**, inicialmente desligada, disponível no cadastro individual do administrativo e nos Ajustes protegidos do app. Cozinheiro permanece sem acesso à tela. Esta é a exceção de permissão individual explicitamente solicitada; os demais acessos continuam pelos quatro perfis.
+- Cancelar exige conexão e encomenda previamente sincronizada; outras operações de encomendas mantêm o comportamento offline existente. A sessão do operador é preservada e senhas não entram em logs, filas ou armazenamento. Reenvios são idempotentes; sincronizar recupera resposta perdida. Revogação de permissão durante a autorização impede a gravação.
+- Validação local: suíte geral com **308 testes aprovados**, mais teste adicional do cadastro de permissão pelo proprietário aprovado; lint/TypeScript aprovados. Chromium: **54 verificações do Pedido**, **54 de Encomendas** (PT/EN/ES, claro/escuro e rotação) e **261 do administrativo** aprovadas. Evidência sintética dos componentes reais; não equivale a testes físicos de Android/impressora.
+- Entrega: rotina específica de homologação preparada para publicar Worker com `--keep-vars`, sem reaplicar esquema nesta alteração de campos JSON, e gerar APK assinado no runner via EAS local, evitando a cota esgotada do EAS cloud. Publicação/compilação só contam como concluídas após confirmação do processamento remoto e download verificado.
+- **Único fluxo funcional adiado pelo proprietário:** integração operacional de Encomendas com cozinha/caixa. Não foi redesenhada nesta etapa.
+- Dependência externa ainda sem confirmação: entrega real de recuperação por e-mail requer remetente/provedor autorizado. Não afirmar envio real apenas por sucesso de tela/testes simulados.
+
 ## Pedido compacto e modo escuro aprovados — 16/10/2026
 
 - Proprietário aprovou a prévia mantendo a identidade atual, com **duas colunas de produtos**, ingredientes/descrição acessíveis pelo **ⓘ**, **+** para abrir a configuração/observações e dados de atendimento/mesa/cliente em bloco superior recolhível por **Confirmar dados**, reaberto por **Editar**. Remover **Somente favoritos** dessa tela; favoritos cadastrados no Cardápio não são apagados.

@@ -15,6 +15,7 @@ export function UserSettings() {
   const { t } = useLanguage();
   const [users, setUsers] = useState(() => service.listUsers());
   const [role,setRole] = useState<AppRole>('cashier');
+  const [cancelPreorders, setCancelPreorders] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -59,7 +60,7 @@ export function UserSettings() {
   </View>;
   return <View style={styles.panel}>
     <Text style={styles.panelTitle}>{t('Gerenciar usuários')}</Text>
-    <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setRole('cashier'); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>
+    <View style={styles.orderLine}>{(['manage', 'create'] as const).map(value => <Pressable key={value} style={[styles.noteChip, tab === value && styles.selectedCategory]} onPress={() => { setTab(value); setEditing(null); setRole('cashier'); setCancelPreorders(false); setUsername(''); setPassword(''); setConfirmation(''); }} disabled={busy}><Text style={[styles.noteChipText, tab === value && styles.selectedCategoryText]}>{t(value === 'manage' ? 'Usuários cadastrados' : 'Cadastrar usuário')}</Text></Pressable>)}</View>
     {loadError && <Text style={styles.helperText}>{t('Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.')}</Text>}
     <Text style={styles.helperText}>{t('Usuários são compartilhados entre tablets após sincronizar. Offline, ficam disponíveis os acessos já recebidos neste aparelho.')}</Text>
     {tab === 'manage' && <View>
@@ -67,18 +68,20 @@ export function UserSettings() {
     {users.length === 0 && <Text style={styles.helperText}>{t('Nenhum usuário adicional cadastrado.')}</Text>}
     {users.map((user) => <View key={user.username} style={styles.orderCard}>
       <View style={styles.orderLine}><Text style={[styles.cardTitle, styles.usernameText]}>{user.username} · {t(ROLE_LABELS[user.role])}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
-      <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setRole(user.role); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Editar usuário')}</Text></Pressable>
+      <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setRole(user.role); setCancelPreorders(user.cancelPreorders === true); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Editar usuário')}</Text></Pressable>
     </View>)}
     </View>}
     {tab === 'create' && <View>
     <Text style={styles.sectionTitle}>{t(editing ? 'Editar usuário' : 'Cadastrar usuário')}</Text>
     <TextInput accessibilityLabel={t('Usuário')} placeholder={t('Usuário')} placeholderTextColor={COLORS.placeholder} value={username} onChangeText={setUsername} editable={!editing && !busy} autoCapitalize="none" autoCorrect={false} maxLength={24} style={[styles.input, styles.usernameText]} />
     <UserRolePicker value={role} onChange={setRole} disabled={busy} />
+    {role === 'cashier' && <View style={styles.orderLine}><Text style={styles.fieldLabel}>{t('Cancelar encomendas')}</Text><Switch accessibilityLabel={t('Cancelar encomendas')} disabled={busy} value={cancelPreorders} onValueChange={setCancelPreorders} /></View>}
+    <Text style={styles.helperText}>{t('Admin e Gerente sempre podem autorizar cancelamentos de encomendas.')}</Text>
     <PasswordField label={t('Senha')} value={password} onChangeText={setPassword} />
     <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />
     <Text style={styles.helperText}>{t('Informe uma senha e confirme a mesma senha.')}</Text>
-    <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={() => change(() => editing ? service.updateUser(editing, users.find((u) => u.username === editing)!.active, password || undefined, password ? confirmation : undefined, role) : service.createUser(username, password, confirmation, role))}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar usuário')}</Text></Pressable>
-    {editing && <Pressable disabled={busy} style={styles.cancelButton} onPress={() => { setEditing(null); setRole('cashier'); setUsername(''); setPassword(''); setConfirmation(''); }}><Text style={styles.cancelButtonText}>{t('Cancelar')}</Text></Pressable>}
+    <Pressable disabled={busy} style={[styles.sendButton, busy && styles.pressed]} onPress={() => change(() => editing ? service.updateUser(editing, users.find((u) => u.username === editing)!.active, password || undefined, password ? confirmation : undefined, role, cancelPreorders) : service.createUser(username, password, confirmation, role, cancelPreorders))}><Text style={styles.sendButtonText}>{t(busy ? 'Salvando…' : 'Salvar usuário')}</Text></Pressable>
+    {editing && <Pressable disabled={busy} style={styles.cancelButton} onPress={() => { setEditing(null); setRole('cashier'); setCancelPreorders(false); setUsername(''); setPassword(''); setConfirmation(''); }}><Text style={styles.cancelButtonText}>{t('Cancelar')}</Text></Pressable>}
     </View>}
   </View>;
 }

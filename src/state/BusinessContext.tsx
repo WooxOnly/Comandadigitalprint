@@ -45,12 +45,22 @@ function useBusinessState() {
     });
   }
   async function setPreorderStatus(id: string, status: Preorder['status']) {
+    if (status === 'cancelled') throw new Error('O cancelamento exige usuário e senha.');
     return run(async () => {
       if (!modules.preorders) throw new Error('Módulo não habilitado para esta empresa.');
       const record = await cloud.get('preorder:' + id) as Preorder | undefined;
       if (!record) throw new Error('Encomenda não encontrada.');
       if (status === 'completed' && record.delivery && record.delivery.status !== 'delivered') throw new Error('Marque a entrega como entregue antes de concluir a encomenda.');
       await cloud.write({ ['preorder:' + id]: { ...record, status } });
+    });
+  }
+  async function cancelPreorder(id: string, username: string, password: string) {
+    return run(async () => {
+      try { return await cloud.cancelPreorder(id, username, password); }
+      catch (error) {
+        const messages: Record<string, string> = { BAD_LOGIN: 'Usuário ou senha incorretos.', RATE_LIMIT: 'Muitas tentativas. Aguarde um minuto.', CANCELLATION_NOT_ALLOWED: 'Usuário sem permissão para cancelar encomendas.', CANCELLATION_PENDING: 'Atualize a lista antes de cancelar outra encomenda.', PREORDER_NOT_SYNCED: 'Sincronize a encomenda antes de cancelar.', PREORDER_CHANGED: 'Encomenda alterada. Atualize a lista e tente novamente.', PREORDER_FINISHED: 'Esta encomenda já foi concluída ou cancelada.', LOGIN_REQUIRED: 'Entre novamente na nuvem.', ACCESS_DENIED: 'Usuário sem permissão para esta ação.' };
+        throw new Error(messages[(error as { code?: string }).code || ''] || 'Conecte à internet para autorizar o cancelamento.');
+      }
     });
   }
   async function saveCustomer(input: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>, id?: string) {
@@ -115,7 +125,7 @@ function useBusinessState() {
       }
     });
   }
-  return { modules, preparation, advancePreparation, preorders, customers, saveCustomer, updateDelivery, overview, pendingCash, busy, savePreorder, setPreorderStatus, cashCommand };
+  return { modules, preparation, advancePreparation, preorders, customers, saveCustomer, updateDelivery, overview, pendingCash, busy, savePreorder, setPreorderStatus, cancelPreorder, cashCommand };
 }
 const BusinessContext = createContext<ReturnType<typeof useBusinessState> | null>(null);
 export function BusinessProvider({ children }: { children: ReactNode }) {

@@ -1983,3 +1983,146 @@ Object.assign(translations, {
   'Confirmar dados': ['Confirm details', 'Confirmar datos'],
   'Número': ['Number', 'Número'],
 });
+
+Object.assign(translations, {
+  "Data da retirada/entrega": [
+    "Pickup/delivery date",
+    "Fecha de retiro/entrega"
+  ],
+  "Horário da retirada/entrega": [
+    "Pickup/delivery time",
+    "Hora de retiro/entrega"
+  ],
+  "Data da agenda": [
+    "Schedule date",
+    "Fecha de la agenda"
+  ],
+  "Formato de 24 horas, no horário deste tablet.": [
+    "24-hour format, using this tablet’s local time.",
+    "Formato de 24 horas, según la hora local de esta tablet."
+  ],
+  "Mês": [
+    "Month",
+    "Mes"
+  ],
+  "Dia": [
+    "Day",
+    "Día"
+  ],
+  "Ano": [
+    "Year",
+    "Año"
+  ],
+  "Hora": [
+    "Hour",
+    "Hora"
+  ],
+  "Minuto": [
+    "Minute",
+    "Minuto"
+  ],
+  "Campo obrigatório.": [
+    "Required field.",
+    "Campo obligatorio."
+  ],
+  "Valor inválido.": [
+    "Invalid value.",
+    "Valor no válido."
+  ],
+  "Confira a data e o horário da retirada/entrega.": [
+    "Check the pickup/delivery date and time.",
+    "Revisa la fecha y hora de retiro/entrega."
+  ],
+  "Confira a data da agenda.": [
+    "Check the schedule date.",
+    "Revisa la fecha de la agenda."
+  ],
+  "Toque no produto para escolher opções e observações.": [
+    "Tap a product to choose options and add notes.",
+    "Toca un producto para elegir opciones y agregar notas."
+  ],
+  "Observações acima do limite permitido.": [
+    "Notes exceed the allowed length.",
+    "Las notas superan la longitud permitida."
+  ],
+  "ADICIONAR À ENCOMENDA": [
+    "ADD TO SCHEDULED ORDER",
+    "AGREGAR AL PEDIDO PROGRAMADO"
+  ],
+  "Adicionar à encomenda": [
+    "Add to scheduled order",
+    "Agregar al pedido programado"
+  ],
+  "Adicionar item": [
+    "Add item",
+    "Agregar artículo"
+  ],
+  "Adicione ao menos um produto.": [
+    "Add at least one product.",
+    "Agrega al menos un producto."
+  ],
+  "Cancelar encomendas": [
+    "Cancel scheduled orders",
+    "Cancelar pedidos programados"
+  ],
+  "Cancelar encomenda": [
+    "Cancel scheduled order",
+    "Cancelar pedido programado"
+  ],
+  "Admin e Gerente sempre podem autorizar cancelamentos de encomendas.": [
+    "Admins and managers can always authorize scheduled order cancellations.",
+    "Los administradores y gerentes siempre pueden autorizar cancelaciones de pedidos programados."
+  ],
+  "O cancelamento exige usuário e senha.": [
+    "Cancellation requires a username and password.",
+    "La cancelación requiere usuario y contraseña."
+  ],
+  "Usuário sem permissão para cancelar encomendas.": [
+    "This user cannot cancel scheduled orders.",
+    "Este usuario no tiene permiso para cancelar pedidos programados."
+  ],
+  "Atualize a lista antes de cancelar outra encomenda.": [
+    "Refresh the list before cancelling another scheduled order.",
+    "Actualiza la lista antes de cancelar otro pedido programado."
+  ],
+  "Sincronize a encomenda antes de cancelar.": [
+    "Sync the scheduled order before cancelling.",
+    "Sincroniza el pedido programado antes de cancelarlo."
+  ],
+  "Encomenda alterada. Atualize a lista e tente novamente.": [
+    "The scheduled order changed. Refresh the list and try again.",
+    "El pedido programado cambió. Actualiza la lista e inténtalo de nuevo."
+  ],
+  "Esta encomenda já foi concluída ou cancelada.": [
+    "This scheduled order is already completed or cancelled.",
+    "Este pedido programado ya se completó o canceló."
+  ],
+  "Entre novamente na nuvem.": [
+    "Sign in to the cloud again.",
+    "Inicia sesión en la nube de nuevo."
+  ],
+  "Conecte à internet para autorizar o cancelamento.": [
+    "Connect to the internet to authorize cancellation.",
+    "Conéctate a internet para autorizar la cancelación."
+  ],
+  "Selecione quem autoriza e informe a senha desse usuário.": [
+    "Select the authorizing user and enter their password.",
+    "Selecciona quién autoriza e ingresa su contraseña."
+  ],
+  "Confirmar cancelamento": [
+    "Confirm cancellation",
+    "Confirmar cancelación"
+  ],
+  "Cancelamento autorizado por": [
+    "Cancellation authorized by",
+    "Cancelación autorizada por"
+  ],
+  "Solicitado por": [
+    "Requested by",
+    "Solicitado por"
+  ],
+  "Carregando…": [
+    "Loading…",
+    "Cargando…"
+  ]
+});

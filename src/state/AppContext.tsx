@@ -129,9 +129,12 @@ function useAppState() {
   const filteredMenu = useMemo(() => searchCatalog(filterProducts(menu, category, activeSubcategory), productOptions, productSearch), [menu, category, activeSubcategory, productOptions, productSearch]);
   const pizzaMenu = useMemo(() => menu.filter((item) => item.kind === 'pizza' && isProductAvailable(item.id, productOptions)), [menu, productOptions]);
 
-  function openProduct(product: Product) {
+  const productConsumer = useRef<((item: OrderItem) => void) | undefined>(undefined);
+  const selectionOpen = useRef(false);
+  function openProduct(product: Product, onAdd?: (item: OrderItem) => void) {
     if (submitter.busy) return;
     if (!isProductAvailable(product.id, productOptions)) { Alert.alert(t('Produto esgotado'), product.name); return; }
+    productConsumer.current = onAdd; selectionOpen.current = true;
     setSelectedProduct(product);
     setProductNote('');
     setPizzaMode(product.allowsExtras === false ? 'whole' : null);
@@ -141,11 +144,14 @@ function useAppState() {
   }
 
   function addSelectedProduct() {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !selectionOpen.current) return;
     try {
       if (!isProductAvailable(selectedProduct.id, productOptions) || (secondFlavor && !isProductAvailable(secondFlavor.id, productOptions))) throw new Error('Produto esgotado. Escolha outro produto.');
       const item = createOrderItem(selectedProduct, productNote, pizzaMode, secondFlavor, extras);
-      setItems((current) => [...current, item]);
+      selectionOpen.current = false;
+      try { if (productConsumer.current) productConsumer.current(item); else setItems((current) => [...current, item]); }
+      catch (error) { selectionOpen.current = true; throw error; }
+      productConsumer.current = undefined;
       setSelectedProduct(null);
     } catch (error) {
       Alert.alert(t('Confira a pizza'), t(error instanceof Error ? error.message : 'Confira os sabores.'));

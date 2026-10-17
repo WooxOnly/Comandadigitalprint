@@ -132,7 +132,7 @@ test('owner manages independent app users with CAS, protected hashes, synchroniz
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'',revision:0})).status,400);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'a',revision:0})).status,200);
   const listing=await(await f.request(path)).json(),user=listing.users[0];
-  assert.deepEqual(Object.keys(user).sort(),['active','revision','role','username']);assert.equal(user.username,'cliente');
+  assert.deepEqual(Object.keys(user).sort(),['active','cancelPreorders','revision','role','username']);assert.equal(user.username,'cliente');
   const login=await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'a'});assert.equal(login.status,200);const session=await login.json();
   assert.equal((await f.call('/login',{storeId:'seabra-2',username:'cliente',password:'a'})).status,401);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'b',revision:0})).status,409);
@@ -144,4 +144,15 @@ test('owner manages independent app users with CAS, protected hashes, synchroniz
   assert.equal((await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'b'})).status,401);
   assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM store_events WHERE store_id='seabra-1' AND key='user:cliente'").get().n,3);
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM manager_users').get().n,0,'App access never creates a metrics account');
+});
+
+test('owner sets individual cashier cancellation permission without changing the password or granting portal access', async t => {
+  const f=await setup(t),group=f.group('Cliente',['seabra-1']),path='/admin/app-users?groupId='+group+'&storeId=seabra-1';
+  assert.equal((await f.request(path,{username:'operator',role:'cashier',active:true,password:'a',cancelPreorders:true,revision:0})).status,200);
+  let user=(await(await f.request(path)).json()).users[0];assert.equal(user.cancelPreorders,true);
+  assert.equal((await f.call('/login',{storeId:'seabra-1',username:'operator',password:'a'})).status,200);
+  assert.equal((await f.request(path,{username:'operator',role:'cashier',active:true,password:'',cancelPreorders:'true',revision:user.revision})).status,400);
+  assert.equal((await f.request(path,{username:'operator',role:'cashier',active:true,password:'',cancelPreorders:false,revision:user.revision})).status,200);
+  user=(await(await f.request(path)).json()).users[0];assert.equal(user.cancelPreorders,false);
+  assert.equal((await f.call('/login',{storeId:'seabra-1',username:'operator',password:'a'})).status,200);
 });

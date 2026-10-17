@@ -24,6 +24,7 @@ export function validBusinessItems(items, priced = false) {
     && (item.unitPriceCents === undefined || validCents(item.unitPriceCents)));
 }
 export function validPreorder(value) {
+  if (value?.cancellation !== undefined && (value.status !== 'cancelled' || !/^[a-z0-9._-]{3,24}$/.test(value.cancellation?.authorizedBy || '') || !/^[a-z0-9._-]{3,24}$/.test(value.cancellation?.requestedBy || '') || typeof value.cancellation?.at !== 'string' || !Number.isFinite(Date.parse(value.cancellation.at)))) return false;
   return value && text(value.id, 160) && value.id.length > 0 && text(value.customer, 500) && value.customer.trim()
     && text(value.contact, 200) && value.contact.trim() && text(value.address, 1000)
     && ['pickup', 'delivery'].includes(value.fulfillment) && (value.fulfillment !== 'delivery' || value.address.trim())

@@ -38,7 +38,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     return signedIn;
   };
   const USER_INDEX = 'comandadigitalprint.users.v1';
-  type User = { username: string; active: boolean; role?: AppRole; login: Digest; attempts: number; blockedUntil: number };
+  type User = { username: string; active: boolean; role?: AppRole; cancelPreorders?: boolean; login: Digest; attempts: number; blockedUntil: number };
   let users: User[] = [];
   const userKey = (username: string) => `comandadigitalprint.user.${username}`;
   const currentRole = () => {if(currentUser==='admin')return 'admin';const user=users.find(user=>user.username===currentUser);return user?.active ? appRole(currentUser,user.role) : null;};
@@ -73,7 +73,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
           if (!Array.isArray(index) || index.some((name) => typeof name !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(name) || name === 'admin') || new Set(index).size !== index.length) throw new Error();
           users = await Promise.all(index.map(async (name) => {
             const user = JSON.parse(await storage.getItemAsync(userKey(name)) || 'null');
-            if (!user || user.username !== name || typeof user.active !== 'boolean' || (user.role!==undefined && !validRole(user.role)) || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
+            if (!user || user.username !== name || typeof user.active !== 'boolean' || (user.role!==undefined && !validRole(user.role)) || (user.cancelPreorders !== undefined && typeof user.cancelPreorders !== 'boolean') || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
             return user as User;
           }));
           record = parsed; loaded = true;
@@ -141,8 +141,8 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     logout: clearSession,
     loginUsers() { return ['admin', ...users.filter((user) => user.active).map((user) => user.username)]; },
     currentRole,
-    listUsers() { requireSettings(); return users.map(({ username, active, role }) => ({ username, active, role: appRole(username,role)! })); },
-    async createUser(username: string, password: string, confirmation: string, role: AppRole = 'cashier') {
+    listUsers() { requireSettings(); return users.map(({ username, active, role, cancelPreorders }) => ({ username, active, role: appRole(username,role)!, ...(cancelPreorders === true ? { cancelPreorders: true } : {}) })); },
+    async createUser(username: string, password: string, confirmation: string, role: AppRole = 'cashier', cancelPreorders = false) {
       return run(async () => {
         requireSettings();
         if (currentRole() !== 'admin') throw new Error('Acesso protegido');
@@ -152,14 +152,14 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         if (users.some((user) => user.username === name)) throw new Error('Este usuário já existe.');
         if (users.length >= 30) throw new Error('Limite de 30 usuários neste aparelho.');
         if (!validPasswords(password, confirmation)) throw new Error(PASSWORD_ERROR);
-        const user: User = { username: name, active: true, role, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
+        const user: User = { username: name, active: true, role, cancelPreorders: cancelPreorders === true, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
         requireSettings();
         await storage.setItemAsync(userKey(name), JSON.stringify(user));
         await storage.setItemAsync(USER_INDEX, JSON.stringify([...users.map((u) => u.username), name]));
         users = [...users, user];
       });
     },
-    async updateUser(username: string, active: boolean, password?: string, confirmation?: string, role?: AppRole) {
+    async updateUser(username: string, active: boolean, password?: string, confirmation?: string, role?: AppRole, cancelPreorders?: boolean) {
       return run(async () => {
         requireSettings();
         if (currentRole() !== 'admin') throw new Error('Acesso protegido');
@@ -170,7 +170,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         if (password !== undefined && !validPasswords(password, confirmation || '')) throw new Error(PASSWORD_ERROR);
         const login = password === undefined ? user.login : await makeDigest(password);
         requireSettings();
-        await saveUser({ ...user, active, role: role ?? user.role ?? 'cashier', login, attempts: 0, blockedUntil: 0 });
+        await saveUser({ ...user, active, role: role ?? user.role ?? 'cashier', ...(cancelPreorders !== undefined ? { cancelPreorders: cancelPreorders === true } : {}), login, attempts: 0, blockedUntil: 0 });
       });
     },
     async changeOwnPassword(currentPassword: string, password: string, confirmation: string) {

@@ -9,3 +9,5 @@ export function roleAction(role: string | null, action: string): boolean;
 export function roleWrite(role: string | null, key: string, value?: unknown): boolean;
 
 export function roleRead(role: string | null, key: string): boolean;
+
+export function canCancelPreorders(role: string | null, permitted?: boolean): boolean;

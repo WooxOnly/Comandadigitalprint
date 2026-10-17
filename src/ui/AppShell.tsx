@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SafeAreaProvider><KeyboardAvoidingView style={[styles.modalBackdrop, isWide && styles.modalBackdropWide]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <SafeAreaView edges={['bottom']} style={[styles.productModal, isWide && styles.productModalWide]}>
               <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.modalContent}>
-                <Text style={styles.modalEyebrow}>{t("ADICIONAR AO PEDIDO")}</Text>
+                <Text style={styles.modalEyebrow}>{t(path === '/preorders' ? 'ADICIONAR À ENCOMENDA' : 'ADICIONAR AO PEDIDO')}</Text>
                 <Text style={styles.modalTitle}>{selectedProduct?.name}</Text>
                 <Text style={styles.settingsIntro}>{selectedProduct?.description || t("Como você quer este produto?")}</Text>
                 {selectedProduct?.kind === 'pizza' && <>
@@ -109,8 +109,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Text style={styles.fieldLabel}>{t("Observação (opcional)")}</Text>
                 <TextInput value={productNote} onChangeText={setProductNote} accessibilityLabel={t("Observação do produto")} placeholder={t("Ex.: bem passado, sem molho...")} placeholderTextColor={COLORS.placeholder} style={[styles.input, styles.modalInput]} multiline />
                 <View style={styles.quickNotes}>{[t("Sem cebola"), t("Sem pimenta"), t("Bem passado")].map((note) => <Pressable key={t(note)} onPress={() => setProductNote((current) => current ? current + ', ' + note : note)} style={styles.noteChip}><Text style={styles.noteChipText}>{t(note)}</Text></Pressable>)}</View>
-                <Pressable disabled={selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor))} style={[styles.sendButton, selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor)) && styles.pressed]} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>{t("Adicionar ao pedido")}</Text></Pressable>
-                <Pressable style={styles.cancelButton} onPress={() => setSelectedProduct(null)}><Text style={styles.cancelButtonText}>{t("Cancelar")}</Text></Pressable>
+                <Pressable accessibilityRole="button" disabled={selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor))} style={[styles.sendButton, selectedProduct?.kind === 'pizza' && (!pizzaMode || (pizzaMode === 'halves' && !secondFlavor)) && styles.pressed]} onPress={addSelectedProduct}><Text style={styles.sendButtonText}>{t(path === '/preorders' ? 'Adicionar à encomenda' : path === '/cash' ? 'Adicionar item' : 'Adicionar ao pedido')}</Text></Pressable>
+                <Pressable accessibilityRole="button" style={styles.cancelButton} onPress={() => setSelectedProduct(null)}><Text style={styles.cancelButtonText}>{t("Cancelar")}</Text></Pressable>
               </ScrollView>
             </SafeAreaView>
           </KeyboardAvoidingView></SafeAreaProvider>

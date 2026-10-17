@@ -9,7 +9,7 @@ export function validStoreModules(value: unknown): value is StoreModules {
 export type Customer = { id: string; name: string; phone: string; email: string; addresses: string[]; notes: string; active: boolean; createdAt: string; updatedAt: string };
 export type Delivery = { feeCents: number; driver: string; status: 'pending' | 'out' | 'delivered'; dispatchedAt?: string; deliveredAt?: string };
 export type BusinessItem = Pick<OrderItem, 'id' | 'name' | 'category' | 'quantity' | 'note'> & { productId?: string; unitPriceCents?: number };
-export type Preorder = { id: string; customer: string; customerId?: string; contact: string; address: string; fulfillment: 'pickup' | 'delivery'; delivery?: Delivery; dueAt: string; createdAt: string; status: 'scheduled' | 'preparing' | 'ready' | 'completed' | 'cancelled'; items: BusinessItem[] };
+export type Preorder = { cancellation?: { authorizedBy: string; requestedBy: string; at: string }; id: string; customer: string; customerId?: string; contact: string; address: string; fulfillment: 'pickup' | 'delivery'; delivery?: Delivery; dueAt: string; createdAt: string; status: 'scheduled' | 'preparing' | 'ready' | 'completed' | 'cancelled'; items: BusinessItem[] };
 export type CustomerHistory = { customerId: string; more: boolean; preorders: Preorder[]; sales: { id: string; createdAt: string; items: { name: string; quantity: number }[]; totalCents?: number; refundedCents?: number }[] };
 export type PaymentMethod = 'cash' | 'card' | 'zelle';
 export type Payment = { method: PaymentMethod; amountCents: number; tenderedCents?: number; changeCents?: number };

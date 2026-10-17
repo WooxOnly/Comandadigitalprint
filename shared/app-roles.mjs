@@ -33,3 +33,5 @@ export function roleRead(role, key) {
   if (!validRole(role)) return false;
   return role !== 'cook' || /^(order:|preparation:|printer(?::|$)|language(?::|$)|device:|user:|logo$)/.test(key);
 }
+
+export function canCancelPreorders(role, permitted = false) { return role === 'admin' || role === 'manager' || (role === 'cashier' && permitted === true); }
