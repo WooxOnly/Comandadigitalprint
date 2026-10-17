@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Portais publicados; APK aguardando acesso Expo — 17/10/2026
+
+- Proprietário configurou `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` nos GitHub Actions Secrets. A nova tentativa publicou somente o Worker de homologação, preservando variáveis remotas e sem migração de banco.
+- Código funcional publicado: `0d9991be9a5c732f301e832cbfbe41882de60b27`. Worker: **`ac4d157e-f1ef-45b1-9b0a-8e3862e62b97`**, publicação em 17/10 às 07:22 de Nova York. Job `portals` aprovado: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027796587 . O resultado geral desse processamento permanece como falha por causa do job independente do APK, não da publicação do Worker.
+- Conferência pública após publicação: `/admin`, `/gestor` e `/health` responderam HTTP 200; saúde `ok:true`. Testes autenticados automatizados usam bases sintéticas; nenhuma conta real foi alterada para conferir a entrega.
+- CI completo aprovado para o código publicado, com 310 testes, lint/TypeScript: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027796609 . Revisão de navegador: 664 cenários responsivos, 444 de aparência, 261 do administrativo, 54 de Pedido e 54 de Encomendas.
+- **APK ainda não gerado:** o GitHub Actions informou `EXPO_TOKEN ausente`. Configurar esse segredo na conta Expo com acesso ao projeto de homologação e retomar somente o job de APK; a compilação é local no runner e não usa a cota esgotada de builds EAS cloud. A liberação para download continua condicionada à assinatura/pacote e conclusão verificadas.
+- Produção preservada. Integração futura de Encomendas com cozinha/caixa continua adiada. Recuperação real por e-mail depende do remetente/provedor, e validação física de tablet/POS continua para teste no equipamento.
+
 ## Correção adicional encontrada na validação remota — 17/10/2026
 
 - A segunda execução de CI revelou uma corrida no retorno idempotente do estorno do Caixa: a mesma operação podia ser confirmada por outra requisição entre a primeira consulta e a leitura do histórico, fazendo o reenvio receber erro. O banco continuava impedindo estorno duplicado.
