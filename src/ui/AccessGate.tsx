@@ -53,11 +53,11 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
           {settings ? <Text style={styles.settingsIntro}>{t('Digite a senha de Configurações para continuar.')}</Text> : <>
             <Text style={styles.fieldLabel}>{t('Usuário')}</Text>
             <View style={styles.userInputRow}>
-              <TextInput style={[styles.input, styles.userInput]} accessibilityLabel={t('Usuário')} value={username} onChangeText={(value) => { setUsername(value); setShowUsers(false); }} editable={!offline} autoCapitalize="none" autoCorrect={false} maxLength={24} />
+              <TextInput style={[styles.input, styles.userInput, styles.usernameText]} accessibilityLabel={t('Usuário')} value={username} onChangeText={(value) => { setUsername(value); setShowUsers(false); }} editable={!offline} autoCapitalize="none" autoCorrect={false} maxLength={24} />
               {!offline && loginUsers.length > 1 && <Pressable style={styles.userPickerButton} accessibilityRole="button" accessibilityLabel={t('Selecionar usuário')} accessibilityState={{ expanded: showUsers }} onPress={() => { Keyboard.dismiss(); setShowUsers((open) => !open); }}><Text style={styles.userPickerArrow}>{showUsers ? '▴' : '▾'}</Text></Pressable>}
             </View>
             {showUsers && !offline && <ScrollView style={styles.userPickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-              {loginUsers.map((name) => <Pressable key={name} style={styles.userPickerItem} accessibilityRole="button" accessibilityLabel={name} onPress={() => { setUsername(name); setPassword(''); setError(''); setShowUsers(false); }}><Text style={styles.connectionText}>{name}</Text></Pressable>)}
+              {loginUsers.map((name) => <Pressable key={name} style={styles.userPickerItem} accessibilityRole="button" accessibilityLabel={name} onPress={() => { setUsername(name); setPassword(''); setError(''); setShowUsers(false); }}><Text style={[styles.connectionText, styles.usernameText]}>{name}</Text></Pressable>)}
             </ScrollView>}
           </>}
           {offline && <><Text style={styles.helperText}>{t('Informe a chave de recuperação guardada fora do aparelho e crie uma senha temporária de sua escolha. Ao conectar, o admin voltará a usar a senha semanal. Pedidos e usuários apagados não serão recuperados.')}</Text><PasswordField label={t('Chave de recuperação')} value={recoveryCode} onChangeText={setRecoveryCode} /></>}

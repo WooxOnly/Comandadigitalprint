@@ -8,30 +8,35 @@ const rgb = value => {
 const hex = values => '#' + values.map(value => Math.round(value).toString(16).padStart(2, '0')).join('');
 const luminance = values => values.map(value => { const s = value / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; }).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
 const blend = (a, b, ratio) => a.map((value, index) => value * (1 - ratio) + b[index] * ratio);
-// The same semantic color conversion is used by native controls and portal CSS.
-// Foreground white and saturated brand backgrounds remain intact, including
-// button contrast; flags, logos, receipts and other image pixels are untouched.
+// Shared neutral graphite palette for native controls and portal CSS.
+// Image pixels, receipt HTML and white labels on primary buttons are untouched.
 export function darkColor(value, property = 'color') {
   const color = rgb(value); if (!color) return value;
   const lower = value.toLowerCase(), light = luminance(color);
-  if (/background/i.test(property)) {
-    if (['#f5f3ef', '#f6f5ef', '#ffffff', '#fff'].includes(lower)) return lower === '#fff' || lower === '#ffffff' ? '#1c2b23' : '#101b15';
-    return light > .45 ? hex(blend([18, 34, 25], color, .1)) : value;
-  }
+  const green = color[1] > color[0] * 1.1 && color[1] > color[2] * 1.04;
   if (/shadow/i.test(property)) return value;
-  if (/border/i.test(property)) return light > .45 ? '#5c7867' : darkColor(value, 'color');
+  if (/background/i.test(property)) {
+    if (['#f5f3ef', '#f6f5ef'].includes(lower)) return '#18191b';
+    if (['#fff', '#ffffff'].includes(lower)) return '#242629';
+    if (['#214b40', '#245c43'].includes(lower)) return '#3a2823';
+    if (['#fcebe3', '#fcebe8', '#fcece8'].includes(lower)) return '#3a2823';
+    if (green || light > .45) return '#2c2e32';
+    return value;
+  }
+  if (/border/i.test(property)) return '#414348';
   const foreground = {
-    '#223b35': '#e6f1e9', '#18392e': '#e6f1e9',
-    '#62716b': '#b5c7bb', '#59685e': '#b5c7bb', '#6c7771': '#a8bbae',
-    '#214b40': '#b7e3ca', '#245c43': '#b7e3ca',
-    '#ae4328': '#ffb49a', '#963821': '#ffb49a',
+    '#223b35': '#f1f1f1', '#18392e': '#f1f1f1',
+    '#62716b': '#b6b8bc', '#59685e': '#b6b8bc', '#6c7771': '#b6b8bc',
+    '#214b40': '#f3a588', '#245c43': '#f3a588',
+    '#ae4328': '#f3a588', '#963821': '#f3a588',
   };
   if (foreground[lower]) return foreground[lower];
-  const background = luminance([28, 43, 35]);
+  if (green) return '#d0d2d5';
+  const background = luminance([36, 38, 41]);
   if ((light + .05) / (background + .05) >= 4.5) return value;
   let result = color;
   for (let amount = .35; amount <= 1; amount += .05) {
-    result = blend(color, [242, 247, 243], amount);
+    result = blend(color, [241, 241, 241], amount);
     if ((luminance(result) + .05) / (background + .05) >= 5) break;
   }
   return hex(result);

@@ -1,5 +1,55 @@
 # Pendências e preferências
 
+## Pedido compacto e modo escuro aprovados — 16/10/2026
+
+- Proprietário aprovou a prévia mantendo a identidade atual, com **duas colunas de produtos**, ingredientes/descrição acessíveis pelo **ⓘ**, **+** para abrir a configuração/observações e dados de atendimento/mesa/cliente em bloco superior recolhível por **Confirmar dados**, reaberto por **Editar**. Remover **Somente favoritos** dessa tela; favoritos cadastrados no Cardápio não são apagados.
+- Implementação local: catálogo e pedido com rolagem independente na proporção 3:2; uma coluna de produtos quando a largura disponível/fontes ampliadas não comportarem duas. Nomes completos quebram linhas sem reticências; cartões acompanham o texto e mantêm ações separadas com alvo de toque de 44 pontos. Ingredientes não adicionam nem imprimem itens; o botão + preserva o diálogo existente de opções/observações. Preços continuam condicionados ao módulo Caixa; esta revisão não altera cobrança nem inventa um novo cálculo financeiro a partir da ilustração.
+- Proprietário rejeitou o tema escuro esverdeado e aprovou a prévia **grafite/cinza neutro**, texto claro e ações em laranja. Paleta compartilhada ajustada para app e portais; tema claro e impressão em papel preservados.
+- Conferência em navegador dos componentes reais com dados sintéticos: **54 verificações** de pedido em PT-BR/EN/ES, claro/escuro, nomes longos, dados recolhíveis, ingredientes, abertura de observações, preços dependentes de módulo e rotação. **300 testes de código**, **444 verificações de aparência** e **369 verificações responsivas ampliadas** aprovadas, além das 54 específicas do pedido; lint e TypeScript aprovados. Compilação Android ainda em andamento. Não confundir prévias ilustradas e Chromium com validação no tablet físico.
+- Compilação local anterior com o tema verde interrompida para incorporar o grafite aprovado. Novo APK de homologação sendo preparado; ainda não declarar disponível nem publicado. Nenhuma alteração desta rodada foi publicada em produção. A revisão futura do fluxo cozinha/caixa permanece adiada.
+
+## Encomendas — detalhamento com o proprietário, 16/10/2026
+
+Estamos detalhando a tela antes de implementar os novos pontos. Não publicar esta rodada nem avançar automaticamente para outras telas.
+
+- **Fluxo completo da operação — revisão adiada expressamente:** o proprietário ampliou o pedido para rever o fluxo de tudo, incluindo **encomendas, pedidos, cozinha e caixa**, não somente o envio da encomenda ao preparo. Mapear do cadastro/agendamento ou abertura do pedido até envio à cozinha, preparo, retirada/entrega, pagamento e conclusão, incluindo cancelamento, estorno e impressão. Definir como os módulos se comunicam, quais ações são manuais/automáticas, responsáveis, permissões e comportamento quando módulos estiverem desativados. A encomenda precisa chegar à cozinha em algum momento; esse momento e a ligação com o Caixa ainda não foram definidos. Não confundir estado do preparo com pagamento ou conclusão. Escopo de revisão registrado; não implementar nem considerar o desenho aprovado nesta etapa.
+- Rótulos confirmados: **Data da retirada/entrega** e **Horário da retirada/entrega**.
+- Data sempre na ordem americana **mês/dia/ano**, nos três idiomas. Campos separados para mês, dia, ano, hora e minuto; mês/dia/hora/minuto aceitam até dois dígitos. Foi proposta a entrada sem zero inicial com preenchimento automático; o ano com quatro dígitos foi perguntado, ainda sem confirmação explícita.
+- Campos obrigatórios indicados com asterisco; se vazios ao salvar, destacar e mostrar aviso junto do campo. Impedir salvamento incompleto/inválido. Não disparar avisos intrusivos na abertura da tela.
+- Ao adicionar produto na Encomenda, abrir os detalhes/observações e opções como em Pedido, antes da inclusão definitiva.
+- Cancelamento solicitado: selecionar o usuário autorizador e verificar sua senha; registrar usuário, data e hora do cancelamento, sem registrar a senha. **Admin/Gerente sempre autorizados; Caixa depende da permissão individual específica “Cancelar encomendas”; Cozinheiro permanece sem acesso à tela.** Esta é uma nova exceção solicitada à regra anterior de permissões exclusivamente por perfil. O padrão desativado para o Caixa foi sugerido, ainda não confirmado separadamente. Não substituir o operador da sessão pela identidade de quem autoriza.
+- Histórico separado de concluídas/canceladas foi apenas sugerido na conversa; fluxo atual ainda não conferido e proposta não aprovada. Não tratar conclusão como pagamento automático nem apagar registros.
+- Correção do contraste do filtro selecionado autorizada; alteração já local, ainda não publicada. Os demais itens desta seção são requisitos/propostas em detalhamento, não funcionalidades entregues.
+
+## Escopo confirmado — abertura do app, 16/10/2026
+
+- Proprietário confirmou que a tela Início com o banner “Tudo pronto para o próximo pedido” **não deve mudar**. HomeScreen e seu layout não foram alterados nesta rodada.
+- Trabalhar **um item por vez, avançando somente após autorização explícita**. A autorização mais recente cobre apenas a abertura do app; as demais alterações locais anteriores permanecem aguardando revisão, sem publicação.
+- Abertura configurada com imagem transparente do chapéu e nome **BistroHub**, fundo off-white `#F5F3EF`, variante nativa escura em grafite `#181A1B`, largura de imagem 200 pontos dentro do canvas nativo de 288 para preservar a marca. Ativo `assets/bistrohub-splash.png`; ícone do aplicativo preservado.
+- Esta configuração nativa exige nova compilação/instalação do APK. Ainda não publicada nem validada no Android físico. Não tratar prévia ou Expo Go como evidência da abertura do APK.
+
+## Fila atual de ajustes — 16/10/2026, resolver parte por parte
+
+Pedido mais recente: registrar todas as demandas e resolver uma por vez. **Os ajustes de layout serão decididos junto com o proprietário.** Não tratar sugestões de dimensões, cores ou composição como desenho aprovado, nem publicar automaticamente esta rodada enquanto ela está em revisão.
+
+- [ ] **Usuários:** mostrar somente a primeira letra maiúscula, como **Will, Admin**. Esta correção substitui o pedido anterior de tudo em maiúsculas. Preservar identificadores de autenticação, contas existentes e senhas; não confundir operadores com nomes de clientes dos pedidos. Ainda não implementado.
+- [ ] **Home em paisagem:** proprietário considera ícones/cartões e espaços muito grandes. Rever proporções em conjunto. Sugestões ainda não aprovadas: retirar o banner grande, botão Iniciar pedido no topo, atalhos compactos com ícone ao lado do nome, até seis módulos por linha, barra inferior e cabeçalho menores, preservando alvos de toque. Não aplicar esse redesenho sem definir a próxima parte com o proprietário.
+- [ ] **Pedido — grupos de produtos:** colocar **Todos por último** e abrir inicialmente em **Aperitivos**, mostrando somente esse grupo para reduzir a lista inicial. Código local ajustado; sem Aperitivos, usar o primeiro grupo disponível. Preservar a seleção explícita do operador e o rascunho ao girar o tablet; não alterar produtos nem a ordem dos outros grupos. Ainda não publicado nem entregue em APK.
+- [ ] **Abertura do APK:** substituir o fundo verde; exibir logo **e nome BistroHub**. Off-white/grafite e detalhe laranja foram sugestões; a composição final será revista em conjunto. A imagem com nome ainda não foi implementada nem entregue em APK.
+- [ ] **Preparo:** trocar Iniciar por **Em preparo**, manter **Pronto**; destacar mesa e nome; apresentar **Recebido há X minutos** e **Em preparo há X minutos**, contando cada etapa desde seu próprio início. Código local alterado, ainda requer revisão final e entrega no APK.
+- [ ] **Filtro de Encomendas:** texto desaparece quando o filtro fica verde. Corrigida localmente a cor selecionada de Todas/Dia/Semana e do endereço selecionado na mesma tela; lint e TypeScript aprovados. Conferência em Chromium aprovada em 36 combinações de filtros, idiomas PT-BR/EN/ES, temas claro/escuro e orientação horizontal/vertical, com contraste mínimo de 4,5:1. Não publicado nem entregue em APK; ainda sem validação no Android físico.
+- [ ] **Entrega APK:** compilação local anterior interrompida para incorporar os novos pedidos. Não há APK novo pronto desta rodada. Cota gratuita de compilação EAS cloud esgotada; nenhuma contratação paga autorizada. Retomar a compilação quando a rodada acordada estiver fechada.
+- [ ] **Recuperação por e-mail:** continua dependente de remetente/serviço aprovado para enviar aos destinatários cadastrados; não afirmar que está funcionando.
+
+As demais demandas e evidências permanecem registradas abaixo. A publicação de homologação já conferida é a versão `9b07a29`; alterações locais posteriores não estão automaticamente disponíveis nela. Produção deve permanecer preservada.
+
+## Publicação online conferida — 16/10/2026
+
+- Código `9b07a29c31c05c9ea01ef0c852d14a0c2f31884d` enviado à branch `homologacao`; CI com **297 testes aprovados**, lint e TypeScript: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/38983437074 .
+- Backup privado validado antes da migração. Aplicada somente `license-schema.sql`, sem reaplicar o esquema antigo de lojas. `LICENSE_SIGNING_PRIVATE_JWK` configurada como segredo correspondente à chave pública do APK. Worker de homologação publicado com `--keep-vars`, versão `fd08b381-27b9-497a-987c-7e0426ea45d5`.
+- Conferência autenticada online aprovou Home/clientes, botão/página de licença, cadastro individual com os quatro perfis, ausência de checklists, temas, API da licença com assinatura verificada, separação do Portal do cliente, `/health`, mesma senha semanal e configurações de lojas preservadas. Resultado privado em `/tmp/bistro-roles-live-result.json`. Nenhuma conta real alterada; produção preservada.
+- **APK:** EAS cloud recusou a build por cota gratuita Android esgotada; reset informado para 01/11/2026. Nenhum plano pago contratado e nenhum ID de build cloud criado para esta entrega. Compilação **EAS local** iniciada com o mesmo perfil/projeto/pacote de homologação e credenciais remotas do Expo, usando ferramentas Android isoladas em `/workspace/scratch`. Log privado em `/tmp/bistro-eas-local-private.log`. Não afirmar APK disponível antes de a compilação concluir e gerar o arquivo.
+
 ## Entrega completa para homologação — 16/10/2026, publicação autorizada
 
 - Proprietário reiterou **publicar tudo**, incluindo app e portais. Esta entrega substitui as notas históricas de alterações apenas locais. Destino exclusivo: branch, Worker/D1 e projeto Expo de homologação; produção preservada.

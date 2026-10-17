@@ -32,8 +32,8 @@ function useAppState() {
   function checkAccess(action: 'menu' | 'settings' | 'reprint') { if (!allowed(action)) throw new Error('Usuário sem permissão para esta ação.'); }
   const { t, language } = useLanguage();
   const [productOptions, setProductOptions] = useState<CatalogOptions>({});
-  const [productSearch, setProductSearch] = useState(''), [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [category, setCategoryState] = useState('Todos');
+  const [productSearch, setProductSearch] = useState('');
+  const [selectedCategory, setCategoryState] = useState<string | null>(null);
   const [subcategory, setSubcategory] = useState('');
   function setCategory(value: string) { setCategoryState(value); setSubcategory(''); }
   const [plate, setPlate] = useState('1');
@@ -117,10 +117,16 @@ function useAppState() {
     try { checkAccess('menu'); const previous = await cloud.get('product-option:' + productId) as ProductOption | undefined; await cloud.write({ ['product-option:' + productId]: { productId, available: true, favorite: false, ...previous, ...change } }); }
     catch (error) { Alert.alert(t('Falha ao salvar'), t((error as { code?: string }).code === 'ACCESS_DENIED' ? 'Usuário sem permissão para esta ação.' : (error as Error).message)); }
   }
+  const categories = useMemo(() => {
+    const groups = Array.from(new Set(menu.map(item => item.category).filter(value => !!value && value !== 'Todos')));
+    const appetizers = groups.findIndex(value => value.trim().toLocaleLowerCase('pt-BR') === 'aperitivos');
+    if (appetizers > 0) groups.unshift(...groups.splice(appetizers, 1));
+    return [...groups, 'Todos'];
+  }, [menu]);
+  const category = selectedCategory && categories.includes(selectedCategory) ? selectedCategory : categories[0];
   const subcategories = useMemo(() => category === 'Todos' ? [] : Array.from(new Set(menu.filter(item => item.category === category).map(item => item.subcategory).filter((value): value is string => !!value))), [category, menu]);
   const activeSubcategory = subcategories.includes(subcategory) ? subcategory : '';
-  const filteredMenu = useMemo(() => searchCatalog(filterProducts(menu, category, activeSubcategory), productOptions, productSearch, favoritesOnly), [menu, category, activeSubcategory, productOptions, productSearch, favoritesOnly]);
-  const categories = useMemo(() => ['Todos', ...Array.from(new Set(menu.map((item) => item.category).filter(Boolean)))], [menu]);
+  const filteredMenu = useMemo(() => searchCatalog(filterProducts(menu, category, activeSubcategory), productOptions, productSearch), [menu, category, activeSubcategory, productOptions, productSearch]);
   const pizzaMenu = useMemo(() => menu.filter((item) => item.kind === 'pizza' && isProductAvailable(item.id, productOptions)), [menu, productOptions]);
 
   function openProduct(product: Product) {
@@ -367,7 +373,7 @@ function useAppState() {
   }
 
 
-  return { printedDestinations, productOptions, updateProductOption, productSearch, setProductSearch, favoritesOnly, setFavoritesOnly, subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { printedDestinations, productOptions, updateProductOption, productSearch, setProductSearch, subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

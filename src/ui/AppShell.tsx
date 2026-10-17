@@ -38,8 +38,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
   const { width, fontScale } = useWindowDimensions();
   const navScroll = useRef<ScrollViewRef>(null);
-  const minTabWidth = tabs.length > TABS.length ? (fontScale >= 1.4 ? 124 : 100) : 0;
-  const navWidth = Math.max(Math.min(width, tabs.length > TABS.length ? 1160 : kitchen ? 760 : isWide ? 640 : 760), minTabWidth * tabs.length + (minTabWidth ? 16 + 4 * (tabs.length - 1) : 0));
+  const minTabWidth = fontScale >= 1.4 ? 108 : 60;
+  const navSpacing = 12 + 2 * Math.max(0, tabs.length - 1);
+  const navWidth = Math.max(Math.min(width, 80 * tabs.length + navSpacing), minTabWidth * tabs.length + navSpacing);
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.screen === screen));
   const selectedOffset = Math.max(0, (selectedIndex + 0.5) * (navWidth / Math.max(1,tabs.length)) - width / 2);
   useEffect(() => { navScroll.current?.scrollTo({ x: selectedOffset, animated: false }); }, [selectedOffset]);
@@ -67,11 +68,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}
 
           {tabs.length > 0 && <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.navBackground} testID="bottom-navigation">
-            <ScrollView ref={navScroll} horizontal showsHorizontalScrollIndicator persistentScrollbar style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} onContentSizeChange={() => navScroll.current?.scrollTo({ x: selectedOffset, animated: false })}>
-              <View testID="navigation-content" style={[styles.bottomNav, isWide && styles.bottomNavWide, { width: navWidth, maxWidth: navWidth }, kitchen && { paddingVertical: 3 }]}>
+            <ScrollView ref={navScroll} horizontal showsHorizontalScrollIndicator={navWidth > width} style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} onContentSizeChange={() => navScroll.current?.scrollTo({ x: selectedOffset, animated: false })}>
+              <View testID="navigation-content" style={[styles.bottomNav, { width: navWidth, maxWidth: navWidth }]}>
                 {tabs.map((tab) => <Pressable testID={'nav-' + tab.screen} key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} aria-selected={screen === tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
-                  <View style={{ marginBottom: 3 }}><NavigationIcon icon={tab.icon} size={kitchen ? 16 : isWide ? 19 : 23} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
-                  <Text numberOfLines={1} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
+                  <View style={{ marginBottom: 2 }}><NavigationIcon icon={tab.icon} size={18} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
+                  <Text numberOfLines={2} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
                 </Pressable>)}
               </View>
             </ScrollView>

@@ -23,12 +23,12 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#F5F3EF",
-          "image": "./assets/chef-foreground.png",
-          "imageWidth": 96,
+          "image": "./assets/bistrohub-splash.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "dark": {
-            "backgroundColor": "#101B15",
-            "image": "./assets/chef-foreground.png"
+            "backgroundColor": "#181A1B",
+            "image": "./assets/bistrohub-splash.png"
           }
         }
       ],

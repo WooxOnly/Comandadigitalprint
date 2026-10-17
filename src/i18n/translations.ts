@@ -1,6 +1,15 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Recebido há {minutes} minuto": ["Received {minutes} minute ago", "Recibido hace {minutes} minuto"],
+  "Em preparo há {minutes} minuto": ["In prep for {minutes} minute", "En preparación desde hace {minutes} minuto"],
+  "Pronto há {minutes} minuto": ["Ready for {minutes} minute", "Listo desde hace {minutes} minuto"],
+  "Finalizado há {minutes} minuto": ["Completed {minutes} minute ago", "Finalizado hace {minutes} minuto"],
+  "Recebido há {minutes} minutos": ["Received {minutes} minutes ago", "Recibido hace {minutes} minutos"],
+  "Em preparo há {minutes} minutos": ["In prep for {minutes} minutes", "En preparación desde hace {minutes} minutos"],
+  "Pronto há {minutes} minutos": ["Ready for {minutes} minutes", "Listo desde hace {minutes} minutos"],
+  "Finalizado há {minutes} minutos": ["Completed {minutes} minutes ago", "Finalizado hace {minutes} minutos"],
+
   "Confira a data e a hora deste tablet para validar a licença.": ["Check this tablet’s date and time to validate the license.", "Revisa la fecha y la hora de esta tableta para validar la licencia."],
   "Voltar à entrada": ["Back to sign in", "Volver al inicio de sesión"],
   "Gerenciar licença": ["Manage license", "Gestionar licencia"],
@@ -1966,3 +1975,11 @@ export function translatedNote(note: string, language: Language) {
     return key ? translate(key, language) : part;
   }).join(', ');
 }
+
+Object.assign(translations, {
+  'Dados do pedido': ['Order details', 'Datos del pedido'],
+  'Atendimento': ['Service', 'Servicio'],
+  'Outra mesa': ['Other table', 'Otra mesa'],
+  'Confirmar dados': ['Confirm details', 'Confirmar datos'],
+  'Número': ['Number', 'Número'],
+});

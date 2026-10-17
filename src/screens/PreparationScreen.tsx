@@ -14,9 +14,15 @@ import { describeExtra } from '../../orderItems';
 import { orderNumberLabel } from '../services/orderNumber';
 import { useKitchenAlerts } from '../ui/useKitchenAlerts';
 import { preparationDurations } from '../../shared/preparation-times.mjs';
-import { preparationQueue, preparationPageSize } from '../services/preparationQueue';
+import { preparationQueue, preparationPageSize, preparationStageMinutes } from '../services/preparationQueue';
 const statuses = ['received', 'preparing', 'ready', 'completed'] as const;
 const labels = { received: 'Recebido', preparing: 'Em preparo', ready: 'Pronto', completed: 'Finalizado' };
+const elapsedLabels = {
+  received: ['Recebido há {minutes} minuto', 'Recebido há {minutes} minutos'],
+  preparing: ['Em preparo há {minutes} minuto', 'Em preparo há {minutes} minutos'],
+  ready: ['Pronto há {minutes} minuto', 'Pronto há {minutes} minutos'],
+  completed: ['Finalizado há {minutes} minuto', 'Finalizado há {minutes} minutos'],
+};
 const accents = { received: '#DBA525', preparing: '#2684B1', ready: '#25734D', completed: '#718078' };
 export default function PreparationScreen() {
   const { modules, preparation, advancePreparation, busy } = useBusiness();
@@ -68,22 +74,23 @@ export default function PreparationScreen() {
     <View testID='preparation-pages' {...gestures.panHandlers} style={[board.viewport, { maxHeight: rows * maxCardHeight + (rows - 1) * 8 }]} onLayout={event => { const { width, height } = event.nativeEvent.layout; setArea(current => current.width === width && current.height === height ? current : { width, height }); }}>
       <ScrollView style={styles.flex} contentContainerStyle={board.grid} showsVerticalScrollIndicator={true}>
         {visible.map(order => {
-          const current = state(order.id), record = preparation.find(value => value.orderId === order.id), timing = preparationDurations(order, record);
-          const minutes = current === 'ready' || current === 'completed' ? timing.totalSeconds === null ? null : Math.floor(timing.totalSeconds / 60) : Math.max(0, Math.floor((now - Date.parse(order.createdAt)) / 60000));
-          const late = ['received', 'preparing'].includes(current) && /^\d{1,3}$/.test(delay) && Number(delay) > 0 && minutes !== null && minutes >= Number(delay);
+          const current = state(order.id), record = preparation.find(value => value.orderId === order.id);
+          const minutes = preparationStageMinutes(order, record, now);
+          const totalMinutes = Math.max(0, Math.floor((now - Date.parse(order.createdAt)) / 60000));
+          const late = ['received', 'preparing'].includes(current) && /^\d{1,3}$/.test(delay) && Number(delay) > 0 && totalMinutes >= Number(delay);
+          const heading = [order.serviceMode === 'takeout' ? t('Para levar') : t('Mesa') + (order.plate ? ' ' + order.plate : ''), order.customer?.trim()].filter(Boolean).join(' · ');
+          const elapsed = minutes === null ? t(labels[current]) + ' · —' : t(elapsedLabels[current][minutes === 1 ? 0 : 1]).replace('{minutes}', minutes.toLocaleString(locale));
           const next = statuses[statuses.indexOf(current) + 1];
           return <View testID={'preparation-card-' + order.id} key={order.id} style={[board.card, { width: cardWidth, height: cardHeight, borderTopColor: late ? '#AE4328' : accents[current] }]}>
-            <View style={board.row}><Text style={board.orderNumber}>{orderNumberLabel(order) || order.plate}</Text><Text style={[board.status, { color: late ? '#AE4328' : accents[current] }]}>{t(labels[current])} · {minutes === null ? '—' : minutes + ' min'}</Text></View>
-            <Text style={board.meta}>{late ? t('Atrasado') + ' · ' : ''}{localDayText(new Date(order.createdAt)) !== localDayText(new Date(now)) ? new Date(order.createdAt).toLocaleDateString(locale, { month: '2-digit', day: '2-digit' }) + ' ' : ''}{new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {t(order.serviceMode === 'takeout' ? 'Para levar' : order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Mesa')}{order.plate ? ' ' + order.plate : ''}</Text>
-
             <ScrollView testID={'preparation-items-' + order.id} style={board.itemPreview} contentContainerStyle={board.itemContent} nestedScrollEnabled persistentScrollbar showsVerticalScrollIndicator>
-              {!!order.customer && <Text style={board.meta}>{order.customer}</Text>}
+              <View style={[board.row, { alignItems: 'flex-start' }]}><Text style={board.orderNumber}>{heading}</Text><Text style={[board.status, { color: late ? '#AE4328' : accents[current] }]}>{elapsed}</Text></View>
+              <Text style={board.meta}>{late ? t('Atrasado') + ' · ' : ''}{localDayText(new Date(order.createdAt)) !== localDayText(new Date(now)) ? new Date(order.createdAt).toLocaleDateString(locale, { month: '2-digit', day: '2-digit' }) + ' ' : ''}{new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {t('Pedido')} {orderNumberLabel(order) || order.plate}</Text>
               {order.items.map((item, index) => <View key={item.id + '-' + index} style={board.itemContent}><Text style={board.item}>{item.quantity}× {item.name}</Text>{!!item.note && <Text style={board.meta}>{item.note}</Text>}</View>)}
               {order.items.some(item => item.flavors?.length || item.extras?.length) && <Text style={board.caption}>{t('Itens e observações nos detalhes')}</Text>}
             </ScrollView>
             <View style={board.actions}><Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} style={board.action} onPress={() => setDetailId(order.id)}><Text style={board.actionText}>{t('Detalhes')}</Text></Pressable>
               {canReprint && <Pressable accessibilityRole="button" disabled={printing} style={[board.action, printing && styles.pressed]} onPress={() => reprint(order)}><Text style={board.actionText}>{t('Reimprimir')}</Text></Pressable>}
-              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={() => advance(order.id)}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Iniciar' : next === 'ready' ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
+              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={() => advance(order.id)}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
             </View>
             {cloud.pending('preparation:' + order.id) && <Text style={board.caption}>{t('Pendente de sincronização')}</Text>}
           </View>;

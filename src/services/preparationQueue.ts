@@ -1,4 +1,10 @@
 import type { Preparation } from './business';
+export function preparationStageMinutes(order: { createdAt: string }, record: Preparation | undefined, now: number): number | null {
+  const status = record?.status ?? 'received';
+  const start = status === 'received' ? order.createdAt : status === 'preparing' ? record?.startedAt ?? record?.updatedAt : status === 'ready' ? record?.readyAt ?? record?.updatedAt : record?.completedAt ?? record?.updatedAt;
+  const time = start ? Date.parse(start) : NaN;
+  return Number.isFinite(time) && Number.isFinite(now) ? Math.max(0, Math.floor((now - time) / 60000)) : null;
+}
 export const PREPARATION_PAGE_SIZE = 8;
 export function preparationPageSize(width: number, height: number) {
   // Short windows retain eight cards so the fixed 44-point controls stay usable.

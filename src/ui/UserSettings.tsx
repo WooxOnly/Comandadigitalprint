@@ -63,16 +63,16 @@ export function UserSettings() {
     {loadError && <Text style={styles.helperText}>{t('Não foi possível carregar os usuários. Reabra os ajustes para tentar novamente.')}</Text>}
     <Text style={styles.helperText}>{t('Usuários são compartilhados entre tablets após sincronizar. Offline, ficam disponíveis os acessos já recebidos neste aparelho.')}</Text>
     {tab === 'manage' && <View>
-    <View style={styles.orderCard}><Text style={styles.cardTitle}>admin</Text><Text style={styles.helperText}>{t('Administrador protegido. Senha semanal gerenciada pelo painel online.')}</Text></View>
+    <View style={styles.orderCard}><Text style={[styles.cardTitle, styles.usernameText]}>admin</Text><Text style={styles.helperText}>{t('Administrador protegido. Senha semanal gerenciada pelo painel online.')}</Text></View>
     {users.length === 0 && <Text style={styles.helperText}>{t('Nenhum usuário adicional cadastrado.')}</Text>}
     {users.map((user) => <View key={user.username} style={styles.orderCard}>
-      <View style={styles.orderLine}><Text style={styles.cardTitle}>{user.username} · {t(ROLE_LABELS[user.role])}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
+      <View style={styles.orderLine}><Text style={[styles.cardTitle, styles.usernameText]}>{user.username} · {t(ROLE_LABELS[user.role])}</Text><Text style={styles.helperText}>{t(user.active ? 'Ativo' : 'Inativo')}</Text><Switch accessibilityLabel={t('Usuário ativo') + ': ' + user.username} value={user.active} disabled={busy} onValueChange={(active) => { Keyboard.dismiss(); change(() => service.updateUser(user.username, active)); }} trackColor={{ false: COLORS.border, true: COLORS.green }} /></View>
       <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setTab('create'); setEditing(user.username); setRole(user.role); setUsername(user.username); setPassword(''); setConfirmation(''); }}><Text style={styles.secondaryButtonText}>{t('Editar usuário')}</Text></Pressable>
     </View>)}
     </View>}
     {tab === 'create' && <View>
     <Text style={styles.sectionTitle}>{t(editing ? 'Editar usuário' : 'Cadastrar usuário')}</Text>
-    <TextInput accessibilityLabel={t('Usuário')} placeholder={t('Usuário')} placeholderTextColor={COLORS.placeholder} value={username} onChangeText={setUsername} editable={!editing && !busy} autoCapitalize="none" autoCorrect={false} maxLength={24} style={styles.input} />
+    <TextInput accessibilityLabel={t('Usuário')} placeholder={t('Usuário')} placeholderTextColor={COLORS.placeholder} value={username} onChangeText={setUsername} editable={!editing && !busy} autoCapitalize="none" autoCorrect={false} maxLength={24} style={[styles.input, styles.usernameText]} />
     <UserRolePicker value={role} onChange={setRole} disabled={busy} />
     <PasswordField label={t('Senha')} value={password} onChangeText={setPassword} />
     <PasswordField label={t('Confirmar senha')} value={confirmation} onChangeText={setConfirmation} />

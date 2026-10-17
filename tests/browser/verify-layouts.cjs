@@ -105,6 +105,9 @@ async function fits(page, label, controls = false) {
   const result = await page.evaluate(checkControls => {
     const overflow = document.documentElement.scrollWidth > innerWidth + 1, outside = [];
     if (checkControls) for (const element of document.querySelectorAll('input,button,select,[role=button],[role=tab]')) {
+      // RN Web makes the underlying app inaccessible while a native Modal is
+      // open. Only its active dialog controls participate in this assertion.
+      if (element.closest('[aria-hidden="true"],[inert]')) continue;
       const rect = element.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
       if (rect.left >= -1 && rect.right <= innerWidth + 1) continue;
       let ancestor = element.parentElement, scroll = false;

@@ -22,7 +22,7 @@ function cashFields(store = {}) {
 function preparationFields(store = {}) {
   return `<fieldset><legend>Painel de preparo</legend><label class="module-option"><input type="checkbox" name="preparationReprint"${store.preparationSettings?.allowReprint ? ' checked' : ''}> Permitir reimpressão no painel de preparo</label><p class="muted">Também respeita o perfil de acesso do usuário. A impressora deve estar configurada no tablet da cozinha.</p></fieldset>`;
 }
-const css = `.app-user-list{display:grid;gap:8px;margin:12px 0}.app-user-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border:1px solid #dbe2dc;border-radius:9px;padding:10px}.app-user-row span{min-width:0;overflow-wrap:anywhere}.app-user-row button{margin-left:auto}#app-user-form{margin-top:14px}`+`
+const css = `#app-username,.app-user-row>span{text-transform:capitalize}.app-user-list{display:grid;gap:8px;margin:12px 0}.app-user-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border:1px solid #dbe2dc;border-radius:9px;padding:10px}.app-user-row span{min-width:0;overflow-wrap:anywhere}.app-user-row button{margin-left:auto}#app-user-form{margin-top:14px}`+`
 input,select,button{max-width:100%}.store-identity{overflow-wrap:anywhere}.log{overflow-wrap:anywhere}@media(max-width:760px),(max-height:600px){.topbar{position:static}}
 :root{font-family:system-ui,-apple-system,sans-serif;color:#223b35;background:#f5f3ef}*{box-sizing:border-box}body{margin:0;min-height:100vh}
 .shell{max-width:960px;margin:0 auto;padding:20px 20px 48px}.topbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:-20px -20px 26px;padding:16px 20px;background:#f5f3ef;border-bottom:1px solid #dbe2dc}
