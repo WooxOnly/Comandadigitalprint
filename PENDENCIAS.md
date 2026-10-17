@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Estado da entrega — 17/10/2026
+
+- Código funcional salvo em `f86581460767b4695dd68fe3844520c377ec7d43`, branch `homologacao`. CI aprovado: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027405322 .
+- Entrega remota https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027405397 interrompida antes da publicação: **`CLOUDFLARE_API_TOKEN` ausente nos GitHub Actions Secrets**. O ambiente reiniciado também não tem a antiga sessão Wrangler/Expo. Não afirmar que o Worker ou APK desta etapa foram publicados.
+- Revisão completa adicional aprovada: **664 verificações responsivas**, **444 de aparência** e **261 do administrativo**, PT-BR/EN/ES. Testes específicos de Pedido e Encomendas: 54 + 54 verificações. Código: 309 testes distintos aprovados (308 na suíte geral e um novo caso administrativo executado separadamente), lint/TypeScript aprovados.
+- Compilação APK separada da publicação do Worker, para permitir preparar o instalador quando o acesso Expo estiver disponível. Sua liberação conjunta depende da publicação correta do servidor. Credenciais exigidas no GitHub Actions: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `EXPO_TOKEN`; nunca registrar seus valores no projeto ou na conversa.
+- As seções datadas abaixo são histórico. Pedidos posteriores de concluir tudo e publicar homologação substituem as antigas anotações de aguardar autorização. Mantêm-se adiados apenas o fluxo operacional de encomendas/cozinha/caixa e as expansões futuras; recuperação real por e-mail ainda depende do provedor/remetente.
+
 ## Retomada e conclusão das correções de Encomendas — 17/10/2026
 
 - Código recuperado do commit `10210de` após reinício do ambiente. Correções recentes reconstruídas; nunca considerar a antiga compilação Android como entrega desta etapa.

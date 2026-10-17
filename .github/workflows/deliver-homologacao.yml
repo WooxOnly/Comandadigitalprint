@@ -59,7 +59,7 @@ jobs:
           NODE
 
   apk:
-    needs: portals
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -110,6 +110,16 @@ jobs:
           name: BistroHub-Homologacao-${{ github.sha }}
           path: artifacts/
           retention-days: 30
+  release:
+    needs: [portals, apk]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: BistroHub-Homologacao-${{ github.sha }}
+          path: artifacts/
       - name: Disponibilizar APK para testes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -123,4 +133,4 @@ jobs:
 
           APK assinado, com pacote exclusivo de homologação. Os testes automatizados não substituem a validação física do tablet e da impressora. A integração futura do fluxo de encomendas com cozinha/caixa permanece adiada.
           NOTES
-          gh release create "$RELEASE_TAG" --prerelease --target "$GITHUB_SHA" --title "BistroHub Homologação ${GITHUB_SHA:0:7}" --notes-file "$RUNNER_TEMP/release-notes.md" artifacts/BistroHub-Homologacao.apk artifacts/SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" --title "BistroHub Homologação ${GITHUB_SHA:0:7}" --notes-file "$RUNNER_TEMP/release-notes.md" artifacts/BistroHub-Homologacao.apk artifacts/SHA256SUMS.txt
