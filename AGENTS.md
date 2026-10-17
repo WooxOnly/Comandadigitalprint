@@ -1,5 +1,11 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Efficiency preferences explicitly confirmed by the owner — 2026-10-17
+
+- After starting an APK build, return its tracking link without monitoring or waiting for completion. Check again only when the owner asks. Stop local monitoring processes without cancelling the remote build.
+- Minimize token use and repetitive progress messages. Use targeted tests for the changed behavior and its affected dependencies, reuse valid prior results, and avoid repeating successful tests without a new change or unresolved concern. Use the full suite when cross-cutting changes or a release require it; do not repeatedly run overlapping full suites.
+- Publishing credentials are now repository Actions Secrets, independent of the temporary workspace login. Do not ask to recreate working credentials; investigate a concrete authentication failure before requesting setup. Never request credential values in chat.
+
 ## Permanent BistroHub requirements
 
 - Every user-facing feature must ship in Brazilian Portuguese, English and Spanish in the administrative portal, Manager Dashboard and APK. Use the existing translation catalogs, including validation, errors, accessibility labels and receipts. Preserve user-entered names and notes.

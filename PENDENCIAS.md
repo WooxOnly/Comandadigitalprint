@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Economia de tokens e compilação sem acompanhamento — 17/10/2026
+
+- Proprietário reiterou: iniciar geração de APK, entregar o link e não acompanhar/esperar a compilação. Consultar novamente somente se solicitado. Monitor local encerrado; compilação remota preservada.
+- `EXPO_TOKEN` configurado pelo proprietário e aceito; ferramentas Android e autenticação Expo passaram. APK solicitado no processamento https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027796587 , etapa de geração em andamento na última consulta. Não afirmar APK pronto/download validado enquanto não houver conferência posterior solicitada.
+- Priorizar testes específicos da alteração e dependências afetadas; aproveitar evidências já aprovadas. Rodada completa somente quando mudanças compartilhadas ou fechamento da entrega justificarem, sem repetir suítes sobrepostas sem necessidade.
+- A reconexão ocorreu porque o ambiente temporário reiniciou e perdeu sessões locais; agora Cloudflare e Expo usam Actions Secrets persistentes do repositório. Não solicitar recriar esses acessos sem falha concreta.
+
 ## Portais publicados; APK aguardando acesso Expo — 17/10/2026
 
 - Proprietário configurou `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` nos GitHub Actions Secrets. A nova tentativa publicou somente o Worker de homologação, preservando variáveis remotas e sem migração de banco.
