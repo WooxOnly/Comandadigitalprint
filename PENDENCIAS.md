@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Correção adicional encontrada na validação remota — 17/10/2026
+
+- A segunda execução de CI revelou uma corrida no retorno idempotente do estorno do Caixa: a mesma operação podia ser confirmada por outra requisição entre a primeira consulta e a leitura do histórico, fazendo o reenvio receber erro. O banco continuava impedindo estorno duplicado.
+- Corrigido o reconhecimento do mesmo identificador no histórico antes de calcular novo estorno. Teste determinístico força exatamente esse intervalo; motivo diferente continua rejeitado como `INVALID_RETRY`. O teste concorrente anterior também deixa de presumir qual das duas operações diferentes vence a corrida; continua exigindo exatamente um estorno e o número correto de reenvios confirmados para o identificador vencedor. Os 33 testes direcionados de Caixa/módulos ampliados passaram; a suíte global posterior passou com **310 testes**, além de lint/TypeScript. O ajuste final da asserção concorrente foi verificado novamente nos 18 testes de Caixa.
+- Preparação Android do runner corrigida para não solicitar o pacote obsoleto `tools`; usar `platform-tools`. Presença de `EXPO_TOKEN` agora é conferida antes de instalar ferramentas. Não confundir falha de preparação com ausência de credencial Expo, que ainda será conferida.
+
 ## Estado da entrega — 17/10/2026
 
 - Código funcional salvo em `f86581460767b4695dd68fe3844520c377ec7d43`, branch `homologacao`. CI aprovado: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39027405322 .

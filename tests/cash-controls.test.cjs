@@ -140,7 +140,12 @@ test('concurrent reversals and withdrawals cannot double return or overdraw the 
   const transaction = sale(session); await f.cash(transaction);
   const refund = reverse(session, transaction);
   const responses = await Promise.all([f.cash(refund), f.cash(refund), f.cash({ ...refund, id: randomUUID() })]);
-  assert.equal(responses.filter(row => row.status === 200).length, 2); assert.equal(f.db.prepare('SELECT count(*) AS count FROM cash_adjustments').get().count, 1);
+  // Either mutation may win; the duplicated ID yields two successes only if it wins.
+  const applied = f.db.prepare('SELECT id FROM cash_adjustments').all();
+  assert.equal(applied.length, 1);
+  assert.equal(responses.filter(row => row.status === 200).length, applied[0].id === refund.id ? 2 : 1);
+  assert.ok(responses.every(row => [200, 400, 409].includes(row.status)));
+
   const next = sale(session); await f.cash(next);
   const [refundResult, outResult] = await Promise.all([f.cash(reverse(session, next)), f.cash({ operation: 'out', id: randomUUID(), deviceId: session.deviceId, sessionId: session.id, amountCents: 1000, note: 'Retirada' })]);
   assert.deepEqual([refundResult.status, outResult.status].sort(), [200, 409]);
@@ -243,4 +248,25 @@ test('CSV sharing writes a native file, preserves the file for the target app an
   await shareCashReport(empty); assert.equal(files[0].exists, true); assert.ok(files[0].value.startsWith('\uFEFF')); assert.equal(calls[0].options.mimeType, 'text/csv');
   failShare = true; await assert.rejects(shareCashReport(empty), /share failed/); assert.equal(files[1].exists, false);
   available = false; await assert.rejects(shareCashReport(empty), /indisponível/); assert.equal(files.length, 2);
+});
+
+test('a reversal retry succeeds when the identical operation commits between its lookup and history read', async t => {
+  const f=await fixture(t);f.modules('seabra-1',false,true);const session=opening(0);await f.cash(session);const transaction=sale(session);await f.cash(transaction);const refund=reverse(session,transaction);
+  const prepare=f.env.DB.prepare;let waiting=true;
+  f.env.DB.prepare=sql=>{
+    const statement=prepare(sql);
+    if (sql === 'SELECT * FROM cash_reversals WHERE store_id = ? AND id = ?') return {
+      bind(...args) {
+        const bound = statement.bind(...args);
+        return { ...bound, async first() {
+          const prior = await bound.first();
+          if (!prior && waiting) { waiting = false; assert.equal((await f.cash(refund)).status, 200); }
+          return prior;
+        } };
+      }
+    };
+    return statement;
+  };
+  const result=await f.cash(refund);assert.equal(result.status,200);assert.equal(f.db.prepare('SELECT count(*) AS count FROM cash_adjustments').get().count,1);assert.equal(result.value.sessions[0].summary.expectedCents,0);
+  assert.equal((await f.cash({...refund,reason:'Outra justificativa'})).value.error,'INVALID_RETRY');
 });

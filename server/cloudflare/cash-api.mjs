@@ -50,6 +50,9 @@ async function reverse(env, actor, input, deviceId, settings) {
   if (!sale) fail(404, 'SALE_NOT_FOUND');
   if (input.operation === 'void' && sale.session_id !== input.sessionId) fail(409, 'VOID_REQUIRES_ORIGINAL_OPEN');
   const { results: rows } = await env.DB.prepare('SELECT * FROM cash_reversals WHERE store_id = ? AND sale_id = ? ORDER BY created_at, id').bind(actor.storeId, input.saleId).all();
+  // A matching retry may commit after the first lookup but before this history read.
+  const applied = rows.find(row => row.id === input.id);
+  if (applied) { check(applied); return reply(await overview(env, actor, deviceId)); }
   if (input.operation === 'void' && rows.length) fail(409, 'VOID_AFTER_REFUND');
   const history = rows.map(row => ({ data: row.data ? JSON.parse(row.data) : null })), original = JSON.parse(sale.data);
   let refund; try { refund = prepareRefund(original, history, requested); } catch (error) { fail(400, error.message); }
