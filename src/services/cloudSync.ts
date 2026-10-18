@@ -150,8 +150,8 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         let kitchen = DEFAULT_PREPARATION_SETTINGS;
         if (state.modules?.preparation) {
           const value = await request('/preparation-settings', undefined, token);
-          if (!value || typeof value.allowReprint !== 'boolean') throw new CloudError('INVALID_DATA');
-          kitchen = { allowReprint: value.allowReprint };
+          if (!value || typeof value.allowReprint !== 'boolean' || (value.useFinishButton !== undefined && typeof value.useFinishButton !== 'boolean')) throw new CloudError('INVALID_DATA');
+          kitchen = { allowReprint: value.allowReprint, useFinishButton: value.useFinishButton !== false };
         }
         await serial(() => persist({ ...state, preparationSettings: kitchen }));
         // Upload individual immutable orders: retries cannot duplicate an order.

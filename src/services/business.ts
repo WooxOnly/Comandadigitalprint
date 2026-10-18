@@ -45,5 +45,5 @@ export function businessTotal(items: BusinessItem[]) {
 
 export type Preparation = { orderId: string; status: 'received' | 'preparing' | 'ready' | 'completed'; updatedAt: string; startedAt?: string; readyAt?: string; completedAt?: string; startedBy?: string; readyBy?: string; completedBy?: string };
 
-export type PreparationSettings = { allowReprint: boolean };
-export const DEFAULT_PREPARATION_SETTINGS: PreparationSettings = Object.freeze({ allowReprint: false });
+export type PreparationSettings = { allowReprint: boolean; useFinishButton: boolean };
+export const DEFAULT_PREPARATION_SETTINGS: PreparationSettings = Object.freeze({ allowReprint: false, useFinishButton: true });

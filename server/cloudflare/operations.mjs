@@ -23,5 +23,6 @@ export async function requireAvailable(env, storeId, items) {
 
 export async function preparationSettings(env, storeId) {
   const row = await env.DB.prepare('SELECT allow_reprint FROM store_preparation_settings WHERE store_id = ?').bind(storeId).first();
-  return { allowReprint: row?.allow_reprint === 1 };
+  const flow = await env.DB.prepare("SELECT data FROM store_records WHERE store_id = ? AND key = 'preparation-flow-settings'").bind(storeId).first();
+  return { allowReprint: row?.allow_reprint === 1, useFinishButton: flow ? JSON.parse(flow.data).useFinishButton !== false : true };
 }

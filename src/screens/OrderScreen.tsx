@@ -14,7 +14,7 @@ import { styles, COLORS, PLATES, QUICK_NOTES } from '../ui/theme';
 export default function OrderScreen() {
   const { t, language, locale } = useLanguage();
   const modules = useStoreModules();
-  const { height } = useWindowDimensions();
+  const { height, fontScale } = useWindowDimensions();
   const [information, setInformation] = useState<Product | null>(null);
   const [identityError, setIdentityError] = useState('');
   const [catalogWidth, setCatalogWidth] = useState(0);
@@ -22,7 +22,12 @@ export default function OrderScreen() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [serviceModeError, setServiceModeError] = useState(false);
   const [plateListWidth, setPlateListWidth] = useState(0);
-  const plateWidth = plateListWidth ? (plateListWidth - 9 * 2) / 10 : undefined;
+  const [identityWidth, setIdentityWidth] = useState(0);
+  const splitIdentity = identityWidth >= 680 && fontScale < 1.4;
+  const splitFooter = identityWidth >= 430 && fontScale < 1.4;
+  const identityGroupWidth = splitIdentity ? (identityWidth - 10) / 2 : '100%';
+  const plateColumns = plateListWidth >= 484 ? 10 : plateListWidth >= 244 ? 5 : Math.max(1, Math.floor((plateListWidth + 6) / 50));
+  const plateWidth = plateListWidth ? Math.floor((plateListWidth - (plateColumns - 1) * 6) / plateColumns) : 44;
   const { productOptions, productSearch, setProductSearch, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, changeCustomer, orderSettings, customerError, categories, category, setCategory, subcategories, subcategory, setSubcategory, filteredMenu, openProduct, items, changeQuantity, updateNote, sendOrder, sending, isReady, isWide } = useApp();
   const currentPlate = customPlate.trim() || plate;
   const itemCount = `${items.length} ${t(items.length === 1 ? 'item' : 'itens')}`;
@@ -53,23 +58,23 @@ export default function OrderScreen() {
   const finishAction = <Pressable testID="finish-order" disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled, busy: sending }} accessibilityHint={t('Salvar e conferir impressão')} onPress={finishOrder} style={[layout.finishButton, disabled && styles.pressed]}><Text style={layout.finishButtonText}>{sending ? t('Salvando e abrindo prévia…') : t('Finalizar pedido')}</Text>{isWide && <Text style={layout.finishButtonHint}>{t('Salvar e conferir impressão')}</Text>}</Pressable>;
   const identity = <View testID="order-identification" style={layout.identityPanel}>
     <Text style={layout.identityTitle}>{t('Dados do pedido')}</Text>
-    <View style={layout.identityRow}>
-      <View style={layout.identityGroup}>
+    <View style={layout.identityRow} onLayout={event => setIdentityWidth(event.nativeEvent.layout.width)}>
+      <View testID="order-service-group" style={[layout.identityGroup, { width: identityGroupWidth }]}>
         <Text style={layout.identityLabel}>{t('Atendimento')}</Text>
-        <View style={layout.serviceOptions}>{(['dine_in', 'takeout'] as const).map(value => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
+        <View testID="order-service-options" style={layout.serviceOptions}>{(['dine_in', 'takeout'] as const).map(value => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
       </View>
-      <View style={layout.identityGroup}>
+      <View testID="order-customer-group" style={[layout.identityGroup, { width: identityGroupWidth }]}>
         <Text style={layout.identityLabel}>{t('Cliente')} {orderSettings.requireCustomer ? '*' : ''}</Text>
         <TextInput editable={!sending} value={customer} onChangeText={value => { changeCustomer(value); setIdentityError(''); }} accessibilityLabel={orderSettings.requireCustomer ? t('Nome do cliente, obrigatório') : t('Nome do cliente, opcional')} placeholder={t('Nome do cliente')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput, !!(customerError || identityError) && styles.inputError]} />
       </View>
     </View>
-    <View style={layout.identityRow}>
-      <View style={layout.tableGroup}>
+    <View style={layout.tableGroup}>
         <Text style={layout.identityLabel}>{t('Mesa')}</Text>
-        <View style={[styles.plateList, layout.tableChoices]} onLayout={event => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map(value => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Mesa ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth, minWidth: 44, minHeight: 44 }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
+        <View testID="order-table-choices" style={layout.tableChoices} onLayout={event => setPlateListWidth(event.nativeEvent.layout.width)}>{PLATES.map(value => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Mesa ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, { width: plateWidth, minWidth: 44, minHeight: 44 }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
       </View>
-      <View style={layout.customTableGroup}><Text style={layout.identityLabel}>{t('Outra mesa')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outro número de mesa')} placeholder={t('Número')} placeholderTextColor={COLORS.placeholder} style={[styles.input, { flex: 1, minWidth: 0 }]} maxLength={50} /></View>
-      <Pressable testID="confirm-order-identification" disabled={sending} onPress={confirmIdentity} accessibilityRole="button" style={[layout.confirmIdentity, sending && styles.pressed]}><Text style={layout.finishButtonText}>{t('Confirmar dados')} ⌃</Text></Pressable>
+    <View style={[layout.identityFooter, !splitFooter && layout.identityFooterStacked]}>
+      <View testID="order-custom-table-group" style={[layout.customTableGroup, !splitFooter && { width: '100%', flexBasis: 'auto', flexGrow: 0 }]}><Text style={layout.identityLabel}>{t('Outra mesa')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outro número de mesa')} placeholder={t('Número')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput]} maxLength={50} /></View>
+      <Pressable testID="confirm-order-identification" disabled={sending} onPress={confirmIdentity} accessibilityRole="button" style={[layout.confirmIdentity, !splitFooter && { width: '100%' }, sending && styles.pressed]}><Text style={layout.finishButtonText}>{t('Avançar')}</Text></Pressable>
     </View>
     {serviceModeError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t('Escolha se o pedido é para comer aqui ou para levar.')}</Text>}
     {!!(customerError || identityError) && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(customerError || identityError)}</Text>}
@@ -123,7 +128,7 @@ export default function OrderScreen() {
 
   return <View style={layout.root}>
     {identityOpen ? <ScrollView style={{ maxHeight: height * (isWide ? 0.35 : 0.42), flexGrow: 0 }} keyboardShouldPersistTaps="handled" contentContainerStyle={layout.identityContainer}>{identity}{!isWide && finishAction}</ScrollView> : <View style={layout.topBar}><View style={layout.topBarInner}>
-      <View style={layout.topMeta}><Text style={layout.topMetaTitle}>{t('Mesa')} {currentPlate}{customer.trim() ? ' · ' + customer.trim() : ''} · {t(serviceLabel!)}</Text></View>
+      <View style={layout.topMeta}><Text testID="order-identification-summary" style={layout.topMetaTitle}>{t('Mesa')} {currentPlate}{customer.trim() ? ' · ' + customer.trim() : ''} · {t(serviceLabel!)}</Text></View>
       <Pressable testID="edit-order-identification" onPress={() => setEditingIdentity(true)} accessibilityRole="button" style={layout.editButton}><Text style={layout.editButtonText}>{t('Editar')}</Text></Pressable>
       {!isWide && finishAction}
     </View></View>}
@@ -152,13 +157,15 @@ const layout = StyleSheet.create({
   identityPanel: { padding: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface, gap: 8 },
   identityTitle: { fontSize: 17, fontWeight: '800', color: COLORS.ink },
   identityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
-  identityGroup: { flex: 1, minWidth: 240, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  identityGroup: { maxWidth: '100%', minWidth: 0, flexShrink: 1, gap: 4 },
   identityLabel: { color: COLORS.ink, fontSize: 13, fontWeight: '700' },
-  identityInput: { flex: 1, minWidth: 0 },
-  tableGroup: { flexGrow: 1, flexBasis: 500, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tableChoices: { flex: 1, minWidth: 0, flexWrap: 'wrap' },
-  customTableGroup: { flexDirection: 'row', alignItems: 'center', gap: 8, flexBasis: 230, flexGrow: 1, minWidth: 0, maxWidth: '100%' },
-  confirmIdentity: { minHeight: 44, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: COLORS.primary, justifyContent: 'center', marginLeft: 'auto' },
+  identityInput: { width: '100%', minWidth: 0 },
+  tableGroup: { width: '100%', minWidth: 0, gap: 4 },
+  tableChoices: { width: '100%', minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  identityFooter: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  identityFooterStacked: { flexDirection: 'column', alignItems: 'stretch' },
+  customTableGroup: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, maxWidth: '100%', gap: 4 },
+  confirmIdentity: { minHeight: 44, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: COLORS.primary, justifyContent: 'center', maxWidth: '100%' },
   orderHeaderActions: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
   productGrid: { width: '100%', minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   productTile: { maxWidth: '100%', minWidth: 0, backgroundColor: COLORS.surface, borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, padding: 10, minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -177,8 +184,8 @@ const layout = StyleSheet.create({
   sectionTitle: { flex: 1, minWidth: 0 },
   editButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   editButtonText: { color: COLORS.green, fontSize: 13, fontWeight: '700' },
-  serviceOptions: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  serviceOption: { minWidth: 0 },
+  serviceOptions: { width: '100%', minWidth: 0, flexDirection: 'row', gap: 6 },
+  serviceOption: { flex: 1, flexBasis: 0, flexShrink: 1, minWidth: 0, paddingHorizontal: 10, paddingVertical: 8 },
   productHeading: { color: COLORS.ink, fontSize: 20, fontWeight: '800', marginBottom: 12 },
   orderItem: { borderTopColor: COLORS.border, borderTopWidth: 1, marginTop: 12, paddingTop: 12 },
   itemRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },

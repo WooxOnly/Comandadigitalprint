@@ -32,3 +32,11 @@ export function preparationDurations(order, value) {
   const between = (a, b) => a && b && Number.isFinite(Date.parse(a)) && Number.isFinite(Date.parse(b)) && Date.parse(b) >= Date.parse(a) ? (Date.parse(b) - Date.parse(a)) / 1000 : null;
   return { waitSeconds: between(order.createdAt, value?.startedAt), preparationSeconds: between(value?.startedAt, value?.readyAt), totalSeconds: between(order.createdAt, value?.readyAt) };
 }
+
+// A ready action can also close the kitchen queue when delivery confirmation is disabled.
+export function completeWhenReady(value, useFinishButton = true, actor) {
+  if (useFinishButton !== false || value.status !== 'ready') return value;
+  return { ...value, status: 'completed', readyAt: value.readyAt ?? value.updatedAt,
+    completedAt: value.updatedAt,
+    ...(value.readyBy || actor ? { readyBy: value.readyBy || actor, completedBy: value.readyBy || actor } : {}) };
+}

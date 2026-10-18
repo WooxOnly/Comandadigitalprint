@@ -1,3 +1,4 @@
+import { AppearanceSelector } from './AppearanceSelector';
 import { useAppearance } from './AppearanceContext';
 import { roleScreen, pathScreen } from '../../shared/app-roles.mjs';
 import { useAppRole } from './useAppRole';
@@ -56,10 +57,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Pressable>
             <View style={styles.headerTitle}>
               <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
+              <Text style={{ color: COLORS.muted, fontSize: 12, marginBottom: 2 }}>{t('Do caixa à cozinha.')}</Text>
               <Text style={[styles.title, kitchen && { fontSize: 18 }]}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
-            {role === 'cook' && <Pressable accessibilityRole="button" accessibilityLabel={t('Sair do sistema')} onPress={logout} style={styles.noteChip}><Text style={styles.noteChipText}>{t('Sair do sistema')}</Text></Pressable>}
-            {isWide && !kitchen && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{t("Do pedido à cozinha")}</Text></View>}
+            <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}><AppearanceSelector language={language} />
+            {role === 'cook' && <Pressable accessibilityRole="button" accessibilityLabel={t('Sair do sistema')} onPress={logout} style={styles.noteChip}><Text style={styles.noteChipText}>{t('Sair do sistema')}</Text></Pressable>}</View>
           </View>
 
           <CloudStatus compact={kitchen} />

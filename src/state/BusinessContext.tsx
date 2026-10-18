@@ -5,7 +5,7 @@ import { useStoreModules } from '../ui/useStoreModules';
 import type { Preorder, Customer, Delivery, Preparation } from '../services/business';
 import { useApp } from './AppContext';
 import { isProductAvailable } from '../services/catalogOptions';
-import { nextPreparation } from '../../shared/preparation-times.mjs';
+import { nextPreparation, completeWhenReady } from '../../shared/preparation-times.mjs';
 import { logError } from '../services/diagnostics';
 import { useAuth } from './AuthContext';
 
@@ -92,7 +92,7 @@ function useBusinessState() {
       const order = await cloud.get('order:' + orderId) as { id: string; createdAt: string } | undefined;
       if (!order) throw new Error('Comanda não encontrada.');
       const previous = await cloud.get('preparation:' + orderId) as Preparation | undefined;
-      const now = new Date().toISOString(), record = nextPreparation(previous, order, status, now, currentUser), id = randomUUID();
+      const now = new Date().toISOString(), record = completeWhenReady(nextPreparation(previous, order, status, now, currentUser), cloud.preparationSettings().useFinishButton, currentUser), id = randomUUID();
       await cloud.write({ ['preparation:' + orderId]: record, ['activity:' + id]: { id, kind: 'preparation', target: orderId, details: status, createdAt: now } });
     });
   }

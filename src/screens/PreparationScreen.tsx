@@ -90,7 +90,7 @@ export default function PreparationScreen() {
             </ScrollView>
             <View style={board.actions}><Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} style={board.action} onPress={() => setDetailId(order.id)}><Text style={board.actionText}>{t('Detalhes')}</Text></Pressable>
               {canReprint && <Pressable accessibilityRole="button" disabled={printing} style={[board.action, printing && styles.pressed]} onPress={() => reprint(order)}><Text style={board.actionText}>{t('Reimprimir')}</Text></Pressable>}
-              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={() => advance(order.id)}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
+              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={() => advance(order.id)}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' || settings.useFinishButton === false ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
             </View>
             {cloud.pending('preparation:' + order.id) && <Text style={board.caption}>{t('Pendente de sincronização')}</Text>}
           </View>;

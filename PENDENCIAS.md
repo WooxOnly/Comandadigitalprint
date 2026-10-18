@@ -1,5 +1,16 @@
 # Pendências e preferências
 
+## Correções da rodada atual — 18/10/2026
+
+- Dados do pedido: campos de atendimento, cliente e mesa reorganizados sem sobreposição, mantendo rascunho na rotação. Botão sem seta: **Avançar / Continue / Continuar**.
+- Preparo: opção por loja **Utilizar o botão finalizar no fluxo de preparo**, no administrativo junto do módulo. Começa habilitada para preservar o funcionamento atual. Desabilitada, **Pronto** conclui diretamente; habilitada, **Finalizar** confirma a entrega. Mantém tempos e autoria. Política armazenada em registro reservado, sem migração D1, sincronizada e mantida offline; somente proprietário altera.
+- Removido o selo antigo “Do pedido à cozinha”. Slogan **BistroHub — Do caixa à cozinha.** nos cabeçalhos interativos do app e dos portais, traduzido nos três idiomas.
+- Aparência: sol/lua sem texto visível no canto superior direito, acesso livre e preferência persistente. App usa formas locais, sem emoji ou dependência nova; portais usam SVG. Nomes acessíveis traduzidos e alvos de 44 × 44.
+- Evidência de navegador: 444 cenários compartilhados de aparência/portais, 42 do bloco de identificação e 39 do KDS. Testes específicos de conclusão: 24 verificações Node e 9 cenários de navegador; regressão de Pedido com 54 cenários aprovada antes da mudança final de cabeçalho. Mais 54 cenários específicos dos ícones aprovados, incluindo contraste mínimo de 4,5:1, localização no topo direito e alvos de toque. Lint e TypeScript aprovados. Evidência em Chromium com serviços sintéticos; validação física Android continua separada.
+- O processamento anterior foi consultado a pedido do proprietário: todos os jobs concluídos com sucesso, inclusive APK/release; o e-mail da tentativa #3 era histórico. Download daquela versão: https://github.com/WooxOnly/Comandadigitalprint/releases/download/homologacao-0d9991be9a5c/BistroHub-Homologacao.apk . Os avisos antigos abaixo ficam como histórico, sem necessidade de recriar secrets.
+- Somente homologação autorizada. Fluxo operacional de Encomendas/cozinha/caixa permanece adiado. Não acompanhar a próxima compilação APK: entregar o link e consultar novamente apenas quando solicitado.
+
+
 ## Economia de tokens e compilação sem acompanhamento — 17/10/2026
 
 - Proprietário reiterou: iniciar geração de APK, entregar o link e não acompanhar/esperar a compilação. Consultar novamente somente se solicitado. Monitor local encerrado; compilação remota preservada.

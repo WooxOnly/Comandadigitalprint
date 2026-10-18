@@ -136,6 +136,7 @@ export function StoreGate({ children }: { children: ReactNode }) {
           {mode === 'select' && <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />}
           <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', borderRadius: 16, marginBottom: 12 }} />
           <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 18 }]}>BistroHub</Text>
+          <Text style={[styles.helperText, { textAlign: 'center', marginBottom: 12 }]}>{t('Do caixa à cozinha.')}</Text>
           {mode === 'loading' ? <ActivityIndicator color={COLORS.green} /> : mode === 'error' ? <>
             <Text style={styles.errorText}>{words.storage}</Text>
             <Pressable onPress={retry} style={styles.sendButton}><Text style={styles.sendButtonText}>{words.retry}</Text></Pressable>

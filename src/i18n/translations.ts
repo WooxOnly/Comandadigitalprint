@@ -2126,3 +2126,7 @@ Object.assign(translations, {
     "Cargando…"
   ]
 });
+
+Object.assign(translations, { 'Avançar': ['Continue', 'Continuar'] });
+
+Object.assign(translations, { 'Do caixa à cozinha.': ['From register to kitchen.', 'De la caja a la cocina.'] });

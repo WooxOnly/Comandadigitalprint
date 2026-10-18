@@ -47,6 +47,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
         {!settings && <LanguageSettings compact />}
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
+          <Text style={[styles.helperText, { textAlign: 'center', marginBottom: 12 }]}>{t('Do caixa à cozinha.')}</Text>
         {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {storeName}</Text>}
         <Text style={styles.panelTitle}>{t(settings ? 'Acesso protegido' : 'Entrar')}</Text>
         {!auth.ready ? <><Text style={styles.errorText}>{t(auth.error || 'Carregando dados salvos…')}</Text>{auth.error && <Pressable style={styles.secondaryWideButton} onPress={auth.load}><Text style={styles.secondaryButtonText}>{t('Tente novamente')}</Text></Pressable>}</> : <>

@@ -20,15 +20,15 @@ const permit=(f,allow,storeId='seabra-1')=>f.db.prepare('INSERT INTO store_prepa
 const order=(f,id=randomUUID(),storeId='seabra-1')=>{f.db.prepare('INSERT INTO store_records(store_id,key,data,revision) VALUES(?,?,?,1)').run(storeId,'order:'+id,JSON.stringify({id,plate:'1',customer:'',createdAt:new Date().toISOString(),items:[]}));return id;};
 test('portal kitchen reprint toggle defaults off, validates strictly and preserves other locations and user permissions',async t=>{
  const f=await fixture(t),cookie=await owner(f);
- assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.a.token)).json(),{allowReprint:false});
+ assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.a.token)).json(),{allowReprint:false,useFinishButton:true});
  const patch=settings=>f.adminResponse(new Request(origin+'/admin/stores',{method:'PATCH',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({id:'seabra-1',name:'Seabra 1',preparationSettings:settings})}),f.env);
  for(const invalid of [null,[],{},true,{allowReprint:'true'},{allowReprint:true,extra:true}])assert.equal((await patch(invalid)).status,400);
- assert.equal((await patch({allowReprint:true})).status,200);
- assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.a.token)).json(),{allowReprint:true});
- assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.b.token)).json(),{allowReprint:false});
+ assert.equal((await patch({allowReprint:true,useFinishButton:true})).status,200);
+ assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.a.token)).json(),{allowReprint:true,useFinishButton:true});
+ assert.deepEqual(await(await f.call('/preparation-settings',undefined,f.b.token)).json(),{allowReprint:false,useFinishButton:true});
  const html=await(await f.adminResponse(new Request(origin+'/admin?groupId=unassigned&storeId=seabra-1',{headers:{Cookie:cookie}}),f.env)).text();assert.match(html,/name="preparationReprint" checked/);
  assert.equal(f.db.prepare('SELECT COUNT(*) AS count FROM store_access_settings').get().count,0);
- assert.equal((await patch({allowReprint:false})).status,200);
+ assert.equal((await patch({allowReprint:false,useFinishButton:true})).status,200);
 });
 test('kitchen reprinting requires module, explicit store opt-in, user permission and an order from that location at every authorization',async t=>{
  const f=await fixture(t),id=order(f),other=order(f,randomUUID(),'seabra-2');

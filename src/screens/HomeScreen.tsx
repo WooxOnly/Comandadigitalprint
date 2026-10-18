@@ -1,4 +1,3 @@
-import { AppearanceSelector } from '../ui/AppearanceSelector';
 import { useAppRole } from '../ui/useAppRole';
 import { useState } from 'react';
 import { useStoreModules } from '../ui/useStoreModules';
@@ -14,7 +13,7 @@ import { styles, navigationTabs, ROUTES, COLORS } from '../ui/theme';
 
 export default function HomeScreen() {
   const { logout } = useAuth();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { width, fontScale } = useWindowDimensions();
   const [gridWidth, setGridWidth] = useState(0);
   const { history, isWide } = useApp();
@@ -23,7 +22,6 @@ export default function HomeScreen() {
   const columns = width < 360 || fontScale >= 1.4 ? 1 : isWide ? 4 : 2;
   const tileWidth = gridWidth ? Math.floor((gridWidth - 12 * (columns - 1)) / columns * 100) / 100 : undefined;
   return <ScreenFrame><View>
-                  <AppearanceSelector language={language} />
                   <View style={[styles.hero, isWide && styles.heroWide]}>
                     <Text style={styles.heroEyebrow}>{t("BOM ATENDIMENTO COMEÇA AQUI")}</Text>
                     <Text style={[styles.heroTitle, isWide && styles.heroTitleWide]}>{t("Tudo pronto para o próximo pedido.")}</Text>

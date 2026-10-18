@@ -2,7 +2,7 @@ import { cancellationUsers, cancelPreorder } from './preorder-cancellation.mjs';
 import { tabletLicense, requireStoreLicense } from './licenses.mjs';
 import { appRole, roleScreen, roleWrite, roleRead } from '../../shared/app-roles.mjs';
 import { storeAccess, requireAccess, preparationSettings } from './operations.mjs';
-import { PREPARATION_TIMES, PREPARATION_ACTORS } from '../../shared/preparation-times.mjs';
+import { PREPARATION_TIMES, PREPARATION_ACTORS, completeWhenReady } from '../../shared/preparation-times.mjs';
 import { provisionableStores, weeklyAdmin } from './admin-auth.mjs';
 import { activeStore, DEFAULT_STORE_ID, storeModules } from './stores.mjs';
 import { customerHistoryResponse, requireCustomer } from './customer-api.mjs';
@@ -182,10 +182,13 @@ export async function cloudResponse(request, env) {
         const previous = existing && JSON.parse(existing.data);
         if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || (input.value.cancelPreorders === true) !== (previous.cancelPreorders === true) || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
       }
+      const requestedValue = input.value, requestedData = JSON.stringify(input.value);
+      if (input.key.startsWith('preparation:') && input.value.status === 'ready') input.value = completeWhenReady(input.value, (await preparationSettings(env, actor.storeId)).useFinishButton, actor.username);
       const data = JSON.stringify(input.value);
       const prior = await env.DB.prepare('SELECT key, data, seq FROM store_events WHERE store_id = ? AND mutation = ?').bind(actor.storeId, input.id).first();
       if (prior) {
-        if (prior.key !== input.key || prior.data !== data) fail(409, 'INVALID_RETRY');
+        const readyRetry = input.key.startsWith('preparation:') && requestedValue.status === 'ready' && prior.data === JSON.stringify(completeWhenReady(requestedValue, false, actor.username));
+        if (prior.key !== input.key || (prior.data !== data && prior.data !== requestedData && !readyRetry)) fail(409, 'INVALID_RETRY');
         return reply({ revision: prior.seq });
       }
       if (input.key.startsWith('preorder:')) {
