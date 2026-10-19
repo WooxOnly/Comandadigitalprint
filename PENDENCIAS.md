@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Filtro de data no Histórico — 19/10/2026
+
+- Funil compacto no lado direito; opções ocultas em popup: Hoje, Últimos 7 dias, Últimos 30 dias, Mês anterior e Personalizado. Ao abrir/reabrir o Histórico, volta a Hoje.
+- Filtro pelo horário local do tablet, nos pedidos já armazenados, totalmente offline. Últimos 7/30 dias incluem hoje; mês anterior é o mês completo; personalizado inclui o dia final inteiro e aceita DD/MM/AAAA em PT/ES, MM/DD/YYYY em EN e oito dígitos numéricos. Datas inválidas ou invertidas não alteram a lista aplicada; Cancelar descarta as mudanças.
+- Mantém status de preparo, detalhes e reimpressão. Estado vazio específico para período sem pedidos. Verificação específica de limites locais, virada de mês/ano, ano bissexto e horário de verão, além de 24 cenários de interface nos três idiomas, dois temas e quatro tamanhos. Os 13 testes específicos de datas/preparo/idiomas, lint e TypeScript passaram. Evidência de navegador com dados sintéticos; Android físico permanece separado.
+
 ## Preparo no Histórico — 19/10/2026
 
 - Lista com Aguardando, Em preparo, Pronto ou Finalizado a partir da etapa salva. Detalhes mostram envio, início, pronto e finalização à direita em paisagem, abaixo do resumo em telas estreitas/fontes grandes.

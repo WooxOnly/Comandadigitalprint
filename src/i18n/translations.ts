@@ -1,6 +1,20 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Hoje": ["Today", "Hoy"],
+  "Últimos 7 dias": ["Last 7 days", "Últimos 7 días"],
+  "Últimos 30 dias": ["Last 30 days", "Últimos 30 días"],
+  "Mês anterior": ["Last month", "Mes anterior"],
+  "Personalizado": ["Custom", "Personalizado"],
+  "Filtrar por data": ["Filter by date", "Filtrar por fecha"],
+  "Data inicial": ["Start date", "Fecha inicial"],
+  "Data final": ["End date", "Fecha final"],
+  "Formato da data": ["Date format", "Formato de fecha"],
+  "Aplicar": ["Apply", "Aplicar"],
+  "Nenhum pedido neste período.": ["No orders in this period.", "No hay pedidos en este período."],
+  "Altere o filtro de data para consultar outros pedidos.": ["Change the date filter to see other orders.", "Cambia el filtro de fecha para ver otros pedidos."],
+  "Informe datas válidas no formato indicado.": ["Enter valid dates in the indicated format.", "Introduce fechas válidas en el formato indicado."],
+  "A data final deve ser igual ou posterior à inicial.": ["The end date must be on or after the start date.", "La fecha final debe ser igual o posterior a la inicial."],
   "Aguardando": ["Waiting", "En espera"],
   "Preparo do pedido": ["Order preparation", "Preparación del pedido"],
   "Enviado à cozinha": ["Sent to kitchen", "Enviado a cocina"],
