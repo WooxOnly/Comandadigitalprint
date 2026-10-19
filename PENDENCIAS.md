@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Prévia da comanda em 75% — 19/10/2026
+
+- Toda nova abertura inicia em 75%, inclusive no CSS inicial da visualização, evitando exibir 100% antes do carregamento. Fechar e reabrir restaura 75%; zoom manual e rotação mantêm o comportamento existente.
+- Alteração somente da visualização no app; largura de papel, HTML enviado para impressão e recibo físico preservados.
+- Lint/TypeScript, 12 testes de impressão e 6 cenários reais de interface em PT/EN/ES (início em 75%, CSS do documento, zoom manual, rotação e reabertura) aprovados. Android físico permanece separado; geração do APK sem acompanhamento.
+
+
 ## Setas de seleção padronizadas — 19/10/2026
 
 - Pedido posterior ao fechamento: remover a seta de texto solta do idioma e corrigir os mesmos casos no restante da interface. Bandeira e chevron agora ficam juntos em uma cápsula visual de 48 × 32, com borda/fundo e alvo de toque de 44px; bandeira permanece 16 × 12.

@@ -8,6 +8,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useApp } from '../state/AppContext';
 import { COLORS, styles } from './theme';
 
+const DEFAULT_PREVIEW_ZOOM = 75;
+
 export function ReceiptPreview() {
   const { previewOrder } = useApp();
   return previewOrder ? <ReceiptPreviewContent key={previewOrder.id} order={previewOrder} /> : null;
@@ -20,7 +22,7 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
   const shortScreen = height < 500;
   const webView = useRef<WebView>(null);
   const [destinationId, setDestinationId] = useState('default');
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(DEFAULT_PREVIEW_ZOOM);
 
   useEffect(() => {
     webView.current?.injectJavaScript(`document.documentElement.style.zoom = '${zoom}%'; true;`);
@@ -29,7 +31,7 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
   let destinations: ReturnType<typeof buildPrintPlan> = []; try { destinations = buildPrintPlan(order, printerSettings); } catch {}
   const activeDestination = destinations.find(destination => destination.id === destinationId) ?? destinations[0];
   const shownOrder = activeDestination?.order ?? order, shownWidth = activeDestination?.settings.paperWidth ?? printerSettings.paperWidth;
-  const html = buildOrderHtml(shownOrder, shownWidth, language).replace('</head>', '<style>@media screen { body { max-width: none; } }</style></head>');
+  const html = buildOrderHtml(shownOrder, shownWidth, language).replace('</head>', `<style>@media screen { html { zoom: ${DEFAULT_PREVIEW_ZOOM}%; } body { max-width: none; } }</style></head>`);
   const paperWidth = Math.min(Math.round(Number(shownWidth) * 96 / 25.4), width - 32);
   const close = () => { if (!printing) setPreviewOrder(null); };
 
