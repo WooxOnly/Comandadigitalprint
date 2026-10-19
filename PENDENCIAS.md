@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Ajuste dos filtros e gráficos do portal — correção atual
+
+- Filtros gerais em uma única linha inclusive no celular: Loja, Período, De, Até e atualização por ícone. Datas compactas MM/DD/YYYY com o seletor nativo mantido; datas/período/loja continuam atualizando a consulta. Rótulo Período corrigido também em inglês/espanhol.
+- Seletor de intervalo do TMA removido dos filtros gerais. Agora fica dentro de um gráfico próprio de TMA por hora, com detalhamento próprio. Troca do intervalo modifica a medida de tempo, preservando datas/loja e o gráfico de quantidade de pedidos.
+- Pizzas de produtos/categorias permanecem visíveis; período sem pedidos agora mostra círculo neutro com 0 e mensagem explícita, em vez de substituir o gráfico apenas por texto. Nenhum valor ou distribuição é inventado.
+- Chromium: 9 combinações PT/EN/ES e larguras 390/800/1280, incluindo alinhamento de todos os filtros, troca de base do TMA e período vazio. 22 testes específicos de idiomas/relatórios, lint e TypeScript aprovados. Validação física Safari permanece separada.
+- Entrega somente dos portais; opção `build_apk=false` no workflow evita gerar APK redundante em alterações web. A entrega completa continua oferecendo geração de APK por padrão.
+
 ## Últimas demandas de layout — publicadas em homologação
 
 - Publicação concluída no commit `9095daae8b16ebfd799b11751749c13200efdb8f`. Validação completa e job de portais aprovados: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39193935444 . APK solicitado automaticamente após o sucesso dos portais; compilação não acompanhada. Conferência pública aprovada: saúde `ok:true`, `/admin`, `/gestor` e recuperação HTTP 200; API de relatórios sem sessão permanece 401. Produção preservada. Lint/TypeScript aprovados, além da validação completa do GitHub.
