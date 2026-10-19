@@ -43,7 +43,7 @@ export function businessTotal(items: BusinessItem[]) {
   return total;
 }
 
-export type Preparation = { orderId: string; status: 'received' | 'preparing' | 'ready' | 'completed'; updatedAt: string; startedAt?: string; readyAt?: string; completedAt?: string; startedBy?: string; readyBy?: string; completedBy?: string };
+export type Preparation = { orderId: string; status: 'received' | 'preparing' | 'ready' | 'completed'; updatedAt: string; startedAt?: string; readyAt?: string; completedAt?: string; startedBy?: string; readyBy?: string; completedBy?: string; correction?: { id: string; base: number; from: string; to: string; at: string; requestedBy: string; authorizedBy: string | null; requestedStatus: string | null; kind: 'undo' | 'authorized' } };
 
 export type PreparationSettings = { allowReprint: boolean; useFinishButton: boolean };
 export const DEFAULT_PREPARATION_SETTINGS: PreparationSettings = Object.freeze({ allowReprint: false, useFinishButton: true });

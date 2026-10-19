@@ -1,5 +1,6 @@
+import { normalizeEmail, validEmail, acceptManagerInvitation } from './manager-invitations.mjs';
 import { CSRF_COOKIE, MANAGER_COOKIE, cookie, digest, equal, html, issueSession, json, loginLimitKey, managerSession, readBody, readCookie } from './manager-auth.mjs';
-import { managerLoginPage, managerPortalPage } from './manager-pages.mjs';
+import { managerLoginPage, managerPortalPage, managerInvitationPage } from './manager-pages.mjs';
 import { TMA_BASES } from '../../shared/production-metrics.mjs';
 import { reportPeriod } from '../../shared/report-period.mjs';
 import { productionReport } from './production-report.mjs';
@@ -31,12 +32,29 @@ export async function managerResponse(request, env, now = Date.now()) {
   const reply = (value, status = 200) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status);
   try {
     if (!env.DB) return reply({ error: 'Portal indisponível.' }, 503);
+    if (path === '/gestor/convite' && request.method === 'GET') {
+      const csrf = crypto.randomUUID();
+      return html(managerInvitationPage(nonce, csrf, language), nonce, 200, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language, 'Referrer-Policy': 'no-referrer' });
+    }
+    if (path === '/gestor/convite' && request.method === 'POST') {
+      if (!sameOrigin || !request.headers.get('Content-Type')?.startsWith('application/json')) return reply({ error: 'Acesso não permitido.' }, 403);
+      let input; try { input = JSON.parse(await readBody(request, 4096)); } catch(error) { if(error.status) throw error; return reply({ error: 'Formulário inválido.' },400); }
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return reply({ error: 'Formulário inválido.' },400);
+      const csrf = readCookie(request, CSRF_COOKIE);
+      if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || input.csrf !== csrf) return reply({ error: 'Sessão de login expirada. Entre novamente.' }, 403);
+      const limitKey = await loginLimitKey(request, 'invitation');
+      await env.DB.prepare('INSERT INTO manager_login_limits(key,attempts,reset_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN reset_at<=? THEN 1 ELSE attempts+1 END,reset_at=CASE WHEN reset_at<=? THEN excluded.reset_at ELSE reset_at END').bind(limitKey,now+900000,now,now).run();
+      const limit = await env.DB.prepare('SELECT attempts FROM manager_login_limits WHERE key=?').bind(limitKey).first();
+      if (limit.attempts > 10) return reply({ error: 'Muitas tentativas. Aguarde 15 minutos.' }, 429);
+      if (typeof input.password !== 'string' || input.password.length < 8 || input.password.length > 256 || input.password !== input.confirmation) return reply({ error: 'Use pelo menos 8 caracteres e confirme a mesma senha.' }, 400);
+      return reply(await acceptManagerInvitation(env, input.token, input.password, now));
+    }
     if (path === '/gestor/login' && request.method === 'POST') {
       if (!sameOrigin || !request.headers.get('Content-Type')?.startsWith('application/x-www-form-urlencoded')) return loginPage(nonce, language, 'Formulário inválido. Entre novamente.', 403);
       const form = new URLSearchParams(await readBody(request, 4096)), csrf = readCookie(request, CSRF_COOKIE);
       if (!csrf || !/^[a-f0-9-]{36}$/.test(csrf) || form.get('csrf') !== csrf) return loginPage(nonce, language, 'Sessão de login expirada. Entre novamente.', 403);
-      const username = (form.get('username') || '').toLowerCase(), password = form.get('password') || '';
-      if (!/^[a-z0-9][a-z0-9._-]{2,23}$/.test(username) || password.length > 256) return loginPage(nonce, language, 'Usuário ou senha incorretos.', 401);
+      const username = normalizeEmail(form.get('email') ?? form.get('username')), password = form.get('password') || '';
+      if (!validEmail(username) || password.length > 256) return loginPage(nonce, language, 'E-mail ou senha incorretos.', 401);
       const limitKey = await loginLimitKey(request, username);
       const limit = await env.DB.prepare('SELECT attempts, reset_at FROM manager_login_limits WHERE key = ?').bind(limitKey).first();
       if (limit?.reset_at > now && limit.attempts >= 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429);
@@ -45,11 +63,12 @@ export async function managerResponse(request, env, now = Date.now()) {
       await env.DB.prepare('INSERT INTO manager_login_limits(key, attempts, reset_at) VALUES(?, 1, ?) ON CONFLICT(key) DO UPDATE SET attempts = CASE WHEN reset_at <= ? THEN 1 ELSE attempts + 1 END, reset_at = CASE WHEN reset_at <= ? THEN excluded.reset_at ELSE reset_at END').bind(limitKey, now + 900000, now, now).run();
       const reserved = await env.DB.prepare('SELECT attempts FROM manager_login_limits WHERE key = ?').bind(limitKey).first();
       if (reserved.attempts > 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429);
-      const user = await env.DB.prepare('SELECT * FROM manager_users WHERE username = ? AND active = 1').bind(username).first();
+      const user = await env.DB.prepare('SELECT * FROM manager_users WHERE lower(username) = ? AND active = 1').bind(username).first();
       const client = user ? await env.DB.prepare('SELECT id, name, revision FROM manager_clients WHERE id = ? AND active = 1').bind(user.client_id).first() : null;
       // A dummy digest keeps nonexistent or disabled accounts on the same slow path.
       const hash = await digest(password, user?.salt || '00000000000000000000000000000000');
-      if (!user || !client || !equal(hash, user.hash)) return loginPage(nonce, language, 'Usuário ou senha incorretos.', 401);
+      const invitation = user ? await env.DB.prepare('SELECT needs_password FROM manager_user_invitations WHERE user_id = ?').bind(user.id).first() : null;
+      if (!user || !client || invitation?.needs_password || !equal(hash, user.hash)) return loginPage(nonce, language, 'E-mail ou senha incorretos.', 401);
       await env.DB.prepare('DELETE FROM manager_login_limits WHERE key = ? OR reset_at <= ?').bind(limitKey, now).run();
       const choice = readCookie(request, LANGUAGE_CHOICE_COOKIE), preference = await savedLanguage(env, user.id);
       language = validLanguage(choice) ? choice : preference || language;
@@ -77,7 +96,7 @@ export async function managerResponse(request, env, now = Date.now()) {
       return response;
     }
     if (path === '/gestor/api/preferences' && request.method === 'GET') return session ? reply({ language }) : reply({ error: 'Acesso não autorizado.' }, 401);
-    if (path === '/gestor' && request.method === 'GET') return session ? html(managerPortalPage(nonce, session, language), nonce, 200, { 'Content-Language': language }) : loginPage(nonce, language);
+    if (path === '/gestor' && request.method === 'GET') return session ? html(managerPortalPage(nonce, session, language), nonce, 200, { 'Content-Language': language }) : loginPage(nonce, language, url.searchParams.get('welcome') === '1' ? 'Senha criada. Entre com seu e-mail.' : '');
     if (!session) return reply({ error: 'Acesso não autorizado.' }, 401);
     if (request.method !== 'GET') return reply({ error: 'Método indisponível.' }, 405);
     const stores = await storesFor(env, session.client);

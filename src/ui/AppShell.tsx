@@ -1,3 +1,4 @@
+import { PreparationUndo } from './PreparationUndo';
 import { AppearanceSelector } from './AppearanceSelector';
 import { useAppearance } from './AppearanceContext';
 import { roleScreen, pathScreen } from '../../shared/app-roles.mjs';
@@ -117,6 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SafeAreaView>
           </KeyboardAvoidingView></SafeAreaProvider>
         </Modal>
+        {permitted && <PreparationUndo />}
         {permitted && <ReceiptPreview />}
       </SafeAreaView>
     </SafeAreaProvider>

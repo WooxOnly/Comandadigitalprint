@@ -90,7 +90,7 @@ async function choose(page, language) {
             assert.equal(await page.locator('.scope-path').getByText(client.name, { exact: true }).count(), 1);
             assert.equal(await page.locator('.scope-path').getByText(client.groupName, { exact: true }).count(), 1);
             assert.equal(await page.evaluate(() => window.untrusted), undefined, 'Administrative names are escaped');
-            for (const [view, label] of [['errors', 'Logs do sistema'], ['printing', 'Logs de impressão'], ['activity', 'Histórico de alterações'], ['client-password', 'Gerenciar senhas do cliente'], ['stores', 'Configurações da loja']]) {
+            for (const [view, label] of [['errors', 'Logs do sistema'], ['printing', 'Logs de impressão'], ['activity', 'Histórico de alterações'], ['app-users', 'Usuários App'], ['stores', 'Configurações da loja']]) {
               const link = page.locator('.store-nav [data-view=' + view + ']');
               assert.equal(await link.textContent(), translate(language, label)); await link.click(); await visible(page, view);
               if (['errors', 'printing', 'activity'].includes(view)) {
@@ -120,8 +120,8 @@ async function choose(page, language) {
         assert.ok(dimensions.scrollHeight <= dimensions.height + 1, 'Both password cards and results fit a 1280×720 desktop: ' + JSON.stringify(dimensions));
         await page.screenshot({ path: path.join(directory, language + '-compact-password-1280x720.png') }); cases++;
         // Customer app credentials use the real owner form and synchronized records.
-        await page.goto(base+'/admin?groupId='+clients[0].groupId+'&storeId=seabra-1#client-password');
-        await visible(page,'client-password');await page.locator('#new-app-user').click();await page.waitForFunction(()=>document.querySelector('#app-user-password').required);
+        await page.goto(base+'/admin?groupId='+clients[0].groupId+'&storeId=seabra-1#app-users');
+        await visible(page,'app-users');await page.locator('#new-app-user').click();await page.waitForFunction(()=>document.querySelector('#app-user-password').required);
         const appUsername='qa-'+language;
         await page.locator('#app-user-role').selectOption('cook');await page.locator('#app-username').fill(appUsername);await page.locator('#app-user-password').fill('a');
         await page.locator('#app-user-form button[type=submit]').click();
@@ -129,7 +129,7 @@ async function choose(page, language) {
         assert.equal(await page.locator('#app-username').inputValue(),appUsername);assert.equal(await page.locator('#app-user-role').inputValue(),'cook');
         assert.equal(await page.locator('#app-username').getAttribute('readonly'),'');
         assert.equal(await page.locator('#app-user-password').inputValue(),'');
-        assert.ok((await page.locator('#client-password a[href*="/admin/gestores"]').getAttribute('href')).includes(clients[0].groupId));
+        assert.equal(await page.locator('#app-users a[href*="/admin/gestores"]').count(),0,'App users have their own page');
         await page.locator('.nav [data-view=password]').click();await visible(page,'password');
         assert.equal(await page.locator('.scope-path:visible').count(),0);assert.equal(await page.locator('.store-nav:visible').count(),0);
         cases++;
@@ -143,12 +143,12 @@ async function choose(page, language) {
         assert.equal(await page.locator('.edit-store').count(), 1);
         await page.locator('.store-nav a').first().click(); await visible(page, 'locations');
         assert.equal(await page.locator('#locations a[href="#new-store"]').count(), 0, 'Single customers cannot add a second location');
-        await page.locator('#locations a[href*="/admin/gestores"]').click();
-        await page.waitForFunction(id => document.querySelector('#client-picker')?.value === id, individualId);
+        await page.locator('#locations a[href*="/admin/cliente"]').click();
+        await page.waitForFunction(()=>!document.querySelector('#client-fields').disabled);
         assert.equal(await page.locator('#client-kind').inputValue(), 'single');
         await page.locator('#client-kind').selectOption('group'); await page.locator('#client-form button').click();
-        await page.waitForFunction(text => document.querySelector('#message').textContent === text, translate(language, 'Cliente salvo.'));
-        await page.locator('.manager-actions a[href*="/admin?groupId="]').click(); await visible(page, 'locations');
+        await page.waitForFunction(text => document.querySelector('#client-result').textContent === text, translate(language, 'Cliente salvo.'));
+        await page.locator('.client-navigation a[href*="/admin?groupId="]:not([href$="#app-users"])').first().click(); await visible(page, 'locations');
         assert.equal(await page.locator('#locations a[href="#new-store"]').count(), 1, 'An explicitly upgraded group can add locations'); cases++;
       } finally { await context.close(); }
     }

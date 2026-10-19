@@ -129,7 +129,7 @@ async function fits(page, label, controls = false) {
   f.modules('seabra-1',true,true,true,true);
   f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active,revision) VALUES(?,?,?,?,1)').run('11111111-1111-4111-8111-111111111111','Synthetic group','["seabra-1"]',1);
   const salt='0123456789abcdef0123456789abcdef',password='manager-layout-password';
-  f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('manager','11111111-1111-4111-8111-111111111111','Gestor','manager',salt,await digest(password,salt));
+  f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('manager','11111111-1111-4111-8111-111111111111','Gestor','manager@example.com',salt,await digest(password,salt));
   const server = https.createServer({key:fs.readFileSync(path.join(directory,'key.pem')),cert:fs.readFileSync(path.join(directory,'cert.pem'))}, async (req,res) => {
     try {
       if (req.url.startsWith('/tablet-preview')) { const file=req.url.startsWith('/tablet-preview.js')?'tablet-preview.js':'tablet-preview.html';res.writeHead(200,{'Content-Type':file.endsWith('js')?'text/javascript':'text/html; charset=utf-8'});res.end(fs.readFileSync(path.join(directory,file)));return; }
@@ -152,15 +152,15 @@ async function fits(page, label, controls = false) {
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin group locations ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
       await page.locator('#locations a[href*="storeId=seabra-1"]').click();await page.waitForSelector('#stores');
       assert.equal(await page.locator('.edit-store').count(),1);assert.equal(await page.locator('#new-panel-password').getAttribute('minlength'),'8');
-      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['home','clients','password','client-password','errors','printing','activity','stores','account']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
-      await page.goto(base+'/admin/gestores?groupId=11111111-1111-4111-8111-111111111111');assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'),language);
+      for(const viewport of viewports){await page.setViewportSize(viewport);for(const view of ['home','clients','password','app-users','errors','printing','activity','stores','account']){await page.evaluate(view=>location.hash=view,view);await page.waitForFunction(view=>!document.querySelector('#'+view).hidden,view);await fits(page,`admin ${language} ${view} ${viewport.width}x${viewport.height}`,true);cases++;}}
+      await page.goto(base+'/admin/cliente?groupId=11111111-1111-4111-8111-111111111111');assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'),language);
       for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`admin provisioning ${language} ${viewport.width}x${viewport.height}`,true);cases++;}
-      await page.locator('#client-name').fill('Grupo '+language);await page.locator('#stores input').first().check();await page.locator('#client-form button').click();await page.waitForFunction(message=>document.querySelector('#message').textContent===message,portalTranslation(language,'Cliente salvo.'));
+      await page.locator('#client-name').fill('Grupo '+language);await page.locator('#stores input').first().check();await page.locator('#client-form button').click();await page.waitForFunction(message=>document.querySelector('#client-result').textContent===message,portalTranslation(language,'Cliente salvo.'));
       await page.goto(base+'/admin');
     }
     const another=await browser.newContext({ignoreHTTPSErrors:true,locale:'pt-BR'}),second=await another.newPage();second.on('pageerror',error=>errors.push(error.message));
     await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#home');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
-    await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
+    await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager@example.com');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
     await verifyLatestManagerQuery(page);cases++;
     for(const language of ['pt','en','es']){
       await selectPortalLanguage(page,language);await page.waitForFunction(()=>document.querySelector('#consult')&&!document.querySelector('#consult').disabled);

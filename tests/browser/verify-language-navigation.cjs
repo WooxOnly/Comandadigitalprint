@@ -106,7 +106,7 @@ async function submit(page) {
     Object.assign(current.env, { RESEND_API_KEY: 'synthetic-resend-key', ADMIN_RECOVERY_EMAIL: 'owner@example.com', PASSWORD_RESET_FROM: 'recovery@example.com', PASSWORD_RESET_ORIGIN: base });
     const salt = '0123456789abcdef0123456789abcdef';
     current.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active,revision) VALUES(?,?,?,?,1)').run('group', 'Fixture Group', '["seabra-1","seabra-2"]', 1);
-    current.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('alice', 'group', 'Fixture Manager', 'alice', salt, await digest(password, salt));
+    current.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run('alice', 'group', 'Fixture Manager', 'alice@example.com', salt, await digest(password, salt));
     for (const storeId of ['seabra-1', 'seabra-2']) current.modules(storeId, true, true, true, true);
     emails.length = 0; requests.length = 0;
     const page = await context.newPage();
@@ -126,7 +126,7 @@ async function submit(page) {
             await runCase(browser, language, viewport, async page => {
               await page.goto(base + '/' + scope);
               await choose(page, language, '/' + scope);
-              await page.locator('[name=username]').fill(scope === 'admin' ? 'admin' : 'alice');
+              await page.locator('[name=username]').fill(scope === 'admin' ? 'admin' : 'alice@example.com');
               await page.locator('[name=password]').fill('synthetic-wrong-password');
               await page.locator('form').evaluate((form, fragment) => { form.action += '?keep=unchanged#' + fragment; }, scope === 'admin' ? 'password' : 'filters');
               if (expired) await page.locator('[name=csrf]').evaluate(element => { element.value = 'invalid-expired-csrf'; });
@@ -227,10 +227,10 @@ async function submit(page) {
             assert.equal(await page.locator('#password').isVisible(), true);
             assert.equal(current.db.prepare('SELECT language FROM panel_preferences WHERE id=1').get().language, 'en');
             assert.equal(posts('/admin/login'), 1);
-            await page.goto(base + '/admin/gestores?groupId=group#client-form');
+            await page.goto(base + '/admin/gestores?groupId=group#user-form');
             await cycle(page, 'en', '/admin/gestores', async () => {
               assert.equal(new URL(page.url()).searchParams.get('groupId'), 'group');
-              assert.equal(new URL(page.url()).hash, '#client-form');
+              assert.equal(new URL(page.url()).hash, '#user-form');
               await page.waitForFunction(() => [...document.querySelector('#client-picker').options].some(option => option.value === 'group'));
               assert.equal(await page.locator('#client-picker').inputValue(), 'group');
               assert.equal(posts('/admin/login'), 1);
@@ -240,7 +240,7 @@ async function submit(page) {
           await runCase(browser, language, viewport, async page => {
             await page.goto(base + '/gestor');
             await choose(page, language, '/gestor');
-            await page.locator('[name=username]').fill('alice');
+            await page.locator('[name=username]').fill('alice@example.com');
             await page.locator('[name=password]').fill(password);
             assert.equal((await submit(page)).status(), 200);
             await page.waitForFunction(() => !document.querySelector('#consult').disabled && document.querySelector('#store').options.length === 3);

@@ -168,7 +168,7 @@ async function seed(storeId: string) {
   const names = JSON.parse(await SecureStore.getItemAsync(USER_INDEX) || '[]');
   for (const name of names) {
     const user = JSON.parse(await SecureStore.getItemAsync(USER_PREFIX + name) || 'null');
-    if (user) data['user:' + name] = { username: user.username, active: user.active, role: user.role, ...(user.cancelPreorders !== undefined ? { cancelPreorders: user.cancelPreorders } : {}), login: user.login };
+    if (user) data['user:' + name] = { username: user.username, active: user.active, role: user.role, ...(user.cancelPreorders !== undefined ? { cancelPreorders: user.cancelPreorders } : {}), ...(user.correctPreparation !== undefined ? { correctPreparation: user.correctPreparation } : {}), login: user.login };
   }
   return data;
 }
@@ -204,7 +204,7 @@ export const authStorage = {
     if (key.startsWith(USER_PREFIX)) {
       const user = JSON.parse(value);
       await SecureStore.setItemAsync(localAuthKey(key + '.attempts'), JSON.stringify({ attempts: user.attempts, blockedUntil: user.blockedUntil }));
-      await cloud.write({ ['user:' + user.username]: { username: user.username, active: user.active, role: user.role, ...(user.cancelPreorders !== undefined ? { cancelPreorders: user.cancelPreorders } : {}), login: user.login } });
+      await cloud.write({ ['user:' + user.username]: { username: user.username, active: user.active, role: user.role, ...(user.cancelPreorders !== undefined ? { cancelPreorders: user.cancelPreorders } : {}), ...(user.correctPreparation !== undefined ? { correctPreparation: user.correctPreparation } : {}), login: user.login } });
       return;
     }
     await SecureStore.setItemAsync(localAuthKey(key), value);

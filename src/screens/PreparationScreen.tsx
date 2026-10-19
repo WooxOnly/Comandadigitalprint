@@ -1,3 +1,5 @@
+import { canUndoPreparation } from '../ui/PreparationUndo';
+import { PasswordField } from '../ui/AccessGate';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Alert, Modal, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { cloud } from '../services/cloudStorage';
@@ -25,17 +27,19 @@ const elapsedLabels = {
 };
 const accents = { received: '#DBA525', preparing: '#2684B1', ready: '#25734D', completed: '#718078' };
 export default function PreparationScreen() {
-  const { modules, preparation, advancePreparation, busy } = useBusiness();
+  const { modules, preparation, advancePreparation, correctPreparation, busy } = useBusiness();
   const { history, printSavedOrder, printing, sending, isReady } = useApp();
-  const { currentUser } = useAuth(), { t, locale, language } = useLanguage();
+  const { currentUser, service } = useAuth(), { t, locale, language } = useLanguage();
   const settings = useSyncExternalStore(cloud.subscribe, cloud.preparationSettings);
   const { width, height, fontScale } = useWindowDimensions();
   const [date, setDate] = useState(() => localDayText(new Date())), [now, setNow] = useState(Date.now), [showCompleted, setShowCompleted] = useState(false), [delay, setDelay] = useState('20');
   const [filterDay, setFilterDay] = useState(false), [filters, setFilters] = useState(false), [pageStart, setPageStart] = useState(0), [detailId, setDetailId] = useState<string | null>(null);
+  const [correction, setCorrection] = useState<{ orderId: string; status: Preparation['status']; updatedAt: string } | null>(null);
+  const [authorizers, setAuthorizers] = useState<{ username: string; role: string }[]>([]), [authorizer, setAuthorizer] = useState(''), [password, setPassword] = useState(''), [correctionError, setCorrectionError] = useState('');
   const [area, setArea] = useState({ width: 0, height: 0 });
   const today = agendaWindow(localDayText(new Date(now)), 'day');
   const alerts = useKitchenAlerts(modules.preparation, history.filter(order => Date.parse(order.createdAt) >= today.start && Date.parse(order.createdAt) < today.end));
-  useEffect(() => { const interval = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(interval); }, []);
+  useEffect(() => { const interval = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(interval); }, []);
   let period: ReturnType<typeof agendaWindow> | null = null; try { if (filterDay) period = agendaWindow(date, 'day'); } catch {}
   const state = (id: string): Preparation['status'] => preparation.find(record => record.orderId === id)?.status ?? 'received';
   const orders = filterDay && !period ? [] : preparationQueue(history, preparation, showCompleted, period);
@@ -62,6 +66,22 @@ export default function PreparationScreen() {
   function advance(id: string) {
     const next = statuses[statuses.indexOf(state(id)) + 1]; if (!next) return;
     Alert.alert(t('Alterar status'), t(labels[next]), [{ text: t('Cancelar') }, { text: t('Confirmar'), onPress: () => { void advancePreparation(id, next).then(() => alerts.acknowledge(id)).catch(e => Alert.alert(t('Falha ao salvar'), t(e.message))); } }]);
+  }
+  function closeCorrection() { if (busy) return; setCorrection(null); setPassword(''); setAuthorizer(''); setCorrectionError(''); }
+  async function chooseCorrection(orderId: string, status: Preparation['status']) {
+    const record = preparation.find(value => value.orderId === orderId); if (!record) return;
+    try { await service.load(); } catch { Alert.alert(t('Falha ao salvar'),t('Não foi possível carregar os usuários deste tablet.'));return; }
+    if (service.canCorrectPreparation()) {
+      void correctPreparation(orderId,status,undefined,undefined,record.updatedAt).catch(error=>Alert.alert(t('Falha ao salvar'),t(error.message)));return;
+    }
+    setCorrection({ orderId, status, updatedAt: record.updatedAt }); setAuthorizer(''); setPassword(''); setCorrectionError('');
+    try { setAuthorizers(service.preparationAuthorizers()); } catch { setAuthorizers([]); setCorrectionError('Não foi possível carregar os usuários deste tablet.'); }
+  }
+  async function authorizeCorrection() {
+    if (!correction) return;
+    const secret = password; setPassword(''); setCorrectionError('');
+    try { await correctPreparation(correction.orderId, correction.status, authorizer, secret, correction.updatedAt); setCorrection(null); }
+    catch (error) { setCorrectionError(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'); }
   }
   function reprint(order: typeof history[number]) { void printSavedOrder(order, false, 'preparation'); }
   return <View style={board.screen} pointerEvents={sending || !isReady ? 'none' : 'auto'}>
@@ -111,7 +131,24 @@ export default function PreparationScreen() {
       <Text style={styles.cardTitle}>{orderNumberLabel(detail) || detail.plate} · {t(labels[state(detail.id)])}</Text><Text style={styles.mutedText}>{new Date(detail.createdAt).toLocaleString(locale)} · {t('Mesa')} {detail.plate} · {detail.customer}</Text>
       {detail.items.map((item, index) => <View key={item.id + '-' + index} style={board.detailItem}><Text style={styles.cardTitle}>{item.quantity}× {item.name}</Text>{item.flavors?.map((flavor, i) => <Text key={i} style={styles.mutedText}>{flavor}</Text>)}{item.extras?.map((extra, i) => <Text key={i} style={styles.mutedText}>+ {describeExtra(extra, item.flavors, language)}</Text>)}{!!item.note && <Text style={styles.cardTitle}>{item.note}</Text>}</View>)}
       {(() => { const record = preparation.find(value => value.orderId === detail.id), timing = preparationDurations(detail, record); return <View style={board.detailItems}>{record?.startedAt && <Text style={styles.helperText}>{t('Início do preparo')}: {new Date(record.startedAt).toLocaleString(locale)} · {record.startedBy}</Text>}{record?.readyAt && <Text style={styles.helperText}>{t('Pronto')}: {new Date(record.readyAt).toLocaleString(locale)} · {record.readyBy}</Text>}{record?.completedAt && <Text style={styles.helperText}>{t('Finalizado')}: {new Date(record.completedAt).toLocaleString(locale)} · {record.completedBy}</Text>}{timing.preparationSeconds !== null && <Text style={styles.helperText}>{t('Tempo de preparo')}: {(timing.preparationSeconds / 60).toLocaleString(locale, { maximumFractionDigits: 1 })} min</Text>}</View>; })()}
+      {(() => { const record = preparation.find(value => value.orderId === detail.id); if (!record || record.status === 'received') return null; return <View style={board.detailItems}>
+        <Text style={styles.cardTitle}>{t('Corrigir etapa do preparo')}</Text>
+        {canUndoPreparation(record, currentUser, now) && <Pressable accessibilityRole="button" disabled={busy} style={board.filterButton} onPress={() => { void correctPreparation(detail.id, undefined, undefined, undefined, record.updatedAt).catch(error => Alert.alert(t('Falha ao salvar'), t(error.message))); }}><Text style={board.actionText}>{t('Desfazer última alteração')}</Text></Pressable>}
+        <Text style={styles.helperText}>{t('Após um minuto, quem tem permissão corrige diretamente. Os demais precisam de autorização local.')}</Text>
+        {statuses.slice(0, statuses.indexOf(record.status)).map(status => <Pressable key={status} accessibilityRole="button" disabled={busy} style={board.filterButton} onPress={() => { void chooseCorrection(detail.id, status); }}><Text style={board.actionText}>{t('Voltar para {stage}').replace('{stage}', t(labels[status]))}</Text></Pressable>)}
+        {record.correction && <Text style={styles.helperText}>{t('Última correção')}: {record.correction.requestedBy} · {record.correction.authorizedBy || t('Desfazer')} · {new Date(record.correction.at).toLocaleString(locale)}</Text>}
+      </View>; })()}
     </ScrollView><View style={board.actions}>{canReprint && <Pressable accessibilityRole="button" disabled={printing} style={board.action} onPress={() => { setDetailId(null); reprint(detail); }}><Text style={board.actionText}>{t('Reimprimir')}</Text></Pressable>}{state(detail.id) !== 'completed' && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance]} onPress={() => advance(detail.id)}><Text style={board.advanceText}>{t('Alterar status')}</Text></Pressable>}</View></>}</View></View></Modal>
+    <Modal visible={!!correction} transparent animationType="fade" onRequestClose={closeCorrection}><View style={board.backdrop}><View testID="preparation-correction" style={board.modal}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={board.detailItems}>
+      <Text style={board.title}>{t('Autorizar correção do preparo')}</Text>
+      {correction && <Text style={styles.helperText}>{t('Voltar para {stage}').replace('{stage}', t(labels[correction.status]))}</Text>}
+      <Text style={styles.fieldLabel}>{t('Usuário autorizado')}</Text>
+      {authorizers.map(user => <Pressable key={user.username} accessibilityRole="radio" accessibilityLabel={user.username} accessibilityState={{ checked: authorizer === user.username }} style={[board.filterButton, authorizer === user.username && styles.selectedCategory]} disabled={busy} onPress={() => { setAuthorizer(user.username); setPassword(''); }}><Text style={[board.actionText, authorizer === user.username && styles.selectedCategoryText]}>{user.username.replace(/^./, letter => letter.toUpperCase())}</Text></Pressable>)}
+      <PasswordField label={t('Senha')} value={password} onChangeText={setPassword} />
+      {!!correctionError && <Text role="alert" style={styles.errorText}>{t(correctionError)}</Text>}
+      <Pressable accessibilityRole="button" disabled={busy || !authorizer || !password} style={[board.filterButton, (busy || !authorizer || !password) && styles.pressed]} onPress={() => { void authorizeCorrection(); }}><Text style={board.actionText}>{t('Confirmar correção')}</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={busy} style={board.filterButton} onPress={closeCorrection}><Text style={board.actionText}>{t('Cancelar')}</Text></Pressable>
+    </ScrollView></View></View></Modal>
   </View>;
 }
 const board = StyleSheet.create({

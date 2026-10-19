@@ -11,3 +11,5 @@ export function roleWrite(role: string | null, key: string, value?: unknown): bo
 export function roleRead(role: string | null, key: string): boolean;
 
 export function canCancelPreorders(role: string | null, permitted?: boolean): boolean;
+
+export function canCorrectPreparation(role: string | null, permitted?: boolean): boolean;

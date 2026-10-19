@@ -11,9 +11,9 @@ async function manager(t, ids = ['seabra-1', 'seabra-2']) {
   const admin = (path, data) => f.adminResponse(new Request(origin + path, { method: 'POST', headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(data) }), f.env);
   response = await admin('/admin/manager-clients', { name: 'Group', active: true, storeIds: ids }); assert.equal(response.status, 201);
   const client = (await response.json()).client;
-  response = await admin('/admin/manager-users', { clientId: client.id, name: 'Gestor', username: 'manager', password: 'manager-password-123', active: true }); assert.equal(response.status, 201);
+  response = await admin('/admin/manager-users', { clientId: client.id, name: 'Gestor', email: 'manager@example.com', password: 'manager-password-123', active: true }); assert.equal(response.status, 201);
   response = await managerResponse(new Request(origin + '/gestor'), f.env); csrf = response.headers.get('Set-Cookie').split(';')[0];
-  response = await managerResponse(new Request(origin + '/gestor/login', { method: 'POST', headers: { Cookie: csrf, Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf: csrf.split('=')[1], username: 'manager', password: 'manager-password-123' }) }), f.env); assert.equal(response.status, 303);
+  response = await managerResponse(new Request(origin + '/gestor/login', { method: 'POST', headers: { Cookie: csrf, Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf: csrf.split('=')[1], username: 'manager@example.com', password: 'manager-password-123' }) }), f.env); assert.equal(response.status, 303);
   const session = response.headers.get('Set-Cookie').split(';')[0];
   const report = async (type, params = {}) => managerResponse(new Request(origin + '/gestor/api/' + type + '?' + new URLSearchParams({ from: '2026-10-01', to: '2026-10-31', timeZone: 'UTC', ...params }), { headers: { Cookie: session } }), f.env);
   return { ...f, report, session, managerResponse };

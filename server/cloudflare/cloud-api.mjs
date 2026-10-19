@@ -1,3 +1,4 @@
+import { correctPreparation, preparationCorrectionUsers } from './preparation-correction.mjs';
 import { cancellationUsers, cancelPreorder } from './preorder-cancellation.mjs';
 import { tabletLicense, requireStoreLicense } from './licenses.mjs';
 import { appRole, roleScreen, roleWrite, roleRead } from '../../shared/app-roles.mjs';
@@ -107,7 +108,7 @@ export async function cloudResponse(request, env) {
     }
     const actor = await session(request, env);
     await requireStoreLicense(env, actor.storeId);
-    const requiredScreen = { '/cloud/preorders/cancellation-users': 'preorders', '/cloud/preorders/cancel': 'preorders', '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
+    const requiredScreen = { '/cloud/preparation/correct': 'preparation', '/cloud/preparation/correction-users': 'preparation', '/cloud/preorders/cancellation-users': 'preorders', '/cloud/preorders/cancel': 'preorders', '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
     if (requiredScreen && !roleScreen(actor.role, requiredScreen)) fail(403, 'ACCESS_DENIED');
     if (url.pathname === '/cloud/preorders/cancellation-users' && request.method === 'GET') return reply(await cancellationUsers(env, actor));
     if (url.pathname === '/cloud/preorders/cancel' && request.method === 'POST') {
@@ -116,6 +117,11 @@ export async function cloudResponse(request, env) {
         return verification.json();
       }));
     }
+    if (url.pathname === '/cloud/preparation/correction-users' && request.method === 'GET') return reply(await preparationCorrectionUsers(env, actor));
+    if (url.pathname === '/cloud/preparation/correct' && request.method === 'POST') return reply(await correctPreparation(env, actor, await body(request), async (username, password) => {
+      const verification = await login(new Request(new URL('/cloud/login', request.url), { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': request.headers.get('CF-Connecting-IP') || 'unknown' }, body: JSON.stringify({ storeId: actor.storeId, username, password }) }), env);
+      return verification.json();
+    }));
     if (url.pathname === '/cloud/preparation-settings' && request.method === 'GET') return reply(await preparationSettings(env, actor.storeId));
     if (url.pathname === '/cloud/preparation-reprint' && request.method === 'POST') {
       if (!(await storeModules(env, actor.storeId)).preparation) fail(403, 'MODULE_DISABLED');
@@ -160,13 +166,15 @@ export async function cloudResponse(request, env) {
       if (!Number.isSafeInteger(cursor) || cursor < 0) fail(400, 'INVALID_DATA');
       const { results } = await env.DB.prepare('SELECT seq, key, data FROM store_events WHERE store_id = ? AND seq > ? ORDER BY seq LIMIT 50').bind(actor.storeId, cursor).all();
       const changes = results.filter(row => roleRead(actor.role, row.key) && (url.searchParams.get('features') === 'operations-v1' || !/^(product-option:|preparation:|activity:)/.test(row.key)) && (!row.key.startsWith('user:') || actor.role === 'admin' || row.key === 'user:' + actor.username)).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
-      return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === 50 });
+      const userProfiles = url.searchParams.get('offlineProfiles') === '1' ? results.filter(row=>row.key.startsWith('user:')).map(row=>{const user=JSON.parse(row.data);return{key:row.key,revision:row.seq,value:{username:user.username,active:user.active,role:appRole(user.username,user.role),correctPreparation:user.correctPreparation===true,cancelPreorders:user.cancelPreorders===true}}}) : undefined;
+      return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === 50, ...(userProfiles?{userProfiles}:{}) });
     }
     if (request.method === 'POST' && url.pathname === '/cloud/change') {
       const input = await body(request);
       if (input?.storeId && input.storeId !== actor.storeId) fail(403, 'STORE_FORBIDDEN');
       if(typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && typeof input.value === 'object' && !Array.isArray(input.value) && input.value.role === undefined){const previous=await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId,input.key).first();if(previous?.data && JSON.parse(previous.data).role!==undefined)input.value.role=JSON.parse(previous.data).role;}
       if (typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && input.value.cancelPreorders === undefined) { const previous = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first(); if (previous && JSON.parse(previous.data).cancelPreorders !== undefined) input.value.cancelPreorders = JSON.parse(previous.data).cancelPreorders; }
+      if (typeof input?.key === 'string' && input.key.startsWith('user:') && input.value && input.value.correctPreparation === undefined) { const previous = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first(); if (previous && JSON.parse(previous.data).correctPreparation !== undefined) input.value.correctPreparation = JSON.parse(previous.data).correctPreparation; }
       if (!input || !validCloudValue(input.key, input.value) || !/^[a-zA-Z0-9-]{16,80}$/.test(input.id || '') || !Number.isSafeInteger(input.base) || input.base < 0) fail(400, 'INVALID_DATA');
       if(!input.key.startsWith('user:') && !roleWrite(actor.role,input.key,input.value)) fail(403,'ACCESS_DENIED');
       if (input.key.startsWith('customer:') && !(await storeModules(env, actor.storeId)).customers) fail(403, 'MODULE_DISABLED');
@@ -180,7 +188,7 @@ export async function cloudResponse(request, env) {
         if (input.key !== 'user:' + actor.username) fail(403, 'ADMIN_REQUIRED');
         const existing = await env.DB.prepare('SELECT data FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
         const previous = existing && JSON.parse(existing.data);
-        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || (input.value.cancelPreorders === true) !== (previous.cancelPreorders === true) || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
+        if (!previous?.active || input.value.username !== actor.username || input.value.active !== previous.active || (input.value.cancelPreorders === true) !== (previous.cancelPreorders === true) || (input.value.correctPreparation === true) !== (previous.correctPreparation === true) || appRole(input.value.username,input.value.role)!==appRole(previous.username,previous.role)) fail(403, 'ADMIN_REQUIRED');
       }
       const requestedValue = input.value, requestedData = JSON.stringify(input.value);
       if (input.key.startsWith('preparation:') && input.value.status === 'ready') input.value = completeWhenReady(input.value, (await preparationSettings(env, actor.storeId)).useFinishButton, actor.username);
@@ -214,6 +222,7 @@ export async function cloudResponse(request, env) {
         if (!source) fail(400, 'ORDER_NOT_SYNCED');
         if (Date.parse(input.value.updatedAt) < Date.parse(JSON.parse(source.data).createdAt) || PREPARATION_TIMES.some(field => input.value[field] && Date.parse(input.value[field]) < Date.parse(JSON.parse(source.data).createdAt))) fail(400, 'INVALID_PREPARATION_TIME');
         const before = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(actor.storeId, input.key).first();
+        if (JSON.stringify(input.value.correction) !== JSON.stringify(before ? JSON.parse(before.data).correction : undefined)) fail(403, 'PREPARATION_AUTH_REQUIRED');
         const current = before ? JSON.parse(before.data).status : 'received';
         const stages = ['received', 'preparing', 'ready', 'completed'];
         if ((!before || before.revision === input.base) && stages.indexOf(input.value.status) <= stages.indexOf(current)) fail(409, 'INVALID_PREPARATION_TRANSITION');
@@ -242,5 +251,5 @@ export async function cloudResponse(request, env) {
       return reply({ error: 'CONFLICT', current: current ? { key: input.key, value: JSON.parse(current.data), revision: current.revision } : null }, 409);
     }
     return reply({ error: 'NOT_FOUND' }, 404);
-  } catch (error) { return reply({ error: error.status ? error.message : 'UNAVAILABLE' }, error.status || 503); }
+  } catch (error) { return reply({ error: error.status ? error.message : 'UNAVAILABLE', ...(error.current?{current:error.current}:{}) }, error.status || 503); }
 }

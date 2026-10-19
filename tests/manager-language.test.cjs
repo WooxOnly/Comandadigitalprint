@@ -16,7 +16,7 @@ async function setup(t) {
   const auth = await import('../server/cloudflare/manager-auth.mjs'), i18n = await import('../server/cloudflare/manager-i18n.mjs');
   const salt = '0123456789abcdef0123456789abcdef', hash = await auth.digest(password, salt);
   f.db.prepare('INSERT INTO manager_clients(id,name,store_ids,active,revision) VALUES(?,?,?,?,1)').run('group', 'Group', '["seabra-1"]', 1);
-  for (const name of ['alice', 'bruno']) f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run(name, 'group', name, name, salt, hash);
+  for (const name of ['alice', 'bruno']) f.db.prepare('INSERT INTO manager_users(id,client_id,name,username,salt,hash,active,revision) VALUES(?,?,?,?,?,?,1,1)').run(name, 'group', name, name+'@example.com', salt, hash);
   const jar = new Map();
   const request = async (path, options = {}, cookies = jar, now = Date.now()) => {
     const headers = new Headers({ 'Accept-Language': 'en-US', Cookie: [...cookies].map(([key, value]) => key + '=' + value).join('; '), ...options.headers });
@@ -25,7 +25,7 @@ async function setup(t) {
   };
   const login = async (username = 'alice', cookies = jar, headers = {}, suppliedPassword = password) => {
     await request('/gestor', { headers }, cookies);
-    return request('/gestor/login', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded', ...headers }, body: new URLSearchParams({ username, password: suppliedPassword, csrf: cookies.get(auth.CSRF_COOKIE) }) }, cookies);
+    return request('/gestor/login', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded', ...headers }, body: new URLSearchParams({ username:username.includes('@')?username:username+'@example.com', password: suppliedPassword, csrf: cookies.get(auth.CSRF_COOKIE) }) }, cookies);
   };
   const choose = (language, cookies = jar, options = {}) => request('/gestor/language', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...options.headers }, body: options.body ?? JSON.stringify({ language }) }, cookies, options.now);
   const preference = user => f.db.prepare('SELECT language FROM manager_user_preferences WHERE user_id=?').get(user)?.language;
@@ -49,7 +49,7 @@ test('anonymous selection localizes sign-in and errors but only valid credential
   const response = await f.choose('es'); assert.deepEqual(await response.json(), { language: 'es', savedToAccount: false });
   assert.equal(f.preference('alice'), undefined);
   const failed = await f.login('alice', f.jar, {}, 'wrong-password'); assert.equal(failed.status, 401);
-  assert.match(await failed.text(), /<p role='alert'>Usuario o contraseña incorrectos\.<\/p>/);
+  assert.match(await failed.text(), /<p role='alert'>Correo electrónico o contraseña incorrectos\.<\/p>/);
   assert.equal(f.preference('alice'), undefined);
   const success = await f.login(); assert.equal(success.status, 303); assert.equal(f.preference('alice'), 'es');
   assert.equal(f.jar.has(f.i18n.LANGUAGE_CHOICE_COOKIE), false);

@@ -10,7 +10,7 @@ import { logError } from '../services/diagnostics';
 import { useAuth } from './AuthContext';
 
 function useBusinessState() {
-  const { currentUser } = useAuth();
+  const { currentUser, service } = useAuth();
   const { productOptions } = useApp();
   const modules = useStoreModules();
   const overview = useSyncExternalStore(cloud.subscribe, cloud.cashOverview);
@@ -96,6 +96,24 @@ function useBusinessState() {
       await cloud.write({ ['preparation:' + orderId]: record, ['activity:' + id]: { id, kind: 'preparation', target: orderId, details: status, createdAt: now } });
     });
   }
+  async function correctPreparation(orderId: string, status?: Preparation['status'], username?: string, password?: string, expectedUpdatedAt?: string) {
+    return run(async () => {
+      try { await service.load(); const value = await cloud.correctPreparationLocally(orderId,status,challenge=>service.approvePreparationCorrection(challenge,username,password),expectedUpdatedAt); void cloud.sync(); return value; }
+      catch (error) {
+        const messages: Record<string, string> = {
+          PREPARATION_AUTH_REQUIRED: 'O prazo de um minuto terminou ou esta alteração exige autorização.',
+          PREPARATION_CORRECTION_NOT_ALLOWED: 'Usuário sem permissão para corrigir o preparo.',
+          PREPARATION_CHANGED: 'A etapa mudou em outro tablet. Atualize os pedidos e tente novamente.',
+          PREPARATION_NOT_SYNCED: 'Sincronize o pedido antes de corrigir o preparo.',
+          PREPARATION_CORRECTION_PENDING: 'Atualize os pedidos para conferir a correção anterior.',
+          BAD_LOGIN: 'Usuário ou senha incorretos.', RATE_LIMIT: 'Muitas tentativas. Aguarde um minuto.',
+          LOGIN_REQUIRED: 'Entre novamente na nuvem.', INVALID_PREPARATION_TRANSITION: 'Escolha uma etapa anterior à atual.',
+        };
+        const code=(error as {code?:string}).code; if(code==='PREPARATION_AUTH_REQUIRED')throw Object.assign(new Error('Usuário sem permissão para corrigir o preparo.'),{code});
+        throw new Error(messages[code||''] || (error instanceof Error?error.message:'Não foi possível salvar a correção do preparo neste tablet.'));
+      }
+    });
+  }
   async function cashCommand(input: Record<string, unknown>) {
     return run(async () => {
       try { return await cloud.cashCommand(input); }
@@ -125,7 +143,7 @@ function useBusinessState() {
       }
     });
   }
-  return { modules, preparation, advancePreparation, preorders, customers, saveCustomer, updateDelivery, overview, pendingCash, busy, savePreorder, setPreorderStatus, cancelPreorder, cashCommand };
+  return { modules, preparation, advancePreparation, correctPreparation, preorders, customers, saveCustomer, updateDelivery, overview, pendingCash, busy, savePreorder, setPreorderStatus, cancelPreorder, cashCommand };
 }
 const BusinessContext = createContext<ReturnType<typeof useBusinessState> | null>(null);
 export function BusinessProvider({ children }: { children: ReactNode }) {

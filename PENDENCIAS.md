@@ -1,5 +1,50 @@
 # Pendências e preferências
 
+## Publicação autorizada — rodada atual
+
+- Proprietário autorizou publicar tudo que foi implementado. Entrega somente em homologação, preservando produção. O layout de Pedido aprovado apenas em prévia continua pendente de implementação; não declarar essa parte entregue. Convites dependem da migração aditiva antes do Worker. APK só inicia após publicação bem-sucedida dos portais; entregar o link sem acompanhar a compilação.
+
+## Correção de preparo totalmente offline — implementação local
+
+- Até 60 segundos, quem realizou a última alteração pode desfazer sem autorização adicional. Depois de um minuto, quem está logado e tem permissão corrige diretamente, sem pedir usuário/senha. Se não tiver, solicita outro usuário autorizado e sua senha, validados exclusivamente no tablet. Admin/Gerente sempre autorizam; demais usuários dependem de `correctPreparation`. Nenhuma dependência de internet para realizar a ação.
+- Guarda mudanças anteriores, correção e provas de autorização no cache protegido antes de confirmar a ação; sincroniza na ordem depois. Não salva senhas de aprovação nem troca a sessão. Credenciais/usuários precisam estar previamente disponíveis no tablet. Perfis e permissões são atualizados na sincronização sem expor verificadores de senha de outros usuários.
+- Conflitos com outro tablet preservam a correção e a trilha locais para revisão; não sobrescrevem a etapa remota silenciosamente. Repetição após resposta perdida não duplica eventos.
+- Validação: oito testes locais/servidor (reinício, pedido ainda não sincronizado, perda de resposta, concorrência, delegação, assinaturas adulteradas), 12 cenários visuais PT/EN/ES, lint e TypeScript aprovados. Evidência em Node/Chromium; validação física Android permanece pendente. Sem publicação, push ou build.
+
+## Barra de ações do cliente organizada — alteração local em 18/10/2026
+
+- Todos os atalhos do cliente, inclusive Licença, estão no mesmo grupo flexível. Mesma altura de 44 px e espaçamento de 8 px. Ordem: Cadastrar loja (quando permitido), Cadastro do cliente, Usuários App, Usuários Painel do gestor, Licença do cliente, Todos os clientes. Em desktop cabem na mesma linha; telas menores quebram apenas conforme a largura disponível.
+- Conferência visual de 9 combinações (PT/EN/ES; 390/800/1280 px), sem sobreposição/rolagem horizontal e com altura uniforme. Lint e TypeScript aprovados. Sem publicar.
+
+## Navegação de cadastro e usuários separada — alteração local em 18/10/2026
+
+- Ao abrir um cliente, os botões são **Cadastro do cliente**, **Usuários App** e **Usuários Painel do gestor**. Removidos os atalhos mistos “Cadastro e usuários” e “Gerenciar senhas do cliente”.
+- **Cadastro do cliente** (`/admin/cliente?groupId=...`) contém somente nome, tipo, situação e lojas vinculadas. Não renderiza nem consulta contas de usuários.
+- **Usuários App** (`/admin?groupId=...#app-users`) pede escolher a loja e abre somente os usuários/perfis/senhas do aplicativo dessa loja. Não contém cartão de contas do portal. Atalhos antigos com `#client-password` são aceitos como alias para a nova seção.
+- **Usuários Painel do gestor** (`/admin/gestores?groupId=...`) contém somente as contas por e-mail, senha/convite e situação desses acessos, sem formulário de cadastro do cliente. Os links mantêm o cliente selecionado.
+- Verificado no Worker local: 18 cenários completos de navegação/edição dos três cadastros em PT/EN/ES, celular e desktop, incluindo isolamento entre lojas/clientes e ausência de formulários misturados. O fluxo de convite foi repetido após a separação: 15 cenários aprovados. Testes específicos de cadastro/idiomas/CSP (29), lint e TypeScript aprovados. Produção/homologação remotas permanecem sem novas publicações; não houve push ou build.
+- A prévia de Pedido fixo em retrato foi aprovada posteriormente, com busca recolhida e subgrupos no botão da categoria; implementação na tela real ainda pendente.
+
+
+## Portal do cliente por e-mail e convites — implementação local em 18/10/2026
+
+- Corrigida a definição anterior: **o login do Portal do cliente usa e-mail**, normalizado em minúsculas. O campo Nome identifica a pessoa e não é login. O administrativo oferece **Definir senha** ou **Enviar convite por e-mail**, além de reenvio e status. A senha pode ser definida pelo proprietário ou pelo cliente após receber o convite; mínimo de 8 caracteres com confirmação.
+- Convites válidos por 24 horas, um único uso, token aleatório de 256 bits armazenado como hash. Link usa fragmento e o remove do histórico ao abrir, sem token em query, armazenamento do navegador ou resposta administrativa. GET de pré-visualização de e-mail não consome o convite. Respeita cliente/conta ativos, revisão, CSRF, limite de tentativas e reenvio após um minuto. Alterar e-mail/senha/cadastro invalida convites e sessões anteriores conforme a revisão. Não concede acesso ao administrativo nem ao APK.
+- Cadastros antigos mantêm ID, hash e vínculo de lojas; o proprietário precisa informar um e-mail real ao editar, sem deduzir endereço a partir do antigo usuário. Internamente a coluna legada `manager_users.username` armazena o e-mail normalizado; o cadastro/API expõe `email`.
+- Nova tabela aditiva `manager_user_invitations` em `server/cloudflare/store-schema.sql`. **Antes de qualquer futura publicação autorizada**, aplicar o schema no D1 de homologação, com permissão de escrita de D1. O token Cloudflare configurado anteriormente tinha D1 Read; não supor que execute migrações. O workflow de entrega atual não aplica esse novo schema automaticamente. Não publicar Worker novo sobre banco sem essa tabela.
+- Integração de envio usa a configuração existente: `PASSWORD_RESET_PROVIDER` (Resend/Brevo), chave privada correspondente, `PASSWORD_RESET_FROM` e `PASSWORD_RESET_ORIGIN` fixo de homologação. SMTP/provedor e remetente reais continuam pendentes de configuração/conferência. Falta de configuração impede o envio antes de criar o acesso; falha do provedor registra falha e nunca afirma que enviou. O fluxo manual continua disponível.
+- Evidências: testes específicos de autenticação, convites e dependências, revisão de idiomas/CSP, lint e TypeScript. Navegador: 15 cenários completos nos três idiomas (cadastro → envio simulado → criação de senha → login → recusa de reutilização), com troca de idioma/tema. Envio testado com provedores sintéticos, sem e-mails reais. Nenhuma publicação, push ou build solicitado.
+
+
+## Alterações locais posteriores à suspensão de publicações — 18/10/2026
+
+- **Não publicar sem nova autorização explícita.** Nenhum push, deploy ou build solicitado nesta rodada. A autorização ampla somente volta a valer se o proprietário disser para seguir e publicar tudo; uma nova proibição exige perguntar antes de cada publicação.
+- Portal do cliente: login com a mesma logo do administrativo, marca compartilhada, cartão compacto de até 440 px, botão terracota, temas e idiomas preservados. Logo também no cabeçalho autenticado. Removido `text-transform:capitalize` dos campos de acesso; desativados autocorreção/capitalização do teclado. A definição inicial por usuário foi substituída pela implementação de acesso por e-mail e convites descrita acima. Cadastro: **Clientes → Abrir cliente → Usuários Painel do gestor → Novo usuário**, com lojas autorizadas e conta separada do APK. Teste Chromium: 18 cenários (PT/EN/ES, claro/escuro, 320/800/1280 px). Login/erro traduzido, CSP, catálogos, lint e TypeScript conferidos. Prévia local: `/tmp/bistro-client-login-YdUY0e/light-1280.png`.
+- Preparo: implementação online inicial substituída pela regra offline aprovada abaixo.
+- **Pedido em retrato aprovado, ainda pendente de implementação:** Pedido atual fixo abaixo da faixa da mesa, com rolagem independente dos itens; catálogo rola abaixo. Busca recolhida numa lupa junto das categorias. Primeiro toque numa categoria com subgrupos mostra todos os produtos; segundo toque abre os subgrupos. Exibir o subgrupo no botão somente quando um específico estiver selecionado, sem linha separada de subgrupos.
+- Integração operacional futura de Encomendas com cozinha/caixa continua adiada.
+
+
 ## Correções da rodada atual — 18/10/2026
 
 - Dados do pedido: campos de atendimento, cliente e mesa reorganizados sem sobreposição, mantendo rascunho na rotação. Botão sem seta: **Avançar / Continue / Continuar**.

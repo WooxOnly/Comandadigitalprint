@@ -65,3 +65,17 @@ Testes locais (Node 24 para os testes com SQLite):
 ```powershell
 node --test tests/*.test.cjs tests/*.test.mjs
 ```
+
+
+### Portal do cliente: e-mail e convite (ainda não publicado)
+
+O cadastro em **Clientes → Abrir cliente → Usuários Painel do gestor** recebe `email` e permite senha manual ou convite. A coluna legada `manager_users.username` guarda o e-mail normalizado; contas antigas precisam receber o endereço real pelo administrativo, preservando o ID e os vínculos. As contas do APK e do administrativo permanecem separadas.
+
+Antes de publicar esta versão, aplique a definição aditiva de `manager_user_invitations` em `store-schema.sql` no banco correto. O workflow de homologação atual publica o Worker sem migração; a credencial anterior com D1 Read precisa de autorização de escrita para aplicar o schema. Não implantar o código novo sem essa migração. Produção não está autorizada.
+
+O envio usa `PASSWORD_RESET_ORIGIN` fixado na origem pública do ambiente, `PASSWORD_RESET_FROM`, `PASSWORD_RESET_PROVIDER=resend` com `RESEND_API_KEY`, ou `PASSWORD_RESET_PROVIDER=brevo` com `BREVO_API_KEY`. Chaves são secrets do Worker; não colocar valores no repositório ou na conversa. Não depende do e-mail de recuperação do proprietário. Configuração ausente retorna erro; falha de envio fica explícita no cadastro. Aceitação do provedor não confirma chegada à caixa de entrada.
+
+Os convites expiram em 24 horas, são de uso único, têm hash no D1, revisões de conta e confirmação de senha. O token vai no fragmento do link, é removido do histórico ao abrir e não é salvo em storage do navegador. A página mantém esse token apenas em memória para troca de idioma e submissão. Reenvio substitui o convite anterior; mudanças de cadastro/senha ou desativação impedem a aceitação.
+
+
+No administrativo, **Cadastro do cliente** (`/admin/cliente`) edita apenas o cliente; **Usuários App** (`#app-users`) seleciona uma loja e gerencia seus operadores; **Usuários Painel do gestor** (`/admin/gestores`) gerencia as contas por e-mail desse cliente. Todas as rotas conservam `groupId`, e operações do aplicativo também exigem `storeId`. O alias antigo `#client-password` abre `#app-users` sem juntar os cadastros.

@@ -111,7 +111,7 @@ test('owner web password accepts eight characters, rejects seven and still requi
   assert.equal((await f.adminResponse(new Request(origin + '/admin/login', { method: 'POST', headers: { Cookie: csrfCookie, Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: 'admin', password: 'abcdefgh', csrf: csrfCookie.split('=')[1] }) }), f.env)).status, 303);
 });
 test('manager web account creation and reset accept eight characters and preserve blank-password edits', async t => {
-  const f = await setup(t), clientId = f.group('Grupo', ['seabra-1']), account = { clientId, name: 'Gestora', username: 'manager', active: true };
+  const f = await setup(t), clientId = f.group('Grupo', ['seabra-1']), account = { clientId, name: 'Gestora', email: 'manager@example.com', active: true };
   assert.equal((await f.request('/admin/manager-users', { ...account, password: '1234567' })).status, 400);
   const created = await f.request('/admin/manager-users', { ...account, password: 'abcdefgh' }); assert.equal(created.status, 201); let user = (await created.json()).user;
   const { digest } = await import('../server/cloudflare/manager-auth.mjs');
@@ -132,7 +132,7 @@ test('owner manages independent app users with CAS, protected hashes, synchroniz
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'',revision:0})).status,400);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'a',revision:0})).status,200);
   const listing=await(await f.request(path)).json(),user=listing.users[0];
-  assert.deepEqual(Object.keys(user).sort(),['active','cancelPreorders','revision','role','username']);assert.equal(user.username,'cliente');
+  assert.deepEqual(Object.keys(user).sort(),['active','cancelPreorders','correctPreparation','revision','role','username']);assert.equal(user.username,'cliente');
   const login=await f.call('/login',{storeId:'seabra-1',username:'cliente',password:'a'});assert.equal(login.status,200);const session=await login.json();
   assert.equal((await f.call('/login',{storeId:'seabra-2',username:'cliente',password:'a'})).status,401);
   assert.equal((await f.request(path,{username:'cliente',active:true,password:'b',revision:0})).status,409);

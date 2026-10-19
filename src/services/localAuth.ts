@@ -1,4 +1,6 @@
-import { appRole, validRole, type AppRole } from '../../shared/app-roles.mjs';
+import { hmac } from '@noble/hashes/hmac.js';
+import { correctionMessage, isQuickPreparationUndo } from '../../shared/preparation-correction.mjs';
+import { appRole, validRole, canCorrectPreparation, type AppRole } from '../../shared/app-roles.mjs';
 import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
@@ -38,7 +40,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
     return signedIn;
   };
   const USER_INDEX = 'comandadigitalprint.users.v1';
-  type User = { username: string; active: boolean; role?: AppRole; cancelPreorders?: boolean; login: Digest; attempts: number; blockedUntil: number };
+  type User = { username: string; active: boolean; role?: AppRole; cancelPreorders?: boolean; correctPreparation?: boolean; login: Digest; attempts: number; blockedUntil: number };
   let users: User[] = [];
   const userKey = (username: string) => `comandadigitalprint.user.${username}`;
   const currentRole = () => {if(currentUser==='admin')return 'admin';const user=users.find(user=>user.username===currentUser);return user?.active ? appRole(currentUser,user.role) : null;};
@@ -73,7 +75,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
           if (!Array.isArray(index) || index.some((name) => typeof name !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(name) || name === 'admin') || new Set(index).size !== index.length) throw new Error();
           users = await Promise.all(index.map(async (name) => {
             const user = JSON.parse(await storage.getItemAsync(userKey(name)) || 'null');
-            if (!user || user.username !== name || typeof user.active !== 'boolean' || (user.role!==undefined && !validRole(user.role)) || (user.cancelPreorders !== undefined && typeof user.cancelPreorders !== 'boolean') || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
+            if (!user || user.username !== name || typeof user.active !== 'boolean' || (user.role!==undefined && !validRole(user.role)) || (user.cancelPreorders !== undefined && typeof user.cancelPreorders !== 'boolean') || (user.correctPreparation !== undefined && typeof user.correctPreparation !== 'boolean') || !validDigest(user.login) || !Number.isInteger(user.attempts) || user.attempts < 0 || !Number.isFinite(user.blockedUntil)) throw new Error();
             return user as User;
           }));
           record = parsed; loaded = true;
@@ -136,13 +138,50 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         else settingsOpen = true;
       });
     },
+    canCorrectPreparation() {
+      const user = users.find(value => value.username === currentUser);
+      return isSessionActive() && canCorrectPreparation(currentRole(), user?.correctPreparation);
+    },
+    preparationAuthorizers() {
+      if (!loaded || !isSessionActive()) throw new Error(AUTH_STORAGE_ERROR);
+      return [...(record ? [{ username: 'admin', role: 'admin' }] : []), ...users.filter(user => user.active && canCorrectPreparation(appRole(user.username,user.role),user.correctPreparation)).map(user => ({username:user.username,role:appRole(user.username,user.role)!}))];
+    },
+    async approvePreparationCorrection(challenge: Record<string, any>, username?: string, password?: string) {
+      return run(async () => {
+        if (!loaded || !isSessionActive() || challenge.requestedBy !== currentUser) throw new Error(AUTH_STORAGE_ERROR);
+        const own = users.find(user => user.username === currentUser);
+        if (Math.abs(Date.parse(challenge.at)-now())>5000)throw new Error('Confira a data e a hora deste tablet.');
+        const quick = isQuickPreparationUndo(challenge);
+        const self = canCorrectPreparation(currentRole(), own?.correctPreparation);
+        if (!quick && !self && !username) throw Object.assign(new Error('PREPARATION_AUTH_REQUIRED'), { code: 'PREPARATION_AUTH_REQUIRED' });
+        const name = quick || self ? currentUser : username!.trim().toLowerCase();
+        const account = name === 'admin' ? record : users.find(user => user.username === name && user.active);
+        if (!account) throw new Error('Usuário ou senha incorretos.');
+        const allowed = name === 'admin' || canCorrectPreparation(appRole(name,(account as User).role),(account as User).correctPreparation);
+        if (!quick && !allowed) throw new Error('Usuário sem permissão para corrigir o preparo.');
+        if (!quick && !self) {
+          if (account.blockedUntil > now()) throw new Error('Muitas tentativas. Aguarde um minuto.');
+          const matches = typeof password === 'string' && password.length > 0 && password.length <= 128 && equal(await derive(password,account.login.salt,account.login.iterations??ITERATIONS),account.login.hash);
+          const attempts = matches ? 0 : account.attempts + 1;
+          const updated = {...account,attempts:attempts>=5?0:attempts,blockedUntil:attempts>=5?now()+60000:0};
+          if (name==='admin') await save(updated as Credentials); else await saveUser(updated as User);
+          if (!matches) throw new Error('Usuário ou senha incorretos.');
+        }
+        const requester=currentUser==='admin'?record:users.find(user=>user.username===currentUser&&user.active);
+        if(!requester)throw new Error(AUTH_STORAGE_ERROR);
+        const requesterProof={username:currentUser,salt:requester.login.salt,...(currentUser==='admin'?{week:record?.week,revision:record?.revision}:{}),signature:bytesToHex(hmac(sha256,hexToBytes(requester.login.hash),new TextEncoder().encode(correctionMessage(challenge))))};
+        return { requester:requesterProof,username:name,kind:quick?'undo':'authorized',salt:account.login.salt,
+          ...(name==='admin'?{week:record?.week,revision:record?.revision}:{}),
+          signature:bytesToHex(hmac(sha256,hexToBytes(account.login.hash),new TextEncoder().encode(correctionMessage(challenge)))) };
+      });
+    },
     lockSettings() { settingsOpen = false; },
     isSessionActive,
     logout: clearSession,
     loginUsers() { return ['admin', ...users.filter((user) => user.active).map((user) => user.username)]; },
     currentRole,
-    listUsers() { requireSettings(); return users.map(({ username, active, role, cancelPreorders }) => ({ username, active, role: appRole(username,role)!, ...(cancelPreorders === true ? { cancelPreorders: true } : {}) })); },
-    async createUser(username: string, password: string, confirmation: string, role: AppRole = 'cashier', cancelPreorders = false) {
+    listUsers() { requireSettings(); return users.map(({ username, active, role, cancelPreorders, correctPreparation }) => ({ username, active, role: appRole(username,role)!, ...(cancelPreorders === true ? { cancelPreorders: true } : {}), ...(correctPreparation === true ? { correctPreparation: true } : {}) })); },
+    async createUser(username: string, password: string, confirmation: string, role: AppRole = 'cashier', cancelPreorders = false, correctPreparation = false) {
       return run(async () => {
         requireSettings();
         if (currentRole() !== 'admin') throw new Error('Acesso protegido');
@@ -152,14 +191,14 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         if (users.some((user) => user.username === name)) throw new Error('Este usuário já existe.');
         if (users.length >= 30) throw new Error('Limite de 30 usuários neste aparelho.');
         if (!validPasswords(password, confirmation)) throw new Error(PASSWORD_ERROR);
-        const user: User = { username: name, active: true, role, cancelPreorders: cancelPreorders === true, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
+        const user: User = { username: name, active: true, role, cancelPreorders: cancelPreorders === true, correctPreparation: correctPreparation === true, login: await makeDigest(password), attempts: 0, blockedUntil: 0 };
         requireSettings();
         await storage.setItemAsync(userKey(name), JSON.stringify(user));
         await storage.setItemAsync(USER_INDEX, JSON.stringify([...users.map((u) => u.username), name]));
         users = [...users, user];
       });
     },
-    async updateUser(username: string, active: boolean, password?: string, confirmation?: string, role?: AppRole, cancelPreorders?: boolean) {
+    async updateUser(username: string, active: boolean, password?: string, confirmation?: string, role?: AppRole, cancelPreorders?: boolean, correctPreparation?: boolean) {
       return run(async () => {
         requireSettings();
         if (currentRole() !== 'admin') throw new Error('Acesso protegido');
@@ -170,7 +209,7 @@ export function createLocalAuth(storage: Storage, randomBytes: (size: number) =>
         if (password !== undefined && !validPasswords(password, confirmation || '')) throw new Error(PASSWORD_ERROR);
         const login = password === undefined ? user.login : await makeDigest(password);
         requireSettings();
-        await saveUser({ ...user, active, role: role ?? user.role ?? 'cashier', ...(cancelPreorders !== undefined ? { cancelPreorders: cancelPreorders === true } : {}), login, attempts: 0, blockedUntil: 0 });
+        await saveUser({ ...user, active, role: role ?? user.role ?? 'cashier', ...(cancelPreorders !== undefined ? { cancelPreorders: cancelPreorders === true } : {}), ...(correctPreparation !== undefined ? { correctPreparation: correctPreparation === true } : {}), login, attempts: 0, blockedUntil: 0 });
       });
     },
     async changeOwnPassword(currentPassword: string, password: string, confirmation: string) {

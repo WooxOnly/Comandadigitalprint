@@ -35,3 +35,5 @@ export function roleRead(role, key) {
 }
 
 export function canCancelPreorders(role, permitted = false) { return role === 'admin' || role === 'manager' || (role === 'cashier' && permitted === true); }
+
+export function canCorrectPreparation(role, permitted = false) { return role === 'admin' || role === 'manager' || (validRole(role) && permitted === true); }

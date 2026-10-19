@@ -17,10 +17,10 @@ export async function appUsersResponse(request, env, { browserLogin, sameOrigin,
     const selectedStoreId = scope.store.id;
     if (request.method === 'GET') {
       const { results } = await env.DB.prepare("SELECT data, revision FROM store_records WHERE store_id = ? AND key LIKE 'user:%' ORDER BY key").bind(selectedStoreId).all();
-      return reply({ users: results.map(row => { const user = JSON.parse(row.data); return { username: user.username, active: user.active, role: appRole(user.username,user.role), cancelPreorders: user.cancelPreorders === true, revision: row.revision }; }).filter(user => user.username !== 'admin') });
+      return reply({ users: results.map(row => { const user = JSON.parse(row.data); return { username: user.username, active: user.active, role: appRole(user.username,user.role), cancelPreorders: user.cancelPreorders === true, correctPreparation: user.correctPreparation === true, revision: row.revision }; }).filter(user => user.username !== 'admin') });
     }
     const input = JSON.parse(await readBody(request, 4096));
-    if (!input || typeof input.username !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(input.username) || input.username === 'admin' || (input.role !== undefined && !validRole(input.role)) || typeof input.active !== 'boolean' || (input.cancelPreorders !== undefined && typeof input.cancelPreorders !== 'boolean') || typeof input.password !== 'string' || input.password.length > 128 || !Number.isSafeInteger(input.revision) || input.revision < 0) return reply({ error: 'Dados de acesso inválidos.' }, 400);
+    if (!input || typeof input.username !== 'string' || !/^[a-z0-9._-]{3,24}$/.test(input.username) || input.username === 'admin' || (input.role !== undefined && !validRole(input.role)) || typeof input.active !== 'boolean' || (input.cancelPreorders !== undefined && typeof input.cancelPreorders !== 'boolean') || (input.correctPreparation !== undefined && typeof input.correctPreparation !== 'boolean') || typeof input.password !== 'string' || input.password.length > 128 || !Number.isSafeInteger(input.revision) || input.revision < 0) return reply({ error: 'Dados de acesso inválidos.' }, 400);
     const key = 'user:' + input.username;
     const previous = await env.DB.prepare('SELECT data, revision FROM store_records WHERE store_id = ? AND key = ?').bind(selectedStoreId, key).first();
     if ((previous?.revision || 0) !== input.revision) return reply({ error: 'Cadastro alterado em outra sessão. Atualize a página.' }, 409);
@@ -28,6 +28,7 @@ export async function appUsersResponse(request, env, { browserLogin, sameOrigin,
     const user = previous ? JSON.parse(previous.data) : { username: input.username };
     user.active = input.active;
     if (input.cancelPreorders !== undefined) user.cancelPreorders = input.cancelPreorders;
+    if (input.correctPreparation !== undefined) user.correctPreparation = input.correctPreparation;
     user.role = input.role ?? appRole(input.username,user.role);
     if (input.password) {
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));

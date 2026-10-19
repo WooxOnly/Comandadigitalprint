@@ -21,12 +21,12 @@ async function setup(t, ids = ['seabra-1', 'seabra-2']) {
   f.admin = (path, data, headers = {}) => f.adminResponse(new Request(origin + path, { method: data === undefined ? 'GET' : 'POST', headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json', ...headers }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), f.env);
   let response = await f.admin('/admin/manager-clients', { name: 'Client group', storeIds: ids, active: true }); assert.equal(response.status, 201);
   f.client = (await response.json()).client;
-  response = await f.admin('/admin/manager-users', { clientId: f.client.id, name: 'Manager', username: 'manager', password, active: true }); assert.equal(response.status, 201);
+  response = await f.admin('/admin/manager-users', { clientId: f.client.id, name: 'Manager', email: 'manager@example.com', password, active: true }); assert.equal(response.status, 201);
   f.user = (await response.json()).user;
   f.manager = (path, cookie = '', extra = {}, now = clock) => managerResponse(new Request(origin + path, { headers: { Cookie: cookie, ...extra } }), f.env, now);
   f.login = async (username = 'manager', pass = password, extra = {}, now = clock) => {
     const page = await f.manager('/gestor'), csrf = page.headers.get('Set-Cookie').split(';')[0];
-    return managerResponse(new Request(origin + '/gestor/login', { method: 'POST', headers: { Cookie: csrf, Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded', ...extra }, body: new URLSearchParams({ csrf: csrf.split('=')[1], username, password: pass }) }), f.env, now);
+    return managerResponse(new Request(origin + '/gestor/login', { method: 'POST', headers: { Cookie: csrf, Origin: origin, 'Content-Type': 'application/x-www-form-urlencoded', ...extra }, body: new URLSearchParams({ csrf: csrf.split('=')[1], username:username.includes('@')?username:username+'@example.com', password: pass }) }), f.env, now);
   };
   f.signin = async () => { const result = await f.login(); assert.equal(result.status, 303); return result.headers.get('Set-Cookie').split(';')[0]; };
   f.report = (cookie, id = '', period = { start: at(0), end: at(3600) }) => f.manager('/gestor/api/production?' + new URLSearchParams({ ...period, storeId: id }), cookie);
@@ -92,9 +92,9 @@ test('only the owner browser session provisions clients and manager users; passw
 test('administrative validation rejects missing stores, duplicate logins, short passwords and stale client edits', async t => {
   const f = await setup(t);
   for (const ids of [[f.a.storeId, f.a.storeId], ['does-not-exist']]) assert.ok((await f.admin('/admin/manager-clients', { name: 'Bad', active: true, storeIds: ids })).status >= 400);
-  const data = { clientId: f.client.id, name: 'Another', username: 'another', password: 'short', active: true };
+  const data = { clientId: f.client.id, name: 'Another', email: 'another@example.com', password: 'short', active: true };
   assert.equal((await f.admin('/admin/manager-users', data)).status, 400);
-  assert.equal((await f.admin('/admin/manager-users', { ...data, username: 'manager', password })).status, 409);
+  assert.equal((await f.admin('/admin/manager-users', { ...data, email: 'manager@example.com', password })).status, 409);
   assert.equal((await f.admin('/admin/manager-clients', { ...f.client, name: 'New name' })).status, 200);
   assert.equal((await f.admin('/admin/manager-clients', { ...f.client, name: 'Stale' })).status, 409);
 });

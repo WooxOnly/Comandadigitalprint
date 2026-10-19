@@ -2130,3 +2130,80 @@ Object.assign(translations, {
 Object.assign(translations, { 'Avançar': ['Continue', 'Continuar'] });
 
 Object.assign(translations, { 'Do caixa à cozinha.': ['From register to kitchen.', 'De la caja a la cocina.'] });
+
+Object.assign(translations, {
+  "Corrigir etapa do preparo": [
+    "Correct kitchen stage",
+    "Corregir etapa de cocina"
+  ],
+  "Admin e Gerente sempre podem autorizar correções do preparo.": [
+    "Admin and Manager can always authorize kitchen corrections.",
+    "Admin y Gerente siempre pueden autorizar correcciones de cocina."
+  ],
+  "O prazo de um minuto terminou ou esta alteração exige autorização.": [
+    "The one-minute window has ended or this change requires authorization.",
+    "El plazo de un minuto terminó o este cambio requiere autorización."
+  ],
+  "Usuário sem permissão para corrigir o preparo.": [
+    "User is not allowed to correct kitchen stages.",
+    "El usuario no tiene permiso para corregir etapas de cocina."
+  ],
+  "A etapa mudou em outro tablet. Atualize os pedidos e tente novamente.": [
+    "The stage changed on another tablet. Refresh the orders and try again.",
+    "La etapa cambió en otra tablet. Actualice los pedidos e inténtelo de nuevo."
+  ],
+  "Sincronize o pedido antes de corrigir o preparo.": [
+    "Sync the order before correcting its kitchen stage.",
+    "Sincronice el pedido antes de corregir su etapa de cocina."
+  ],
+  "Atualize os pedidos para conferir a correção anterior.": [
+    "Refresh the orders to check the previous correction.",
+    "Actualice los pedidos para comprobar la corrección anterior."
+  ],
+  "Escolha uma etapa anterior à atual.": [
+    "Choose an earlier stage.",
+    "Elija una etapa anterior a la actual."
+  ],
+  "Conecte à internet para corrigir a etapa do preparo.": [
+    "Connect to the internet to correct the kitchen stage.",
+    "Conéctese a internet para corregir la etapa de cocina."
+  ],
+  "Etapa alterada": [
+    "Stage changed",
+    "Etapa modificada"
+  ],
+  "Desfazer última alteração": [
+    "Undo last change",
+    "Deshacer último cambio"
+  ],
+  "Após um minuto, a correção exige usuário e senha de alguém autorizado.": [
+    "After one minute, correction requires an authorized user and password.",
+    "Después de un minuto, la corrección requiere un usuario autorizado y su contraseña."
+  ],
+  "Voltar para {stage}": [
+    "Return to {stage}",
+    "Volver a {stage}"
+  ],
+  "Última correção": [
+    "Last correction",
+    "Última corrección"
+  ],
+  "Autorizar correção do preparo": [
+    "Authorize kitchen correction",
+    "Autorizar corrección de cocina"
+  ],
+  "Usuário autorizado": [
+    "Authorized user",
+    "Usuario autorizado"
+  ],
+  "Confirmar correção": [
+    "Confirm correction",
+    "Confirmar corrección"
+  ]
+});
+
+Object.assign(translations, { 'Desfazer': ['Undo', 'Deshacer'], 's': ['s', 's'] });
+
+Object.assign(translations, { 'Após um minuto, quem tem permissão corrige diretamente. Os demais precisam de autorização local.': ['After one minute, users with permission can correct directly. Others need local authorization.', 'Después de un minuto, quienes tienen permiso corrigen directamente. Los demás necesitan autorización local.'], 'Não foi possível carregar os usuários deste tablet.': ['Could not load users from this tablet.', 'No se pudieron cargar los usuarios de esta tablet.'], 'Não foi possível salvar a correção do preparo neste tablet.': ['Could not save the kitchen correction on this tablet.', 'No se pudo guardar la corrección de cocina en esta tablet.'], 'Confira a etapa atual antes de refazer a correção do preparo.': ['Check the current stage before retrying the kitchen correction.', 'Revise la etapa actual antes de volver a corregir la cocina.'] });
+
+Object.assign(translations, { 'Confira a data e a hora deste tablet.': ['Check this tablet’s date and time.', 'Revise la fecha y la hora de esta tablet.'] });

@@ -96,7 +96,7 @@ test('additional administrator reaches clients before locations and can manage g
   assert.equal(listed.status, 200); assert.deepEqual((await listed.json()).map(item => item.id), [store.id]);
   assert.equal((await extra.request('/admin?groupId=' + group.id + '&storeId=' + store.id)).status, 200);
   assert.equal((await extra.request('/admin/gestores?groupId=' + group.id)).status, 200);
-  const manager = await extra.json('/admin/manager-users', { clientId: group.id, username: 'test-manager', name: 'Test manager', password: 'Manager-password-123', active: true });
+  const manager = await extra.json('/admin/manager-users', { clientId: group.id, email: 'test-manager@example.com', name: 'Test manager', password: 'Manager-password-123', active: true });
   assert.equal(manager.status, 201);
   assert.equal(f.db.prepare('SELECT COUNT(*) AS count FROM manager_users').get().count, 1);
   const directory = await extra.request('/admin/manager-clients'); assert.equal(directory.status, 200);
