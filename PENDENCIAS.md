@@ -1,6 +1,8 @@
 # Pendências e preferências
 
-## Últimas demandas de layout — implementadas nesta rodada, aguardando publicação
+## Últimas demandas de layout — publicadas em homologação
+
+- Publicação concluída no commit `9095daae8b16ebfd799b11751749c13200efdb8f`. Validação completa e job de portais aprovados: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39193935444 . APK solicitado automaticamente após o sucesso dos portais; compilação não acompanhada. Conferência pública aprovada: saúde `ok:true`, `/admin`, `/gestor` e recuperação HTTP 200; API de relatórios sem sessão permanece 401. Produção preservada. Lint/TypeScript aprovados, além da validação completa do GitHub.
 
 - Esta seção substitui os registros anteriores que ainda descreviam a tela de Pedido como somente uma prévia. Autorização atual: fazer todas as pendências e publicar em homologação. Fluxo operacional de Encomendas/cozinha/caixa continua adiado.
 - App: mesas compactas, Outra mesa e Avançar na mesma linha nas larguras de tablet em retrato/paisagem. Em telas pequenas/fontes grandes há quebra acessível. Altura de toque preservada em 44 px; largura dos números reduzida expressamente a pedido do proprietário. Sem rolagem horizontal nesse bloco.
