@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## TMA do período e controles +/funil — implementação atual
+
+- Substitui o gráfico de TMA por hora da rodada anterior. TMA agora mostra somente a média ponderada dos pedidos com intervalo registrado em todo o período selecionado (dia, mês, ano ou datas manuais). Incluído Ano atual no seletor; os limites existentes de até 366 dias permanecem.
+- TMA fica no indicador compacto. O + abre média, período, intervalo medido e quantidade de pedidos usados no cálculo. O funil imediatamente à direita do + abre as opções do TMA. Sem registros, mostra — e zero amostras, sem inventar médias.
+- Removida a coluna de TMA por hora dos detalhes do gráfico de quantidade. O gráfico de pedidos por hora permanece independente, com quantidade no dia e média por horário nos períodos maiores.
+- Cabeçalhos de relatórios: + substitui o texto Detalhes, com nome acessível traduzido; ações no canto superior esquerdo. Filtros gerais e filtros do gráfico financeiro usam o mesmo funil para revelar/recolher seus campos. Globais preservam uma linha quando abertos. Detalhamento financeiro do gráfico também usa popup. Filtros não existentes não são inventados nos cartões sem opções.
+- Testes reais de navegador com conta/base sintética verificam dia 5 min, mês/ano 8,3 min ponderados (três pedidos de 5 min e seis de 10 min), intervalo manual 10 min, mudança para tempo de preparo, zero amostras, ícones, diálogos e filtros financeiros. A linha de pico/quantidade de pedidos não é uma medida de TMA e permanece separada.
+- Publicação somente dos portais, sem novo APK. Produção preservada; teste Android físico e entrega real de e-mails continuam separados.
+
 ## Ajuste dos filtros e gráficos do portal — correção atual
 
 - Publicado em homologação no código `b21697602794c07ed3734bc3f335fc07662d37fc`: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39195808640 . Validação completa e portais aprovados; jobs APK/release intencionalmente ignorados. Saúde e entrada do gestor HTTP 200 após publicação. Produção e compilação anterior preservadas.

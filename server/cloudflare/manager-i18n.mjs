@@ -7,6 +7,11 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  "A média considera somente os pedidos com o intervalo registrado no período selecionado.": ["The average includes only orders with the selected time interval recorded within the selected period.", "El promedio incluye solo los pedidos con el intervalo registrado dentro del período seleccionado."],
+  "Ano atual": ["This year", "Año actual"],
+  "Filtros do TMA": ["Average time filters", "Filtros del tiempo medio"],
+  "TMA do período": ["Average time for the period", "Tiempo medio del período"],
+  "Filtros": ["Filters", "Filtros"],
   "TMA por hora": ["Average fulfillment time by hour", "Tiempo medio de atención por hora"],
   "Período": ["Period", "Período"],
   "Usuários no gráfico: {shown} de {count}.": ["Users in chart: {shown} of {count}.", "Usuarios en el gráfico: {shown} de {count}."],
