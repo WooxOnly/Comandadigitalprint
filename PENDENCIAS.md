@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Preparo no Histórico — 19/10/2026
+
+- Lista com Aguardando, Em preparo, Pronto ou Finalizado a partir da etapa salva. Detalhes mostram envio, início, pronto e finalização à direita em paisagem, abaixo do resumo em telas estreitas/fontes grandes.
+- Utiliza o cache existente, incluindo correções offline, sem alterar pedidos/preparo. Finalização automática mantém Pronto e Finalizado no mesmo instante; configuração atual não reinterpreta pedidos antigos. Horários ausentes aparecem como não registrados, sem usar a data de atualização como substituta. Sem registro e módulo desabilitado, não exibe preparo fictício.
+- Verificação: 20 testes específicos de histórico, política, correção e idiomas; 18 cenários de interface PT/EN/ES, claro/escuro, telefone/retrato/paisagem. Lint e TypeScript aprovados. Evidência em navegador com dados sintéticos, sem alegar validação Android física.
+
 ## Cadastro de produtos em popup — 19/10/2026
 
 - Removido o botão global Salvar cardápio. Adicionar produto usa verde sólido e abre imediatamente um popup dedicado, mesmo com busca ativa; não cria item invisível no fim da lista.

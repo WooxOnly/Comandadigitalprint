@@ -1,6 +1,10 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Aguardando": ["Waiting", "En espera"],
+  "Preparo do pedido": ["Order preparation", "Preparación del pedido"],
+  "Enviado à cozinha": ["Sent to kitchen", "Enviado a cocina"],
+  "Horário não registrado": ["Time not recorded", "Hora no registrada"],
   "Recebido há {minutes} minuto": ["Received {minutes} minute ago", "Recibido hace {minutes} minuto"],
   "Em preparo há {minutes} minuto": ["In prep for {minutes} minute", "En preparación desde hace {minutes} minuto"],
   "Pronto há {minutes} minuto": ["Ready for {minutes} minute", "Listo desde hace {minutes} minuto"],
