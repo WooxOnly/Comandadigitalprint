@@ -89,3 +89,8 @@ test('calendar inputs reject invalid dates/zones and permit bounded annual compa
   for (const params of [{ from: '2026-02-30', to: '2026-03-01' }, { from: '2026-10-08', to: '2026-10-07' }, { from: '2026-01-01', to: '2027-01-03' }, { from: '2026-01-01', to: '2026-01-02', timeZone: 'Bad/Zone' }]) await assert.rejects(async () => f.report(params), error => error.status === 400);
   const year = await f.report({ from: '2026-01-01', to: '2026-12-31' }); assert.equal(year.breakdowns.months.length, 12); assert.equal(year.breakdowns.days.length, 365);
 });
+
+test('pie quantity totals include every product beyond the displayed top 100',async t=>{
+ const f=await toolsFor(t),{order}=f.record('2026-10-07T14:00:00Z');order.items=Array.from({length:105},(_,index)=>({id:randomUUID(),name:'Product '+index,category:'Category '+index,quantity:2,note:''}));f.db.prepare('UPDATE store_records SET data=? WHERE store_id=? AND key=?').run(JSON.stringify(order),'seabra-1','order:'+order.id);
+ const data=await f.report({from:'2026-10-07',to:'2026-10-07',timeZone:'UTC'});assert.equal(data.products.length,100);assert.equal(data.categories.length,100);assert.equal(data.productCount,105);assert.equal(data.productQuantity,210);assert.equal(data.products.reduce((sum,item)=>sum+item.quantity,0),200);
+});

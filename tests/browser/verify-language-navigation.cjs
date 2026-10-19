@@ -246,14 +246,14 @@ async function submit(page) {
             await page.waitForFunction(() => !document.querySelector('#consult').disabled && document.querySelector('#store').options.length === 3);
             await page.evaluate(() => {
               history.replaceState(null, '', '/gestor?keep=unchanged#sales-view');
-              for (const [id, value] of Object.entries({ store: 'seabra-2', from: '2026-10-01', to: '2026-10-03', zone: 'Europe/Madrid', 'tma-basis': 'ready', month: '2026-10', breakdown: 'weekdays', 'chart-metric': 'average', 'sales-breakdown': 'days', 'sales-chart-metric': 'netReceiptsCents' })) document.querySelector('#' + id).value = value;
+              for (const [id, value] of Object.entries({ store: 'seabra-2', 'tma-basis': 'ready', 'sales-breakdown': 'days', 'sales-chart-metric': 'netReceiptsCents' })) document.querySelector('#' + id).value = value;
             });
             await page.locator('#area-sales').click();
             await page.waitForFunction(() => !document.querySelector('#consult').disabled);
-            const before = await page.evaluate(() => Object.fromEntries(['store', 'from', 'to', 'zone', 'tma-basis', 'month', 'breakdown', 'chart-metric', 'sales-breakdown', 'sales-chart-metric'].map(id => [id, document.querySelector('#' + id).value])));
+            const before = await page.evaluate(() => Object.fromEntries(['store', 'tma-basis', 'sales-breakdown', 'sales-chart-metric'].map(id => [id, document.querySelector('#' + id).value])));
             await cycle(page, language, '/gestor', async chosen => {
               await page.waitForFunction(() => !document.querySelector('#consult').disabled && document.querySelector('#store').options.length === 3);
-              const after = await page.evaluate(() => Object.fromEntries(['store', 'from', 'to', 'zone', 'tma-basis', 'month', 'breakdown', 'chart-metric', 'sales-breakdown', 'sales-chart-metric'].map(id => [id, document.querySelector('#' + id).value])));
+              const after = await page.evaluate(() => Object.fromEntries(['store', 'tma-basis', 'sales-breakdown', 'sales-chart-metric'].map(id => [id, document.querySelector('#' + id).value])));
               assert.deepEqual(after, before, 'All Manager Dashboard filters survive the GET navigation');
               assert.equal(await page.locator('#area-sales').getAttribute('aria-pressed'), 'true');
               assert.equal(new URL(page.url()).searchParams.get('keep'), 'unchanged');

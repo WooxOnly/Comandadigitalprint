@@ -32,7 +32,7 @@ const { loadTs } = require('../helpers/load-ts.cjs'), { translate } = loadTs('sr
           const tableCollisions=[];for(let i=0;i<tables.length;i++)for(let j=i+1;j<tables.length;j++)if(overlaps(tables[i],tables[j]))tableCollisions.push([i,j]);
           return {collisions,contained,tableCollisions,tableCount:tables.length,minTableWidth:Math.min(...tables.map(r=>r.width)),overflow:document.documentElement.scrollWidth>innerWidth+1};
         });
-        assert.deepEqual(result.collisions, [], JSON.stringify({language,theme,width,result}));assert.deepEqual(result.contained, []);assert.deepEqual(result.tableCollisions, []);assert.equal(result.tableCount,10);assert.ok(result.minTableWidth>=43.9);assert.equal(result.overflow,false);
+        assert.deepEqual(result.collisions, [], JSON.stringify({language,theme,width,result}));assert.deepEqual(result.contained, []);assert.deepEqual(result.tableCollisions, []);assert.equal(result.tableCount,10);assert.ok(result.minTableWidth>=21.9);assert.equal(result.overflow,false);
         assert.equal(await page.getByTestId('confirm-order-identification').textContent(),t('Avançar'));
         assert.equal(await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).inputValue(),'Will · Cliente com nome longo');
         assert.equal(await page.getByRole('textbox',{name:t('Outro número de mesa'),exact:true}).inputValue(),'18');

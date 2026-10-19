@@ -7,6 +7,16 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  "Usuários no gráfico: {shown} de {count}.": ["Users in chart: {shown} of {count}.", "Usuarios en el gráfico: {shown} de {count}."],
+  "Outros": ["Other", "Otros"],
+  "Personalizado": ["Custom", "Personalizado"],
+  "Nenhum pedido neste período.": ["No orders in this period.", "No hay pedidos en este período."],
+  "Pedidos iniciados e prontos por usuário. Detalhes incluem o tempo médio de preparo.": ["Started and ready orders by user. Details include average prep time.", "Pedidos iniciados y listos por usuario. Los detalles incluyen el tiempo promedio de preparación."],
+  "Média de pedidos por hora no período selecionado.": ["Average orders per hour over the selected period.", "Promedio de pedidos por hora del período seleccionado."],
+  "Pedidos por hora no dia selecionado.": ["Orders by hour on the selected day.", "Pedidos por hora del día seleccionado."],
+  "Pedidos marcados prontos por usuário no período.": ["Orders marked ready by each user during the period.", "Pedidos marcados como listos por cada usuario en el período."],
+  "Produtividade da cozinha por usuário": ["Kitchen productivity by user", "Productividad de cocina por usuario"],
+  "Pedidos por hora": ["Orders by hour", "Pedidos por hora"],
   'Usuários App': ['App users', 'Usuarios de la app'],
   'Usuários Painel do gestor': ['Manager Dashboard users', 'Usuarios del Panel de gestión'],
   'Usuários, senhas e perfis de acesso ao aplicativo desta loja.': ['Users, passwords and app access profiles for this store.', 'Usuarios, contraseñas y perfiles de acceso a la app de esta tienda.'],
@@ -302,7 +312,7 @@ export function languageScript(language, userId = '', scope = 'manager', signIn 
   return `const language=${JSON.stringify(language)},locale=${JSON.stringify(LANGUAGES[language])},translations=${serialized},singularTranslations=${singular},viewKey=${JSON.stringify('bistro-manager-view:' + userId)};
 function tr(source,values={}){const text=String(values.count)==='1'&&Object.hasOwn(singularTranslations,source)?singularTranslations[source]:Object.hasOwn(translations,source)?translations[source]:source;return text.replace(/\\{(\\w+)\\}/g,(match,key)=>String(values[key]??match))}
 function tmaLabel(basis){return tr(basis==='preparation'?'TMA de preparo':basis==='ready'?'TMA até pronto':'TMA')}
-function saveView(){if(!document.querySelector('#filters'))return;try{const view={};for(const id of ['store','from','to','zone','tma-basis','month','breakdown','chart-metric','sales-breakdown','sales-chart-metric'])view[id]=document.querySelector('#'+id).value;view.area=activeArea;sessionStorage.setItem(viewKey,JSON.stringify(view))}catch{}}
+function saveView(){if(!document.querySelector('#filters'))return;try{const view={};for(const id of ['store','tma-basis','sales-breakdown','sales-chart-metric']){const field=document.querySelector('#'+id);if(field)view[id]=field.value};view.area=activeArea;sessionStorage.setItem(viewKey,JSON.stringify(view))}catch{}}
 function languageTarget(nextLanguage){
 const target=new URL(location.href);
 if(target.pathname==='/admin/login')target.pathname='/admin';
