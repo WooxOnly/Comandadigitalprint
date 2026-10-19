@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Setas de seleção padronizadas — 19/10/2026
+
+- Pedido posterior ao fechamento: remover a seta de texto solta do idioma e corrigir os mesmos casos no restante da interface. Bandeira e chevron agora ficam juntos em uma cápsula visual de 48 × 32, com borda/fundo e alvo de toque de 44px; bandeira permanece 16 × 12.
+- Chevron desenhado compartilhado no idioma, seletor de usuário do login, subgrupos do pedido e expansão de produtos do Cardápio. Reutiliza os botões/cápsulas existentes; expansão do Cardápio tem moldura própria. Setas invertem ao abrir. Portais usam o mesmo desenho em SVG, sem depender da fonte. Seletores nativos já contidos em campos mantêm o comportamento do sistema.
+- Sem mudanças em idiomas disponíveis, sessões, permissões, rascunhos ou proporções aprovadas do Pedido.
+- Verificações: 19 testes Node de aparência/idiomas; 24 casos específicos de cápsula/chevron/abrir/fechar nos três idiomas, temas e larguras; 90 de preferências do app; 450 de aparência app/portais; 18 do Pedido com subgrupos e proporções. Lint e TypeScript aprovados. Compilação do APK não acompanhada.
+
+
 ## Fechamento atual — 19/10/2026
 
 Consulte [FECHAMENTO-2026-10-19.md](FECHAMENTO-2026-10-19.md) para o checklist consolidado e a entrega atual. Os registros anteriores abaixo preservam a cronologia; indicações antigas de “somente prévia”, “sem publicar” ou bloqueio de credenciais foram superadas pelas publicações posteriores. Switch/bandeira compactos já estão nos portais; proporção 34%/124px/76px incluída na entrega do APK solicitada para `5e9c22f`, sem acompanhar a compilação. Permanecem separados a conferência física, entrega real de e-mails e o fluxo de Encomendas expressamente adiado.

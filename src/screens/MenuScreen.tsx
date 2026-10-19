@@ -1,3 +1,4 @@
+import { DropdownChevron } from '../ui/DropdownChevron';
 import { useAppRole } from '../ui/useAppRole';
 import { useAccess } from '../ui/useAccess';
 import { searchCatalog } from '../services/catalogOptions';
@@ -34,7 +35,7 @@ export default function MenuScreen() {
                     {searchCatalog(menu, productOptions, search).map((product) => <View key={product.id} style={styles.menuListItem}>
                       <Pressable style={styles.menuListHeader} accessibilityRole="button" accessibilityState={{ expanded: expandedId === product.id }} accessibilityLabel={`${product.name}, ${t(expandedId === product.id ? 'Ocultar detalhes' : 'Ver detalhes')}`} onPress={() => setExpandedId(expandedId === product.id ? null : product.id)}>
                         <View style={styles.menuListTitle}><Text style={styles.cardTitle}>{productOptions[product.id]?.favorite ? '★ ' : ''}{product.name}{productOptions[product.id]?.available === false ? ` · ${t('Esgotado')}` : ''}</Text><Text style={styles.mutedText}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{modules.cash && <Text style={styles.cardTitle}>{Number.isFinite(product.price) ? formatMoney(Math.round(product.price * 100), locale) : '—'}</Text>}</View>
-                        <Text style={styles.connectionText}>{expandedId === product.id ? '▴' : '▾'}</Text>
+                        <DropdownChevron expanded={expandedId === product.id} framed />
                       </Pressable>
                       {expandedId === product.id && <View style={styles.menuListDetails}>
                       <View style={styles.quickNotes}><Pressable disabled={!canEdit} style={styles.noteChip} onPress={() => void updateProductOption(product.id, { available: productOptions[product.id]?.available === false })}><Text style={styles.noteChipText}>{t(productOptions[product.id]?.available === false ? 'Marcar disponível' : 'Marcar esgotado')}</Text></Pressable><Pressable disabled={!canEdit} style={styles.noteChip} onPress={() => void updateProductOption(product.id, { favorite: !productOptions[product.id]?.favorite })}><Text style={styles.noteChipText}>{t(productOptions[product.id]?.favorite ? 'Remover favorito' : 'Marcar favorito')}</Text></Pressable></View>

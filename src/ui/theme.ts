@@ -92,7 +92,6 @@ export const styles = StyleSheet.create({
   userInputRow: { flexDirection: 'row', gap: 8 },
   userInput: { flex: 1, minWidth: 0 },
   userPickerButton: { width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, backgroundColor: '#F8FAF8' },
-  userPickerArrow: { color: COLORS.ink, fontSize: 20 },
   userPickerList: { maxHeight: 192, borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, marginTop: 8 },
   userPickerItem: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12, borderBottomColor: COLORS.border, borderBottomWidth: 1 },
   inputError: { borderColor: '#A33024' },

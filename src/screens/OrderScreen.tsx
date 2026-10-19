@@ -1,3 +1,4 @@
+import { DropdownChevron } from '../ui/DropdownChevron';
 import { useStoreModules } from '../ui/useStoreModules';
 import { formatMoney } from '../services/business';
 import { useState } from 'react';
@@ -113,7 +114,7 @@ export default function OrderScreen() {
     <View style={layout.categoryToolbar}>
       <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={styles.categoryList}>{categories.map(value => {
         const selected = value === category, hasSubgroups = selected && subcategories.length > 0;
-        return <Pressable key={value} onPress={() => { if (hasSubgroups) setSubgroupsOpen(true); else { setCategory(value); setSubgroupsOpen(false); } }} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.category, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, selected && styles.selectedCategoryText]}>{t(value)}{selected && subcategory ? ' · ' + t(subcategory) : ''}{hasSubgroups ? ' ▾' : ''}</Text></Pressable>;
+        return <Pressable key={value} onPress={() => { if (hasSubgroups) setSubgroupsOpen(true); else { setCategory(value); setSubgroupsOpen(false); } }} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.category, layout.categoryChoice, value === category && styles.selectedCategory]}><Text style={[styles.categoryText, selected && styles.selectedCategoryText]}>{t(value)}{selected && subcategory ? ' · ' + t(subcategory) : ''}</Text>{hasSubgroups && <DropdownChevron expanded={subgroupsOpen} color="#FFFFFF" />}</Pressable>;
       })}</ScrollView>
       <Pressable testID="toggle-product-search" accessibilityRole="button" accessibilityLabel={t('Buscar produto')} accessibilityState={{ expanded: searchOpen }} style={layout.infoButton} onPress={() => { setSearchOpen(!searchOpen); if (searchOpen) setProductSearch(''); }}><View style={layout.magnifier}><View style={layout.magnifierHandle} /></View></Pressable>
     </View>
@@ -167,6 +168,7 @@ const layout = StyleSheet.create({
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
   orderPanel: { maxHeight: '100%', marginBottom: 0, padding: 12, minHeight: 120, flexShrink: 1 },
   orderItems: { flexShrink: 1 },
+  categoryChoice: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   categoryToolbar: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   magnifier: { width: 17, height: 17, borderWidth: 2, borderColor: COLORS.green, borderRadius: 9 },
   magnifierHandle: { width: 9, height: 2, position: 'absolute', bottom: -4, right: -6, backgroundColor: COLORS.green, transform: [{ rotate: '45deg' }] },
