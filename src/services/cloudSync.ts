@@ -190,8 +190,10 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         }
         await serial(() => persist({ ...state, preparationSettings: kitchen }));
         // Upload individual immutable orders: retries cannot duplicate an order.
+        const preparationFollowups = new Set((state.preparationOperations || []).map(item => item.key));
         for (let preparationPass=0;preparationPass<2;preparationPass++) {
         for (const sent of Object.values(state.pending)) {
+          if (preparationPass === 1 && !preparationFollowups.has(sent.key)) continue;
           if (session?.token !== token) return;
           if (state.preparationOperations?.some(item=>item.key===sent.key)) continue;
           if (!sent.key.startsWith('user:') && !roleWrite(roleOf(),sent.key,sent.value)) continue;

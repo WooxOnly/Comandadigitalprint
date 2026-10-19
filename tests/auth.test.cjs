@@ -2,11 +2,9 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { randomBytes } = require('node:crypto');
 const fs = require('node:fs');
-const { DatabaseSync } = require('node:sqlite');
 const ts = require('typescript');
-const output = {};
-new Function('exports', 'require', ts.transpileModule(fs.readFileSync('src/services/localAuth.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText)(output, (name) => name === '../../shared/app-roles.mjs' ? require('../shared/app-roles.mjs') : name === '../config/offlineRecovery.json' ? require('../src/config/offlineRecovery.json') : require(name));
-const { createLocalAuth, settingsAccessCode } = output;
+const { DatabaseSync } = require('node:sqlite');
+const { createLocalAuth, settingsAccessCode } = require('./helpers/load-ts.cjs').loadTs('src/services/localAuth.ts');
 function storeDatabase() {
   const database = new DatabaseSync(':memory:');
   for (const file of ['schema.sql', 'cloud-schema.sql', 'diagnostics-schema.sql', 'store-schema.sql']) database.exec(fs.readFileSync('server/cloudflare/' + file, 'utf8'));
