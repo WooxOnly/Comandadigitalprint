@@ -35,7 +35,7 @@ export function OrderIdentification(props: Props) {
   </View>;
   const custom = <View testID="order-custom-table-group" style={single ? compactRow ? local.customCompact : local.customInline : [local.custom, !inlineTables && { width: '100%', flexBasis: 'auto' }]}>
     <Text style={[local.label, single && { width: compactRow ? 64 : 72, fontSize: 11, lineHeight: 14 }]}>{t('Outra mesa')}</Text>
-    <TextInput editable={!props.disabled} value={props.customPlate} onChangeText={text => props.onCustom(text.replace(/\D/g, '').slice(0, 3))} maxLength={3} keyboardType="number-pad" accessibilityLabel={t('Outro número de mesa')} placeholder={single ? '—' : t('Número')} style={[styles.input, local.input, single && { width: compactRow ? 64 : 52, paddingHorizontal: 8 }]} />
+    <TextInput editable={!props.disabled} value={props.customPlate} onChangeText={text => props.onCustom(text.replace(/\D/g, '').slice(0, 3))} maxLength={3} keyboardType="number-pad" accessibilityLabel={t('Outro número de mesa')} placeholder={single ? '' : t('Número')} style={[styles.input, local.input, single && { width: compactRow ? 64 : 52, paddingHorizontal: 8 }]} />
   </View>;
   const advance = <Pressable testID="confirm-order-identification" disabled={props.disabled} accessibilityRole="button" onPress={props.onConfirm} style={[local.advance, props.disabled && styles.pressed]}><Text style={local.advanceText}>{t('Avançar')}</Text></Pressable>;
   return <View testID="order-identification" style={[local.panel, single && { paddingVertical: 6, gap: 4 }]}>

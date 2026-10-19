@@ -30,6 +30,8 @@ function themed<C extends ComponentType<any>>(Component: C, textInput = false, t
       if (textInput && dark && !values.placeholderTextColor) values.placeholderTextColor = '#b6b8bc';
       return values;
     }, [props, dark, compactLandscape]);
+    // Forward the opaque ref to the native control; its current value is never read here.
+    // eslint-disable-next-line react-hooks/refs
     return createElement(Component, { ...themedProps, ref });
   });
   Themed.displayName = 'ThemedControl';
@@ -47,3 +49,11 @@ export const ActivityIndicator = themed(Native.ActivityIndicator);
 export const SafeAreaView = themed(NativeSafeAreaView);
 
 export const Switch = themed(Native.Switch);
+
+// Icon strokes/fills are foreground ink even when drawn with a View background.
+export function IconView(props: ComponentProps<typeof Native.View>) {
+  const { theme } = useAppearance();
+  const flat = Native.StyleSheet.flatten(props.style) || {};
+  const style = theme === 'dark' ? Object.fromEntries(Object.entries(flat).map(([key, value]) => [key, typeof value === 'string' && /color$/i.test(key) ? darkColor(value, 'color') : value])) : flat;
+  return <Native.View {...props} style={style} />;
+}

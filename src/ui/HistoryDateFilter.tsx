@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { historyDateRange, historyDateText, historyPeriods, type HistoryPeriod } from '../services/historyDates';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from './ThemedNative';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View, IconView } from './ThemedNative';
 import { KeyboardPressable as Pressable, KeyboardTextInput as TextInput } from './KeyboardControls';
 import { COLORS, styles } from './theme';
 
@@ -25,8 +25,8 @@ export function HistoryDateFilter({ range, onApply }: { range: Range; onApply: (
       <Text style={styles.helperText}>{t(historyPeriods.find(choice => choice.value === range.period)!.label)}</Text>
       <Pressable testID="history-date-filter" accessibilityRole="button" accessibilityLabel={t('Filtrar por data')} accessibilityState={{ expanded: open }} onPress={show} style={[styles.addButton, { width: 44, paddingHorizontal: 0, alignItems: 'center' }]}>
         <View accessible={false} pointerEvents="none" style={{ alignItems: 'center' }}>
-          <View style={{ width: 18, height: 0, borderTopWidth: 10, borderTopColor: COLORS.green, borderLeftWidth: 7, borderRightWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent' }} />
-          <View style={{ width: 4, height: 7, backgroundColor: COLORS.green, marginTop: -1 }} />
+          <IconView style={{ width: 18, height: 0, borderTopWidth: 10, borderTopColor: COLORS.green, borderLeftWidth: 7, borderRightWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent' }} />
+          <IconView style={{ width: 4, height: 7, backgroundColor: COLORS.green, marginTop: -1 }} />
         </View>
       </Pressable>
     </View>

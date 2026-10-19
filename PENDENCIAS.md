@@ -1,5 +1,24 @@
 # Pendências e preferências
 
+## Demandas retomadas em 19/10/2026 — implementação local
+
+- Proprietário autorizou implementar e, depois, “Ok, sobe tudo”, esclarecendo “Portais e apk”. Autorizada publicação deste conjunto em homologação e uma compilação do APK correspondente, sem monitorar a compilação.
+- Modo escuro: corrigidos traços dos ícones (atendimento, lupa, funil e setas), contraste das ações e seleção. Fundo laranja atrás do Iniciar pedido removido no escuro; fundo branco do Histórico corrigido; espaçamento abaixo de Finalizar pedido.
+- Histórico: status junto ao cliente; detalhes com + e reimpressão com impressora. Impressora também nos cartões e detalhes do preparo, preservando permissões.
+- Preparo: status traduzido e minutos em formato compacto, por exemplo Em preparo - 13m. O proprietário reafirmou que NÃO deve mudar o tamanho do balão: dimensões, capacidade e grade mantidas.
+- Portal: gráficos L separados de pedidos por dia da semana e por mês; no Caixa, relatório próprio de ticket médio ponderado e gráficos separados de vendas líquidas em USD por dia e por mês. Filtros, escopos, módulos e datas reais de devolução preservados.
+- Verificação final: 350 testes Node (`tests/*.test.cjs` e `tests/*.test.mjs`), lint, TypeScript e diff-check aprovados. Portal: 18 combinações de idioma/tema com três larguras cada, incluindo ticket ponderado, gráficos separados e devolução negativa; login: 12 fluxos previamente aprovados.
+- Navegador: 450 combinações de aparência/idioma/tela, 39 verificações do KDS, 18 do histórico e 30 específicas dos controles escuros aprovadas. Componentes reais com dados/dispositivos sintéticos; Android físico e impressora continuam fora desta validação.
+
+## TMA em destaque, controles à direita e login após inatividade — implementação local
+
+- TMA em cartão grande na primeira linha dos relatórios, ao lado de Pedidos por hora. Uma média ponderada do período, com intervalo e amostra visíveis; filtro preservado: emissão→finalização, emissão→pronto e início→pronto. O filtro inicial/emissão→finalização inclui a espera antes do preparo.
+- + e funil juntos no alto à DIREITA, nessa ordem, conforme esclarecimento explícito do proprietário. Símbolos desenhados menores e centralizados, cápsulas visuais compactas com área de toque de 44px; padrão também no relatório financeiro.
+- Gráfico por hora mantém volume pela emissão (quantidade no dia, média por hora coberta em períodos maiores), sem mudar a escala aprovada ou os cálculos. Zeros não criam barras; valores positivos pequenos recebem pontos no valor real e rótulos quando há poucas horas com atividade, para não parecerem inexistentes.
+- Ambos os logins renovam somente o desafio CSRF antes do POST normal, no mesmo clique. Não prolonga sessão autenticada, não relaxa validação e não grava senha fora do formulário. Falha de conexão conserva os dados e permite tentar novamente.
+- Traço de preenchimento removido de Outra mesa no app, nas duas orientações do tablet.
+- Publicação deste conjunto e APK autorizados posteriormente por “Ok, sobe tudo” / “Portais e apk”. APK 2e0bceb corresponde à entrega anterior.
+
 ## Entrega autorizada deste conjunto — 19/10/2026
 
 - Proprietário: “Ok, pode postar tudo”. Autorização para publicar este conjunto em homologação e solicitar o APK correspondente, sem estender a autorização a compilações futuras.

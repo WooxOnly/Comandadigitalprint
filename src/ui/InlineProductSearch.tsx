@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, TextInput, View } from './ThemedNative';
+import { AccessibilityInfo, Animated, Easing, TextInput, View, IconView } from './ThemedNative';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { useLanguage } from '../i18n/LanguageContext';
 import { COLORS } from './theme';
@@ -28,8 +28,8 @@ export function InlineProductSearch({ open, value, width, onChange, onToggle, on
     </Animated.View>
     <Pressable testID="toggle-product-search" accessibilityRole="button" accessibilityLabel={t(open ? 'Fechar busca' : 'Buscar produto')} accessibilityState={{ expanded: open }} onPress={onToggle} style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
       <View accessible={false} pointerEvents="none" style={{ width: 20, height: 20 }}>
-        <View style={{ width: 14, height: 14, borderWidth: 1.7, borderColor: COLORS.green, borderRadius: 7 }} />
-        <View style={{ width: 8, height: 1.7, position: 'absolute', top: 14, left: 11, borderRadius: 1, backgroundColor: COLORS.green, transform: [{ rotate: '45deg' }] }} />
+        <IconView style={{ width: 14, height: 14, borderWidth: 1.7, borderColor: COLORS.green, borderRadius: 7 }} />
+        <IconView style={{ width: 8, height: 1.7, position: 'absolute', top: 14, left: 11, borderRadius: 1, backgroundColor: COLORS.green, transform: [{ rotate: '45deg' }] }} />
       </View>
     </Pressable>
   </View>;

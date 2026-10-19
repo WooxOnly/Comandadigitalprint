@@ -149,7 +149,7 @@ const layout = StyleSheet.create({
   topMetaDetail: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
   finishButton: { minHeight: 46, minWidth: 132, maxWidth: 220, backgroundColor: COLORS.primary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center', alignItems: 'center' },
   finishButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  orderPanel: { maxHeight: '100%', marginBottom: 0, padding: 12, minHeight: 120, flexShrink: 1 },
+  orderPanel: { gap: 10, maxHeight: '100%', marginBottom: 0, padding: 12, minHeight: 120, flexShrink: 1 },
   orderItems: { flexShrink: 1 },
   categoryChoice: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   categoryToolbar: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },

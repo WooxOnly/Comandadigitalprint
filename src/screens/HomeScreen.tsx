@@ -1,3 +1,4 @@
+import { useAppearance } from '../ui/AppearanceContext';
 import { useAppRole } from '../ui/useAppRole';
 import { useState } from 'react';
 import { useStoreModules } from '../ui/useStoreModules';
@@ -12,6 +13,7 @@ import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles, navigationTabs, ROUTES, COLORS } from '../ui/theme';
 
 export default function HomeScreen() {
+  const { theme } = useAppearance();
   const { logout } = useAuth();
   const { t } = useLanguage();
   const { width, fontScale } = useWindowDimensions();
@@ -22,7 +24,7 @@ export default function HomeScreen() {
   const columns = width < 360 || fontScale >= 1.4 ? 1 : isWide ? 4 : 2;
   const tileWidth = gridWidth ? Math.floor((gridWidth - 12 * (columns - 1)) / columns * 100) / 100 : undefined;
   return <ScreenFrame><View>
-                  <View style={[styles.hero, isWide && styles.heroWide]}>
+                  <View style={[styles.hero, isWide && styles.heroWide, theme === 'dark' && { backgroundColor: 'transparent' }]}>
                     <Text style={styles.heroEyebrow}>{t("BOM ATENDIMENTO COMEÇA AQUI")}</Text>
                     <Text style={[styles.heroTitle, isWide && styles.heroTitleWide]}>{t("Tudo pronto para o próximo pedido.")}</Text>
                     <Text style={styles.heroDescription}>{t("Monte a comanda, confira os detalhes e envie para a cozinha.")}</Text>

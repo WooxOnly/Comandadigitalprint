@@ -18,8 +18,9 @@ export function darkColor(value, property = 'color') {
   if (/background/i.test(property)) {
     if (['#f5f3ef', '#f6f5ef'].includes(lower)) return '#18191b';
     if (['#fff', '#ffffff'].includes(lower)) return '#242629';
-    if (['#214b40', '#245c43'].includes(lower)) return '#3a2823';
-    if (['#fcebe3', '#fcebe8', '#fcece8'].includes(lower)) return '#3a2823';
+    if (['#214b40', '#245c43'].includes(lower)) return '#32634f';
+    if (['#fcebe3', '#fcebe8', '#fcece8'].includes(lower)) return '#563a30';
+    if (['#e8f1ec', '#dfece5'].includes(lower)) return '#44464a';
     if (green || light > .45) return '#2c2e32';
     return value;
   }

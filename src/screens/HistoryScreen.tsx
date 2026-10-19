@@ -1,3 +1,4 @@
+import { ActionIcon } from '../ui/ActionIcon';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useCallback, useState } from 'react';
 import { historyDateRange, historyInRange, type HistoryPeriod } from '../services/historyDates';
@@ -34,12 +35,12 @@ export default function HistoryScreen() {
                     const summary = historyPreparation(order.createdAt, records.get(order.id), modules.preparation);
                     return <View key={order.id} testID="history-order" style={styles.historyCard}>
                     <View style={styles.historySummary}>
-                      <View style={[styles.historyPrimary, { gap: 5 }]}><Text style={styles.cardTitle} numberOfLines={1}>{orderNumberLabel(order) ? `${t('Pedido nº')} ${orderNumberLabel(order)}` : order.plate ? `${t('Mesa')} ${order.plate}` : t('Para levar')}</Text><Text style={styles.mutedText} numberOfLines={1}>{orderNumberLabel(order) ? (order.plate ? `${t('Mesa')} ${order.plate} · ` : `${t('Para levar')} · `) : ''}{order.customer || t("Cliente não informado")}{compact ? ` · ${order.items.length} ${order.items.length === 1 ? t('item') : t('itens')}` : ''}</Text>{summary && <HistoryPreparationBadge summary={summary} />}</View>
+                      <View style={[styles.historyPrimary, { gap: 5 }]}><Text style={styles.cardTitle} numberOfLines={1}>{orderNumberLabel(order) ? `${t('Pedido nº')} ${orderNumberLabel(order)}` : order.plate ? `${t('Mesa')} ${order.plate}` : t('Para levar')}</Text><View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}><Text style={[styles.mutedText, { flexShrink: 1 }]} numberOfLines={1}>{orderNumberLabel(order) ? (order.plate ? `${t('Mesa')} ${order.plate} · ` : `${t('Para levar')} · `) : ''}{order.customer || t("Cliente não informado")}{compact ? ` · ${order.items.length} ${order.items.length === 1 ? t('item') : t('itens')}` : ''}</Text>{summary && <HistoryPreparationBadge summary={summary} />}</View></View>
                       {!compact && <Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)}</Text>}
                       {!compact && <Text style={styles.historyCount}>{order.items.length} {order.items.length === 1 ? t("item") : t("itens")}</Text>}
                       <View style={styles.historyInlineActions}>
-                        <Pressable accessibilityRole="button" accessibilityLabel={t('Ver detalhes')} style={[styles.addButton, compact && styles.historyIconButton]} onPress={() => router.push({ pathname: '/history/[id]', params: { id: order.id } })}><Text style={[styles.addButtonText, compact && styles.historyIconText]}>{compact ? '⋯' : t('Ver detalhes')}</Text></Pressable>
-                        <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={!canReprint} accessibilityState={{ disabled: !canReprint }} style={[styles.addButton, compact && styles.historyIconButton, !canReprint && styles.pressed]} onPress={() => printSavedOrder(order)}><Text style={[styles.addButtonText, compact && styles.historyIconText]}>{compact ? '↻' : t('Reimprimir')}</Text></Pressable>
+                        <Pressable accessibilityRole="button" accessibilityLabel={t('Ver detalhes')} style={[styles.addButton, styles.historyIconButton]} onPress={() => router.push({ pathname: '/history/[id]', params: { id: order.id } })}><ActionIcon kind="plus" /></Pressable>
+                        <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={!canReprint} accessibilityState={{ disabled: !canReprint }} style={[styles.addButton, styles.historyIconButton, !canReprint && styles.pressed]} onPress={() => printSavedOrder(order)}><ActionIcon kind="printer" /></Pressable>
                       </View>
                     </View>
                   </View>; })}

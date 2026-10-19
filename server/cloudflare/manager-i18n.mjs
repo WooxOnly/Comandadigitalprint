@@ -7,6 +7,10 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  "Vendas por mês": ["Sales by month", "Ventas por mes"],
+  "Vendas por dia": ["Sales by day", "Ventas por día"],
+  "Pedidos por mês": ["Orders by month", "Pedidos por mes"],
+  "Pedidos por dia da semana": ["Orders by weekday", "Pedidos por día de la semana"],
   "A data inicial deve ser anterior ou igual à data final.": ["The start date must be on or before the end date.", "La fecha inicial debe ser anterior o igual a la fecha final."],
   "Informe uma data válida no formato MM/DD/YYYY.": ["Enter a valid date in MM/DD/YYYY format.", "Ingrese una fecha válida en formato MM/DD/YYYY."],
   "Calendário final": ["End calendar", "Calendario final"],
@@ -18,7 +22,8 @@ export const TRANSLATIONS = {
   "A média considera somente os pedidos com o intervalo registrado no período selecionado.": ["The average includes only orders with the selected time interval recorded within the selected period.", "El promedio incluye solo los pedidos con el intervalo registrado dentro del período seleccionado."],
   "Ano atual": ["This year", "Año actual"],
   "Filtros do TMA": ["Average time filters", "Filtros del tiempo medio"],
-  "TMA do período": ["Average time for the period", "Tiempo medio del período"],
+  "Não foi possível entrar. Confira a conexão e tente novamente.": ["Could not sign in. Check your connection and try again.", "No se pudo iniciar sesión. Comprueba la conexión e inténtalo de nuevo."],
+  "TMA do período": ["TMA · Period average", "TMA · Media del período"],
   "Filtros": ["Filters", "Filtros"],
   "TMA por hora": ["Average fulfillment time by hour", "Tiempo medio de atención por hora"],
   "Período": ["Period", "Período"],
@@ -320,7 +325,7 @@ export function languageSelector(language) {
 export const languageSelectorCss = `.language-corner:empty{display:none}.language-picker{position:relative;flex:none;margin:0;font:14px system-ui,sans-serif}.language-picker>summary{display:flex;align-items:center;justify-content:center;gap:6px;width:48px;height:44px;cursor:pointer;list-style:none;border-radius:8px;color:#214b40}.language-picker>summary::-webkit-details-marker{display:none}.language-picker svg{display:block;width:16px;height:12px;border-radius:1px;pointer-events:none}.language-trigger-face{display:flex;align-items:center;justify-content:center;gap:6px;width:48px;height:32px;border:1px solid #dbe2dc;border-radius:10px;background:#f8faf8}.language-picker .dropdown-chevron{width:12px;height:12px;flex:none}.language-picker[open] .dropdown-chevron{transform:rotate(180deg)}.language-picker[open] .language-trigger-face{background:#e8f1ec;border-color:#214b40}html[data-theme=dark] .language-trigger-face{background:#242629;border-color:#414348}html[data-theme=dark] .language-picker[open] .language-trigger-face{background:#3a2823;border-color:#f3a588}.language-menu{position:absolute;top:100%;right:0;z-index:110;min-width:172px;padding:4px;background:#fff;border:1px solid #dbe2dc;border-radius:12px;box-shadow:0 4px 16px #0002}.language-picker .language-button{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-height:44px;margin:0;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:#214b40;font:14px system-ui,sans-serif;cursor:pointer}.language-picker .language-button[aria-pressed=true]{background:#e8f1ec}.language-picker summary:focus-visible,.language-picker .language-button:focus-visible{outline:3px solid #ae4328;outline-offset:2px}.language-picker .language-button:disabled{opacity:.55;cursor:wait}#language-message:empty{display:none}#language-message{position:absolute;top:100%;right:16px;background:#fff;color:#a22828;font:12px system-ui,sans-serif;max-width:280px;padding:8px;border-radius:8px}html[data-theme=dark] .language-picker>summary,html[data-theme=dark] .language-button{color:#f1f1f1}html[data-theme=dark] .language-menu,html[data-theme=dark] #language-message{background:#242629;border-color:#414348}html[data-theme=dark] .language-picker .language-button[aria-pressed=true]{background:#3a2823}`;
 export function languageScript(language, userId = '', scope = 'manager', signIn = false) {
   const index = language === 'en' ? 0 : language === 'es' ? 1 : -1;
-  const signInKeys = ['Não foi possível salvar o idioma. Tente novamente.', 'Muitas tentativas. Tente novamente em {count} segundos.', 'Você já pode tentar novamente.'];
+  const signInKeys = ['Não foi possível entrar. Confira a conexão e tente novamente.', 'Não foi possível salvar o idioma. Tente novamente.', 'Muitas tentativas. Tente novamente em {count} segundos.', 'Você já pode tentar novamente.'];
   const entries = signIn ? signInKeys.map(key => [key, TRANSLATIONS[key]]) : Object.entries(TRANSLATIONS);
   const translations = Object.fromEntries(entries.map(([key, values]) => [key, index < 0 ? key : values[index]]));
   const serialized = JSON.stringify(translations).replace(/</g, '\\u003c');
