@@ -1,6 +1,8 @@
 # Pendências e preferências
 
-## Datas personalizadas do portal — correção atual
+## Datas personalizadas do portal — publicado em homologação
+
+- Publicado no código `f5eb545297cad8256e3409c1a055b7b902df68b2`: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39207357892 . Validação completa e portais aprovados; saúde e entrada do gestor HTTP 200 após publicação. Apenas web, sem novo APK.
 
 - Corrigida a apresentação compacta que cobria o campo editável com uma data apenas exibida. Os campos De/Até agora são textos realmente editáveis em MM/DD/YYYY, com botão próprio de calendário e valores ISO separados para a consulta.
 - Aceita também oito dígitos pelo teclado numérico, normalizados ao confirmar. Datas impossíveis e rascunhos incompletos ficam no campo, com validação traduzida, sem disparar consultas inválidas nem apagar o relatório aplicado. Intervalo invertido não é enviado; atualização explícita informa o erro.
