@@ -215,17 +215,24 @@ function useAppState() {
     }
   }
 
-  async function saveMenu(nextMenu = menu) {
-    nextMenu = standardizeMenu(nextMenu);
+  async function saveMenu(nextMenu = menu, optionChange?: Partial<ProductOption> & { productId: string }): Promise<boolean> {
     try {
       checkAccess('menu');
+      nextMenu = standardizeMenu(nextMenu);
       if (!isValidMenu(nextMenu)) throw new Error('Confira nomes, categorias e identificadores do cardápio.');
-      await AsyncStorage.setItem(MENU_KEY, JSON.stringify(nextMenu));
+      if (optionChange) {
+        if (!nextMenu.some(product => product.id === optionChange.productId)) throw new Error('Confira nomes, categorias e identificadores do cardápio.');
+        const key = 'product-option:' + optionChange.productId;
+        const previous = await cloud.get(key) as ProductOption | undefined;
+        await cloud.write({ menu: nextMenu, [key]: { available: true, favorite: false, ...previous, ...optionChange } });
+      } else await AsyncStorage.setItem(MENU_KEY, JSON.stringify(nextMenu));
       menuDirty.current = false; menuRef.current = nextMenu; setMenu(nextMenu);
       Alert.alert(t('Cardápio salvo'), t('Produtos salvos. Alterações sem conexão ficam pendentes de sincronização.'));
+      return true;
     } catch (error) {
       logError('menu.save_failed', error);
       Alert.alert(t('Falha ao salvar'), t((error as { code?: string }).code === 'MANAGER_REQUIRED' ? 'Somente gerentes e administradores podem alterar preços no cardápio.' : error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'));
+      return false;
     }
   }
 

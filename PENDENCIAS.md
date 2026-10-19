@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Cadastro de produtos em popup — 19/10/2026
+
+- Removido o botão global Salvar cardápio. Adicionar produto usa verde sólido e abre imediatamente um popup dedicado, mesmo com busca ativa; não cria item invisível no fim da lista.
+- Popup de inclusão/edição com nome, preço quando Caixa está ativo, ingredientes, grupo, subgrupo e opção de pizza. Rodapé sempre acessível com **Salvar** / **Cancelar**, nos três idiomas. Formulário compacto, rolável em telas baixas e com áreas seguras preservadas.
+- Rascunho isolado: cancelar não grava; validação antes de salvar; falhas mantêm o formulário e os dados. Novo item aparece no início do catálogo salvo, e a busca é limpa somente após inclusão bem-sucedida. Edição preserva os demais produtos. Disponibilidade/favorito também são rascunhos e são gravados junto do cardápio numa única transação durável. Exclusão pede confirmação e mantém o formulário em caso de falha.
+- `saveMenu` confirma sucesso/falha apenas depois da gravação, para o popup não fechar com erro. Papéis e autorização de preço preservados; gravação local/sincronização offline continuam com a infraestrutura existente.
+- Evidências: 24 fluxos de interface PT/EN/ES, claro/escuro e quatro tamanhos, incluindo busca ativa, criação, cancelamento, validação, edição, falha/reenvio e exclusão confirmada; mais 6 conferências do popup compacto em paisagem normal/baixa. Testes específicos de cardápio/perfis/idiomas (19), armazenamento/sincronização (14), lint e TypeScript aprovados. Navegador usa os componentes reais com adaptadores sintéticos de armazenamento/confirmação nativa; validação Android física continua separada.
+
+
 ## Cabeçalhos corrigidos: controles à direita — 19/10/2026
 
 - Correção expressa do proprietário: tema e idioma juntos no canto superior DIREITO em todo o app e portais. Logo/nome/slogan voltam à posição original, antes dos controles, sem alterar a logo personalizada. Registros anteriores de canto esquerdo ficam superados por esta instrução.

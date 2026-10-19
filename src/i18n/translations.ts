@@ -580,6 +580,9 @@ export const translations: Record<string, readonly [string, string]> = {
     "+ Add product",
     "+ Agregar producto"
   ],
+  "Salvar": ["Save", "Guardar"],
+  "Editar produto": ["Edit product", "Editar producto"],
+  "Excluir este produto do cardápio?": ["Delete this product from the menu?", "¿Eliminar este producto del menú?"],
   "Salvar cardápio": [
     "Save menu",
     "Guardar menú"
