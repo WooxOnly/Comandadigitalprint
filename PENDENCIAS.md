@@ -6,7 +6,7 @@
 - Seletor de intervalo do TMA removido dos filtros gerais. Agora fica dentro de um gráfico próprio de TMA por hora, com detalhamento próprio. Troca do intervalo modifica a medida de tempo, preservando datas/loja e o gráfico de quantidade de pedidos.
 - Pizzas de produtos/categorias permanecem visíveis; período sem pedidos agora mostra círculo neutro com 0 e mensagem explícita, em vez de substituir o gráfico apenas por texto. Nenhum valor ou distribuição é inventado.
 - Chromium: 9 combinações PT/EN/ES e larguras 390/800/1280, incluindo alinhamento de todos os filtros, troca de base do TMA e período vazio. 22 testes específicos de idiomas/relatórios, lint e TypeScript aprovados. Validação física Safari permanece separada.
-- Entrega somente dos portais; opção `build_apk=false` no workflow evita gerar APK redundante em alterações web. A entrega completa continua oferecendo geração de APK por padrão.
+- Entrega web separada da fila longa de APK, com serialização específica da publicação do Worker. Compilações anteriores permanecem intactas. Entrega somente dos portais; opção `build_apk=false` no workflow evita gerar APK redundante em alterações web. A entrega completa continua oferecendo geração de APK por padrão.
 
 ## Últimas demandas de layout — publicadas em homologação
 

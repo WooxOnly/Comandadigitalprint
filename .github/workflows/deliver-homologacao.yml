@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bistro-homologacao-publish
+  group: ${{ github.event_name == 'workflow_dispatch' && !inputs.build_apk && 'bistro-homologacao-portals' || 'bistro-homologacao-publish' }}
   cancel-in-progress: false
 
 jobs:
@@ -35,6 +35,9 @@ jobs:
       - run: node --test tests/*.test.cjs tests/*.test.mjs
 
   portals:
+    concurrency:
+      group: bistro-homologacao-worker-deploy
+      cancel-in-progress: false
     needs: validate
     runs-on: ubuntu-latest
     steps:
