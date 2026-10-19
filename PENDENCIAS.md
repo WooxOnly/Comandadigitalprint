@@ -2,6 +2,8 @@
 
 ## Ajuste dos filtros e gráficos do portal — correção atual
 
+- Publicado em homologação no código `b21697602794c07ed3734bc3f335fc07662d37fc`: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39195808640 . Validação completa e portais aprovados; jobs APK/release intencionalmente ignorados. Saúde e entrada do gestor HTTP 200 após publicação. Produção e compilação anterior preservadas.
+
 - Filtros gerais em uma única linha inclusive no celular: Loja, Período, De, Até e atualização por ícone. Datas compactas MM/DD/YYYY com o seletor nativo mantido; datas/período/loja continuam atualizando a consulta. Rótulo Período corrigido também em inglês/espanhol.
 - Seletor de intervalo do TMA removido dos filtros gerais. Agora fica dentro de um gráfico próprio de TMA por hora, com detalhamento próprio. Troca do intervalo modifica a medida de tempo, preservando datas/loja e o gráfico de quantidade de pedidos.
 - Pizzas de produtos/categorias permanecem visíveis; período sem pedidos agora mostra círculo neutro com 0 e mensagem explícita, em vez de substituir o gráfico apenas por texto. Nenhum valor ou distribuição é inventado.
