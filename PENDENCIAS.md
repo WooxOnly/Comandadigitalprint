@@ -1,6 +1,8 @@
 # Pendências e preferências
 
-## TMA do período e controles +/funil — implementação atual
+## TMA do período e controles +/funil — publicado em homologação
+
+- Código publicado `1abe2f470bd1091158ebfff0cab2cacc5a8480fd`. Execução https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39206219795 : validação completa e portais aprovados; APK/release ignorados intencionalmente. Saúde e entrada do gestor HTTP 200 após publicação. 18 verificações de navegador PT/EN/ES, 30 testes específicos de relatórios/idiomas/vendas, lint e TypeScript aprovados.
 
 - Substitui o gráfico de TMA por hora da rodada anterior. TMA agora mostra somente a média ponderada dos pedidos com intervalo registrado em todo o período selecionado (dia, mês, ano ou datas manuais). Incluído Ano atual no seletor; os limites existentes de até 366 dias permanecem.
 - TMA fica no indicador compacto. O + abre média, período, intervalo medido e quantidade de pedidos usados no cálculo. O funil imediatamente à direita do + abre as opções do TMA. Sem registros, mostra — e zero amostras, sem inventar médias.
