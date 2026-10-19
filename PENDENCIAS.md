@@ -2,6 +2,8 @@
 
 ## Publicação autorizada — rodada atual
 
+- Após o proprietário ajustar D1 para Edit, retomados somente jobs falhos da execução `39180221058` (tentativa 2), reaproveitando os 335 testes/lint/TypeScript aprovados. Migração aditiva e publicação do Worker de homologação concluídas. Conferência pública: `/health`, `/admin` e `/gestor` HTTP 200; login do cliente com marca, campo e-mail e capitalização automática desabilitada. Geração do APK solicitada pelo workflow após o sucesso dos portais; não acompanhada e não afirmar APK concluído. Produção preservada. Código publicado: `21264046022b6fd436d7217a7b3e422bbfc8fc3e`. Layout de Pedido aprovado somente em prévia e entrega real de e-mails continuam pendentes.
+
 - Tentativa `39180221058`, commit `21264046022b6fd436d7217a7b3e422bbfc8fc3e`: validação completa aprovada (lint, TypeScript e testes). Migração recusada pela API Cloudflare D1 `/import`, erro de autenticação 10000: token existente precisa de D1 Edit, não somente Read. Ponto de recuperação obtido antes da tentativa. Worker não foi atualizado e APK/release não iniciaram. Editar a permissão do token existente; retomar apenas jobs falhos após ajuste, reaproveitando a validação aprovada. Não recriar credenciais/secrets sem necessidade. Processamento: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39180221058 .
 
 - Proprietário autorizou publicar tudo que foi implementado. Entrega somente em homologação, preservando produção. O layout de Pedido aprovado apenas em prévia continua pendente de implementação; não declarar essa parte entregue. Convites dependem da migração aditiva antes do Worker. APK só inicia após publicação bem-sucedida dos portais; entregar o link sem acompanhar a compilação.
