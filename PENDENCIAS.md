@@ -2,6 +2,8 @@
 
 ## Publicação autorizada — rodada atual
 
+- Tentativa `39180221058`, commit `21264046022b6fd436d7217a7b3e422bbfc8fc3e`: validação completa aprovada (lint, TypeScript e testes). Migração recusada pela API Cloudflare D1 `/import`, erro de autenticação 10000: token existente precisa de D1 Edit, não somente Read. Ponto de recuperação obtido antes da tentativa. Worker não foi atualizado e APK/release não iniciaram. Editar a permissão do token existente; retomar apenas jobs falhos após ajuste, reaproveitando a validação aprovada. Não recriar credenciais/secrets sem necessidade. Processamento: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39180221058 .
+
 - Proprietário autorizou publicar tudo que foi implementado. Entrega somente em homologação, preservando produção. O layout de Pedido aprovado apenas em prévia continua pendente de implementação; não declarar essa parte entregue. Convites dependem da migração aditiva antes do Worker. APK só inicia após publicação bem-sucedida dos portais; entregar o link sem acompanhar a compilação.
 
 ## Correção de preparo totalmente offline — implementação local
