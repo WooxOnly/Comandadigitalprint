@@ -2,6 +2,8 @@
 
 ## Remoção do resumo textual abaixo de Pedidos por hora
 
+- Publicado em homologação: `a55bc11f7180a45c880fbfb13186c8f84c4d2d59`, execução https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39206468370 . Validação e portais aprovados; saúde OK após publicar. Sem novo APK. Testes de idioma (11), navegador específico (3), lint e TypeScript aprovados.
+
 - Proprietário dispensou a linha de horário/média como “09:00 PM · 0.03 Average orders/hour”. Removidos o resumo automático de pico e a linha similar após clicar em uma barra. O gráfico e o popup de detalhes continuam disponíveis. Alteração somente do portal, sem novo APK.
 
 ## TMA do período e controles +/funil — publicado em homologação
