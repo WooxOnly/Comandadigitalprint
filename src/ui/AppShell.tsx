@@ -1,5 +1,4 @@
 import { SettingsLanguageVisibility } from './SettingsLanguageVisibility';
-import { PreparationUndo } from './PreparationUndo';
 import { LanguageSettings } from './LanguageSettings';
 import { AppearanceSelector } from './AppearanceSelector';
 import { useAppearance } from './AppearanceContext';
@@ -122,7 +121,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SafeAreaView>
           </KeyboardAvoidingView></SafeAreaProvider>
         </Modal>
-        {permitted && <PreparationUndo />}
         {permitted && <ReceiptPreview />}
       </SafeAreaView>
     </SafeAreaProvider></SettingsLanguageVisibility.Provider>

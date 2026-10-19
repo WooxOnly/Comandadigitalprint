@@ -1,4 +1,4 @@
-import { canUndoPreparation } from '../ui/PreparationUndo';
+import { canUndoPreparation } from '../services/preparationUndo';
 import { PasswordField } from '../ui/AccessGate';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Alert, Modal, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from '../ui/ThemedNative';

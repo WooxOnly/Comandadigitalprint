@@ -1,5 +1,11 @@
 # Pendências e preferências
 
+## Remoção do aviso flutuante de preparo — 19/10/2026
+
+- Removida a faixa global “Etapa alterada” com contador e botão Desfazer, inclusive sua sobreposição e temporizador.
+- Desfazer até um minuto e correções autorizadas continuam nos Detalhes do pedido do preparo, com as regras offline existentes. Pedidos finalizados podem ser acessados por Mostrar finalizados.
+- Verificação: 12 cenários de interface nos três idiomas, incluindo finalizados, desfazer, prazo expirado, autorização e ausência da faixa em paisagem/retrato/Home; 8 testes de correção offline; lint e TypeScript aprovados.
+
 ## Filtro de data no Histórico — 19/10/2026
 
 - Funil compacto no lado direito; opções ocultas em popup: Hoje, Últimos 7 dias, Últimos 30 dias, Mês anterior e Personalizado. Ao abrir/reabrir o Histórico, volta a Hoje.
