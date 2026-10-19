@@ -7,6 +7,14 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  "A data inicial deve ser anterior ou igual à data final.": ["The start date must be on or before the end date.", "La fecha inicial debe ser anterior o igual a la fecha final."],
+  "Informe uma data válida no formato MM/DD/YYYY.": ["Enter a valid date in MM/DD/YYYY format.", "Ingrese una fecha válida en formato MM/DD/YYYY."],
+  "Calendário final": ["End calendar", "Calendario final"],
+  "Calendário inicial": ["Start calendar", "Calendario inicial"],
+  "Abrir calendário final": ["Open end calendar", "Abrir calendario final"],
+  "Abrir calendário inicial": ["Open start calendar", "Abrir calendario inicial"],
+  "Data final": ["End date", "Fecha final"],
+  "Data inicial": ["Start date", "Fecha inicial"],
   "A média considera somente os pedidos com o intervalo registrado no período selecionado.": ["The average includes only orders with the selected time interval recorded within the selected period.", "El promedio incluye solo los pedidos con el intervalo registrado dentro del período seleccionado."],
   "Ano atual": ["This year", "Año actual"],
   "Filtros do TMA": ["Average time filters", "Filtros del tiempo medio"],

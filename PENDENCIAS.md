@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Datas personalizadas do portal — correção atual
+
+- Corrigida a apresentação compacta que cobria o campo editável com uma data apenas exibida. Os campos De/Até agora são textos realmente editáveis em MM/DD/YYYY, com botão próprio de calendário e valores ISO separados para a consulta.
+- Aceita também oito dígitos pelo teclado numérico, normalizados ao confirmar. Datas impossíveis e rascunhos incompletos ficam no campo, com validação traduzida, sem disparar consultas inválidas nem apagar o relatório aplicado. Intervalo invertido não é enviado; atualização explícita informa o erro.
+- Calendário usa showPicker quando disponível e seletor nativo visível como alternativa. Fechar com Esc não fecha o painel inteiro de filtros. Escolha pelo calendário e digitação sincronizam o mesmo período, em qualquer opção de período; editar datas seleciona Personalizado automaticamente.
+- Teste anterior de alteração programática do input nativo foi reforçado para clicar e digitar no campo visível, confirmar, verificar datas efetivamente enviadas/aplicadas e preservar entrada inválida. 18 cenários PT/EN/ES em larguras 390/800/1280; mais 3 específicos de teclado numérico/alternativa de calendário. Testes de idioma (11), lint e TypeScript aprovados localmente. Apenas portal; sem novo APK.
+
 ## Remoção do resumo textual abaixo de Pedidos por hora
 
 - Publicado em homologação: `a55bc11f7180a45c880fbfb13186c8f84c4d2d59`, execução https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39206468370 . Validação e portais aprovados; saúde OK após publicar. Sem novo APK. Testes de idioma (11), navegador específico (3), lint e TypeScript aprovados.
