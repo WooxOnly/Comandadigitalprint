@@ -1,5 +1,10 @@
 # Pendências e preferências
 
+## Fechamento atual — 19/10/2026
+
+Consulte [FECHAMENTO-2026-10-19.md](FECHAMENTO-2026-10-19.md) para o checklist consolidado e a entrega atual. Os registros anteriores abaixo preservam a cronologia; indicações antigas de “somente prévia”, “sem publicar” ou bloqueio de credenciais foram superadas pelas publicações posteriores. Switch/bandeira compactos já estão nos portais; proporção 34%/124px/76px incluída na entrega do APK solicitada para `5e9c22f`, sem acompanhar a compilação. Permanecem separados a conferência física, entrega real de e-mails e o fluxo de Encomendas expressamente adiado.
+
+
 ## Datas personalizadas do portal — publicado em homologação
 
 - Publicado no código `f5eb545297cad8256e3409c1a055b7b902df68b2`: https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39207357892 . Validação completa e portais aprovados; saúde e entrada do gestor HTTP 200 após publicação. Apenas web, sem novo APK.
