@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Cabeçalhos corrigidos: controles à direita — 19/10/2026
+
+- Correção expressa do proprietário: tema e idioma juntos no canto superior DIREITO em todo o app e portais. Logo/nome/slogan voltam à posição original, antes dos controles, sem alterar a logo personalizada. Registros anteriores de canto esquerdo ficam superados por esta instrução.
+- Cabeçalho operacional com logo à esquerda e preferências à direita; entrada/vinculação/licença com seletores no alto à direita de seus cartões. Restrições de idioma nos Ajustes preservadas.
+- Portais restauram marca à esquerda na barra fixa e controles à direita. Popup de idioma alinhado pela direita para abrir dentro da tela, incluindo largura de 320px. Switch, bandeiras e cápsulas permanecem compactos.
+- Verificação: 90 cenários do app com posição à direita/logo antes dos controles; 450 de aparência app/portais; 24 de seletores e popup dentro da tela; 19 testes Node de aparência/idioma. Lint/TypeScript aprovados. Gerar APK sem acompanhar a compilação.
+
+
 ## Prévia da comanda em 75% — 19/10/2026
 
 - Toda nova abertura inicia em 75%, inclusive no CSS inicial da visualização, evitando exibir 100% antes do carregamento. Fechar e reabrir restaura 75%; zoom manual e rotação mantêm o comportamento existente.

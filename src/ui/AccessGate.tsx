@@ -44,7 +44,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
       <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
-        {!settings && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 8 }}><AppearanceSelector language={language} /><LanguageSettings compact /></View>}
+        {!settings && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginBottom: 8 }}><AppearanceSelector language={language} /><LanguageSettings compact /></View>}
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
           <Text style={[styles.helperText, { textAlign: 'center', marginBottom: 12 }]}>{t('Do caixa à cozinha.')}</Text>

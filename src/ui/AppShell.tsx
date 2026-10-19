@@ -56,16 +56,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, { zIndex: 20 }, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
-            <View testID="preferences-controls" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }}><AppearanceSelector language={language} />{(path !== '/printer' || settingsLanguageVisible) && <LanguageSettings compact />}</View>
             <Pressable disabled={role !== 'admin'} accessible={role === 'admin'} onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>
-              <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
+              <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} testID="header-brand-logo" style={styles.logoImage} />
             </Pressable>
             <View style={styles.headerTitle}>
               <Text numberOfLines={1} style={styles.eyebrow}>BistroHub · {storeName}</Text>
               <Text style={{ color: COLORS.muted, fontSize: 12, marginBottom: 2 }}>{t('Do caixa à cozinha.')}</Text>
               <Text style={[styles.title, kitchen && { fontSize: 18 }]}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            <View style={{ alignItems: 'flex-end', alignSelf: 'flex-start', gap: 4, flexShrink: 0 }}>
+            <View testID="preferences-controls" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' }}><AppearanceSelector language={language} />{(path !== '/printer' || settingsLanguageVisible) && <LanguageSettings compact />}</View>
             {role === 'cook' && <Pressable accessibilityRole="button" accessibilityLabel={t('Sair do sistema')} onPress={logout} style={styles.noteChip}><Text style={styles.noteChipText}>{t('Sair do sistema')}</Text></Pressable>}</View>
           </View>
 
