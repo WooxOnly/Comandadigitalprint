@@ -49,7 +49,7 @@ const { decodeLicenseCode } = require('../../shared/license.mjs');
       if (await languageButton.getAttribute('aria-pressed') !== 'true') await Promise.all([page.waitForNavigation(), languageButton.click()]);
       await page.locator('#license-status').filter({ hasText: translate('Licença ativa', language) }).waitFor();
       for (const theme of ['light', 'dark']) {
-        await page.locator('[data-theme-choice=' + theme + ']').click();
+        if(await page.locator('html').getAttribute('data-theme')!==theme)await page.locator('.theme-switch').click();
         for (const viewport of [{ width: 320, height: 568 }, { width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
           await page.setViewportSize(viewport);
           const summaries = page.locator('#client-license > details > summary');
@@ -84,7 +84,7 @@ const { decodeLicenseCode } = require('../../shared/license.mjs');
       await page.goto(base + '/tablet-preview.html?language=' + language + '#/license');
       await page.waitForFunction(() => !!window.qa);
       await page.evaluate(() => window.qa.setLicense({status:'unverified',expiresAt:null,error:false}));
-      await page.getByTestId('theme-' + theme).click();
+      if(await page.getByTestId('theme-switch').getAttribute('aria-checked')!==String(theme==='dark'))await page.getByTestId('theme-switch').click();
       assert.equal(await page.getByTestId('licensed-content').isVisible(), false);
       try { await page.getByText(translate('Este tablet ainda não verificou a licença.', language), { exact: true }).waitFor({timeout:3000}); } catch(error) { await page.screenshot({path:path.join(directory,'failed-gate.png')}); console.error(JSON.stringify({language,theme,viewport,body:await page.locator('body').innerText(),errors})); throw error; }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
@@ -106,6 +106,7 @@ const { decodeLicenseCode } = require('../../shared/license.mjs');
     }
     for (const language of ['pt', 'en', 'es']) {
       await page.goto(base + '/tablet-preview.html?language=' + language + '#/link');
+      await page.getByTestId('language-trigger').click();
       await page.getByLabel({pt:'Português',en:'English',es:'Español'}[language],{exact:true}).click();
       await page.getByText(translate('Liberação temporária offline', language), { exact: true }).click();
       await page.getByLabel(translate('Código temporário', language), { exact: true }).fill('synthetic-code');

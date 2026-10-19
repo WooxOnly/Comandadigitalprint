@@ -3,7 +3,8 @@ import { useAccess } from '../ui/useAccess';
 import { useStoreModules } from '../ui/useStoreModules';
 import { router } from 'expo-router';
 import { useLanguage } from '../i18n/LanguageContext';
-import { LanguageSettings } from '../ui/LanguageSettings';
+import { useContext, useEffect } from 'react';
+import { SettingsLanguageVisibility } from '../ui/SettingsLanguageVisibility';
 import { UserSettings } from '../ui/UserSettings';
 import { TabletSettings } from '../ui/TabletSettings';
 import { Keyboard, Switch, Text, View } from '../ui/ThemedNative';
@@ -13,12 +14,14 @@ import { ScreenFrame } from '../ui/ScreenFrame';
 import { styles, COLORS, CONNECTIONS } from '../ui/theme';
 
 export default function PrinterScreen() {
+  const setSettingsLanguageVisible = useContext(SettingsLanguageVisibility);
+  useEffect(() => { setSettingsLanguageVisible(true); return () => setSettingsLanguageVisible(false); }, [setSettingsLanguageVisible]);
   const { t } = useLanguage();
   const canRestore = useAccess('restore');
   const canSettings = useAccess('settings');
   const modules = useStoreModules();
   const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, savingOrderSettings } = useApp();
-  return <ScreenFrame><LanguageSettings compact /><View style={[styles.columns, isWide && styles.columnsWide]}>
+  return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
                   <View style={[styles.column, isWide && styles.columnWide, { gap: 12 }]}>
                     <UserSettings />
                     {canRestore && <Pressable style={styles.secondaryWideButton} onPress={() => router.navigate('/backups')}><Text style={styles.secondaryButtonText}>{t('Recuperação de dados')}</Text></Pressable>}

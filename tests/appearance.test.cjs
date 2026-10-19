@@ -9,7 +9,7 @@ test('dark palette preserves white button labels and image data while replacing 
 test('both portal entry and authenticated pages preserve nonce scripts and expose translated theme controls without injecting untrusted names',async()=>{
  const {managerLoginPage,managerPortalPage}=await import('../server/cloudflare/manager-pages.mjs'),{loginPage,recoveryPage}=await import('../server/cloudflare/admin-panel.mjs');
  const pages=[];for(const language of ['pt','en','es'])pages.push(managerLoginPage('appearance-nonce','csrf','',language),managerPortalPage('appearance-nonce',{user:{id:'synthetic',name:'<script>untrusted()</script>'},client:{name:'A & B'}},language),loginPage('appearance-nonce','','csrf',language));
- for(const content of pages){assert.match(content,/data-theme-choice="light"/);assert.match(content,/data-theme-choice="dark"/);assert.match(content,/position:sticky;top:0/);assert.match(content,/html\[data-theme=dark\]/);assert.ok(!content.includes('<script>untrusted()</script>'));for(const match of content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)){assert.match(match[1],/^ nonce=['"]appearance-nonce['"]$/);new Script(match[2]);}}
+ for(const content of pages){assert.match(content,/class="theme-switch" role="switch"/);assert.match(content,/<details id='language'/);assert.equal((content.match(/id='language'/g)||[]).length,1);assert.match(content,/position:sticky;top:0/);assert.match(content,/html\[data-theme=dark\]/);assert.ok(!content.includes('<script>untrusted()</script>'));for(const match of content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)){assert.match(match[1],/^ nonce=['"]appearance-nonce['"]$/);new Script(match[2]);}}
  assert.equal(typeof recoveryPage,'function');
 });
 

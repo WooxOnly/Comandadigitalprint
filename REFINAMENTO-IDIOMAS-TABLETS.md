@@ -94,3 +94,11 @@ Para posto fixo, usar suporte estável, carregador/cabo de boa qualidade e local
 O refinamento foi concluído na branch `homologacao`; commit/push, publicação e APK foram autorizados em 08/10 e estão em entrega, com resultados efetivos registrados em `PENDENCIAS.md`. Antes do Worker atualizado, reaplicar `server/cloudflare/store-schema.sql`: inclui `manager_user_preferences` e `panel_preferences`, além das tabelas de módulos já previstas. O comando de entrega preparado reaplica esse esquema.
 
 As mudanças de interface desta rodada exigem o APK atualizado para serem testadas no Android; não adicionam dependência nativa. O APK também precisa incorporar os módulos nativos das etapas anteriores, incluindo impressão pela rede, compartilhamento e áudio da cozinha.
+
+## Atualização solicitada em 19/10/2026 — preferências compactas
+
+- Switch de tema no estilo iPhone (42 × 24), com sol/lua no botão deslizante; seletor de idioma recolhido com bandeira atual (16 × 12) e seta. Áreas de toque de pelo menos 44px.
+- Ambos na mesma linha no canto superior esquerdo de todo o app e dos portais, incluindo entrada/vinculação/licença. Configurações mantém o idioma oculto até o desbloqueio existente, aparecendo depois no cabeçalho compartilhado.
+- Portais mantêm barra fixa, endpoints/cookies e navegação GET segura de idioma. Menus fecham ao escolher, clicar fora ou pressionar Escape. Tema persiste localmente e respeita o sistema no primeiro acesso.
+- Validação local: lint e TypeScript sem erros; 19 testes Node de aparência/idioma; 450 casos de aparência app/portais; 90 de preferências compactas do app; 48 cenários com 190 trocas de idioma nos portais; 18 de login do cliente; 18 de layout de pedidos. Componentes reais em navegador com serviços sintéticos; validação física permanece separada.
+- Publicação autorizada somente em homologação. Retornar o link de geração do APK sem acompanhá-lo.

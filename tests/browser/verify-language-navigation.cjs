@@ -66,8 +66,9 @@ async function submit(page) {
 
   async function choose(page, language, expectedPath) {
     const before = requests.length, state = limits();
+    await page.locator('#language > summary').click();
     const button = page.locator(`[data-language=${language}]`);
-    if (await button.getAttribute('aria-pressed') === 'true') return;
+    if (await button.getAttribute('aria-pressed') === 'true') { await page.locator('#language > summary').click(); return; }
     const csrf = await page.locator('[name=csrf]').count() ? await page.locator('[name=csrf]').inputValue() : null;
     const [response] = await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), button.click()]);
     assert.equal(response.request().method(), 'GET', 'A language switch navigates with GET, never repeats the native POST');
@@ -89,7 +90,7 @@ async function submit(page) {
     assert.ok(![password, current.env.ADMIN_VIEW_TOKEN, 'synthetic-wrong-password', 'Synthetic-reset-pass'].some(value => storage.includes(value)), 'Passwords are not persisted to web storage');
     const geometry = await page.evaluate(() => ({ overflow: document.documentElement.scrollWidth > innerWidth + 1, sizes: [...document.querySelectorAll('#language button')].map(element => { const box = element.getBoundingClientRect(), flag = element.querySelector('svg').getBoundingClientRect(); return [box.width, box.height, flag.width, flag.height]; }) }));
     assert.equal(geometry.overflow, false);
-    assert.deepEqual(geometry.sizes, Array(3).fill([44, 44, 20, 15]));
+    assert.equal(geometry.sizes.length,3);for(const [width,height,flagWidth,flagHeight] of geometry.sizes){assert.ok(width>=44&&height>=44);assert.equal(flagWidth,16);assert.equal(flagHeight,12);}
     switches++;
   }
 

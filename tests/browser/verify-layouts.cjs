@@ -11,10 +11,11 @@ async function selectPortalLanguage(page, language) {
   const picker = page.locator('#language');
   await picker.waitFor();
   assert.equal(await picker.locator('button').count(), 3);
-  assert.deepEqual(await picker.locator('button').allTextContents(), ['', '', '']);
-  assert.equal(await picker.locator('svg[aria-hidden=true]').count(), 3);
+  assert.deepEqual(await picker.locator('button').allTextContents(), ['Português', 'English', 'Español']);
+  assert.equal(await picker.locator('.language-menu svg[aria-hidden=true]').count(), 3);
   const choice = picker.locator(`[data-language=${language}]`);
   if (await choice.getAttribute('aria-pressed') !== 'true') {
+    await picker.locator('summary').click();
     await Promise.all([page.waitForEvent('framenavigated', frame => frame === page.mainFrame()), choice.click()]);
   }
   assert.equal(await page.locator('#language [aria-pressed=true]').getAttribute('data-language'), language);
@@ -184,13 +185,11 @@ async function fits(page, label, controls = false) {
           assert.equal(await page.getByRole('radio').count(),0,'Settings language selection requires unlocking first');
           assert.equal(await page.getByText(appTranslation('Salvar configurações',language),{exact:true}).count(),0,'Settings remain locked');
         }
-        if(route==='/link')await page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true}).click();
         if(['/link','/login','/printer'].includes(route)){
-          const flags=page.getByRole('radio').filter({has:page.locator('img')});
-          assert.equal(await flags.count(),3);
-          assert.equal(await page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true}).getAttribute('aria-checked'),'true');
-          assert.deepEqual(await flags.allTextContents(),['','','']);
-          await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role=radio] img')).every(img=>img.complete&&img.naturalWidth>0));
+          const trigger=page.getByTestId('language-trigger');await trigger.click();
+          const flags=page.getByRole('radio').filter({has:page.locator('img')});assert.equal(await flags.count(),3);
+          const selected=page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true});assert.equal(await selected.getAttribute('aria-checked'),'true');
+          await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role=radio] img')).every(img=>img.complete&&img.naturalWidth>0));await selected.click();
         }
         if(route==='/menu')await page.getByText('Produto sintético com descrição longa e acentuação · '+'Detalhes e opções '.repeat(8),{exact:true}).first().click();
         for(const viewport of viewports){await page.setViewportSize(viewport);await page.waitForTimeout(40);await fits(page,`APK components ${language} ${route} ${viewport.width}x${viewport.height}`,true);cases++;if(route==='/link'&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${language}-${viewport.width}x${viewport.height}.png`)});if(['/login','/settings-access','/printer'].includes(route)&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${route.slice(1)}-${language}-${viewport.width}x${viewport.height}.png`)});}

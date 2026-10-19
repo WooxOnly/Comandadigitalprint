@@ -132,8 +132,8 @@ export function StoreGate({ children }: { children: ReactNode }) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <View style={[styles.panel, { width: '100%', maxWidth: 460 }]}>
-          <AppearanceSelector language={language} />
-          {mode === 'select' && <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 8 }}><AppearanceSelector language={language} />
+          {mode === 'select' && <LanguageSelector language={language} disabled={busy} onChange={(value) => { setLanguage(value); setMessage(''); }} />}</View>
           <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', borderRadius: 16, marginBottom: 12 }} />
           <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 18 }]}>BistroHub</Text>
           <Text style={[styles.helperText, { textAlign: 'center', marginBottom: 12 }]}>{t('Do caixa à cozinha.')}</Text>

@@ -1,7 +1,8 @@
-import { Image, StyleSheet, View } from './ThemedNative';
-import { type Language } from '../i18n/translations';
+import { useRef, useState, type ComponentRef } from 'react';
+import { Image, Modal, Text, useWindowDimensions, StyleSheet, View } from './ThemedNative';
+import { translate, type Language } from '../i18n/translations';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
-import { COLORS, styles } from './theme';
+import { COLORS } from './theme';
 
 const choices = [
   { value: 'pt', label: 'Português', flag: require('../../assets/flags/brazil.png') },
@@ -14,26 +15,29 @@ export function LanguageSelector({ language, onChange, disabled = false }: {
   onChange: (language: Language) => void;
   disabled?: boolean;
 }) {
-  return <View style={flagStyles.row}>
-    {choices.map(({ value, label, flag }) => <Pressable
-      key={value}
-      disabled={disabled}
-      accessibilityLabel={label}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: language === value, disabled }}
-      aria-checked={language === value}
-      aria-disabled={disabled}
-      onPress={() => onChange(value)}
-      style={[flagStyles.button, language === value && flagStyles.selected, disabled && styles.pressed]}
-    >
-      <Image source={flag} accessible={false} resizeMode="contain" style={flagStyles.image} />
-    </Pressable>)}
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const anchor = useRef<ComponentRef<typeof View>>(null);
+  const { width, height } = useWindowDimensions();
+  const current = choices.find(choice => choice.value === language) || choices[0];
+  return <View ref={anchor} collapsable={false} style={{ flexShrink: 0 }}>
+    <Pressable testID="language-trigger" disabled={disabled} accessibilityRole="button" accessibilityLabel={translate('Idioma', language) + ': ' + current.label} accessibilityState={{ expanded: !!position, disabled }} aria-expanded={!!position} onPress={() => anchor.current?.measureInWindow((x, y, _w, h) => setPosition({ left: Math.max(8, Math.min(x, width - 188)), top: Math.max(8, Math.min(y + h, height - 156)) }))} style={flagStyles.trigger}>
+      <Image source={current.flag} accessible={false} resizeMode="contain" style={flagStyles.image} /><Text accessible={false} style={{ fontSize: 12, color: COLORS.green }}>⌄</Text>
+    </Pressable>
+    <Modal transparent visible={!!position} animationType="none" onRequestClose={() => setPosition(null)}>
+      <Pressable accessible={false} onPress={() => setPosition(null)} style={StyleSheet.absoluteFill} />
+      <View accessibilityLabel={translate('Idioma', language)} style={[flagStyles.menu, { left: Math.max(8, Math.min(position?.left || 8, width - 188)), top: Math.max(8, Math.min(position?.top || 8, height - 156)) }]}>
+        {choices.map(({ value, label, flag }) => <Pressable key={value} disabled={disabled} accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: language === value, disabled }} aria-checked={language === value} onPress={() => { setPosition(null); if (value !== language) onChange(value); }} style={[flagStyles.option, language === value && flagStyles.selected]}>
+          <Image source={flag} accessible={false} resizeMode="contain" style={flagStyles.image} /><Text style={{ fontSize: 14, color: COLORS.green, flexShrink: 1 }}>{label}</Text>
+        </Pressable>)}
+      </View>
+    </Modal>
   </View>;
 }
 
 const flagStyles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 4, alignSelf: 'flex-end', marginBottom: 12 },
-  button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' },
-  selected: { backgroundColor: COLORS.greenSoft, borderColor: COLORS.green },
-  image: { width: 20, height: 15, borderRadius: 2 },
+  trigger: { width: 48, height: 44, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  menu: { position: 'absolute', width: 180, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, backgroundColor: '#FFFFFF', boxShadow: '0px 4px 16px rgba(0,0,0,0.16)' },
+  option: { minHeight: 44, paddingHorizontal: 12, flexDirection: 'row', gap: 10, alignItems: 'center', borderRadius: 8 },
+  selected: { backgroundColor: COLORS.greenSoft },
+  image: { width: 16, height: 12, borderRadius: 1 },
 });

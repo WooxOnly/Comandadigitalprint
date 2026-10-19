@@ -1,11 +1,13 @@
+import { SettingsLanguageVisibility } from './SettingsLanguageVisibility';
 import { PreparationUndo } from './PreparationUndo';
+import { LanguageSettings } from './LanguageSettings';
 import { AppearanceSelector } from './AppearanceSelector';
 import { useAppearance } from './AppearanceContext';
 import { roleScreen, pathScreen } from '../../shared/app-roles.mjs';
 import { useAppRole } from './useAppRole';
 import { useAuth } from '../state/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewRef, Text, useWindowDimensions, View, SafeAreaView } from './ThemedNative';
@@ -21,6 +23,7 @@ import { NavigationIcon } from './NavigationIcon';
 import { useStoreModules } from './useStoreModules';
 import { useStoreName } from './useStoreName';
 export function AppShell({ children }: { children: ReactNode }) {
+  const [settingsLanguageVisible, setSettingsLanguageVisible] = useState(false);
   const { t, language } = useLanguage();
   const { theme } = useAppearance();
   const storeName = useStoreName();
@@ -47,12 +50,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const selectedOffset = Math.max(0, (selectedIndex + 0.5) * (navWidth / Math.max(1,tabs.length)) - width / 2);
   useEffect(() => { navScroll.current?.scrollTo({ x: selectedOffset, animated: false }); }, [selectedOffset]);
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+    <SettingsLanguageVisibility.Provider value={setSettingsLanguageVisible}><SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <SafeAreaView testID="app-surface" style={styles.container}>
         {!isReady && <Text style={styles.helperText}>{t("Carregando dados salvos…")}</Text>}
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
+          <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={[styles.header, isWide && styles.headerWide, { zIndex: 20 }, kitchen && { paddingVertical: 6, maxWidth: '100%' }]}>
+            <View testID="preferences-controls" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }}><AppearanceSelector language={language} />{(path !== '/printer' || settingsLanguageVisible) && <LanguageSettings compact />}</View>
             <Pressable disabled={role !== 'admin'} accessible={role === 'admin'} onPress={chooseLogo} accessibilityRole="button" accessibilityLabel={t("Escolher logotipo do restaurante")} style={({ pressed }) => [styles.logoButton, isWide && styles.logoButtonWide, kitchen && { width: 32, height: 32, borderRadius: 8 }, pressed && styles.pressed]}>
               <Image source={logoUri ? { uri: logoUri } : require('../../assets/chef-icon.png')} style={styles.logoImage} />
             </Pressable>
@@ -61,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Text style={{ color: COLORS.muted, fontSize: 12, marginBottom: 2 }}>{t('Do caixa à cozinha.')}</Text>
               <Text style={[styles.title, kitchen && { fontSize: 18 }]}>{t(moduleTitle || (path.startsWith('/history/') ? 'Detalhes do pedido' : currentTab.title))}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}><AppearanceSelector language={language} />
+            <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             {role === 'cook' && <Pressable accessibilityRole="button" accessibilityLabel={t('Sair do sistema')} onPress={logout} style={styles.noteChip}><Text style={styles.noteChipText}>{t('Sair do sistema')}</Text></Pressable>}</View>
           </View>
 
@@ -121,6 +125,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         {permitted && <PreparationUndo />}
         {permitted && <ReceiptPreview />}
       </SafeAreaView>
-    </SafeAreaProvider>
+    </SafeAreaProvider></SettingsLanguageVisibility.Provider>
   );
 }
