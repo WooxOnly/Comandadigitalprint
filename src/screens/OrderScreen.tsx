@@ -25,11 +25,13 @@ export default function OrderScreen() {
   const [searchOpen, setSearchOpen] = useState(!!productSearch);
   const [subgroupsOpen, setSubgroupsOpen] = useState(false);
   const [identityWidth, setIdentityWidth] = useState(0);
+  const isWide = wideLayout && width > height;
+  const compactLandscape = isWide && fontScale < 1.4;
   const splitIdentity = identityWidth >= 680 && fontScale < 1.4;
   const inlineTables = identityWidth >= 460 && fontScale < 1.4;
   const identityGroupWidth = splitIdentity ? (identityWidth - 10) / 2 : '100%';
   const plateWidth = inlineTables ? Math.min(44, Math.floor((identityWidth - 206 - 36) / 10)) : 44;
-  const isWide = wideLayout && width > height;
+  const compactIdentity = compactLandscape && splitIdentity && inlineTables;
   const currentPlate = customPlate.trim() || plate;
   const itemCount = `${items.length} ${t(items.length === 1 ? 'item' : 'itens')}`;
   const serviceLabel = serviceMode === 'dine_in' ? 'Para comer aqui' : serviceMode === 'takeout' ? 'Para levar' : null;
@@ -57,24 +59,24 @@ export default function OrderScreen() {
     setIdentityError(''); setEditingIdentity(false);
   }
   const finishAction = <Pressable testID="finish-order" disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled, busy: sending }} onPress={finishOrder} style={[layout.finishButton, disabled && styles.pressed]}><Text style={layout.finishButtonText}>{sending ? t('Salvando e abrindo prévia…') : t('Finalizar pedido')}</Text></Pressable>;
-  const identity = <View testID="order-identification" style={layout.identityPanel}>
-    <Text style={layout.identityTitle}>{t('Dados do pedido')}</Text>
+  const identity = <View testID="order-identification" style={[layout.identityPanel, compactIdentity && layout.landscapeIdentity, compactIdentity && !serviceModeError && !(customerError || identityError) && { height: 124 }]}>
+    <Text style={[layout.identityTitle, compactIdentity && layout.landscapeIdentityTitle]}>{t('Dados do pedido')}</Text>
     <View style={layout.identityRow} onLayout={event => setIdentityWidth(event.nativeEvent.layout.width)}>
-      <View testID="order-service-group" style={[layout.identityGroup, { width: identityGroupWidth }]}>
-        <Text style={layout.identityLabel}>{t('Atendimento')}</Text>
-        <View testID="order-service-options" style={layout.serviceOptions}>{(['dine_in', 'takeout'] as const).map(value => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
+      <View testID="order-service-group" style={[layout.identityGroup, { width: identityGroupWidth }, compactIdentity && layout.landscapeIdentityGroup]}>
+        <Text style={[layout.identityLabel, compactIdentity && layout.landscapeIdentityLabel]}>{t('Atendimento')}</Text>
+        <View testID="order-service-options" style={[layout.serviceOptions, compactIdentity && { flex: 1, width: undefined }]}>{(['dine_in', 'takeout'] as const).map(value => <Pressable key={value} onPress={() => { setServiceMode(value); setServiceModeError(false); }} accessibilityRole="radio" accessibilityState={{ checked: serviceMode === value }} style={[styles.paperOption, layout.serviceOption, compactIdentity && { minHeight: 44, height: 44 }, serviceMode === value && styles.selectedConnection]}><Text style={[styles.connectionText, serviceMode === value && styles.selectedConnectionText]}>{t(value === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text></Pressable>)}</View>
       </View>
-      <View testID="order-customer-group" style={[layout.identityGroup, { width: identityGroupWidth }]}>
-        <Text style={layout.identityLabel}>{t('Cliente')} {orderSettings.requireCustomer ? '*' : ''}</Text>
-        <TextInput editable={!sending} value={customer} onChangeText={value => { changeCustomer(value); setIdentityError(''); }} accessibilityLabel={orderSettings.requireCustomer ? t('Nome do cliente, obrigatório') : t('Nome do cliente, opcional')} placeholder={t('Nome do cliente')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput, !!(customerError || identityError) && styles.inputError]} />
+      <View testID="order-customer-group" style={[layout.identityGroup, { width: identityGroupWidth }, compactIdentity && layout.landscapeIdentityGroup]}>
+        <Text style={[layout.identityLabel, compactIdentity && layout.landscapeIdentityLabel]}>{t('Cliente')} {orderSettings.requireCustomer ? '*' : ''}</Text>
+        <TextInput editable={!sending} value={customer} onChangeText={value => { changeCustomer(value); setIdentityError(''); }} accessibilityLabel={orderSettings.requireCustomer ? t('Nome do cliente, obrigatório') : t('Nome do cliente, opcional')} placeholder={t('Nome do cliente')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput, compactIdentity && layout.landscapeIdentityInput, !!(customerError || identityError) && styles.inputError]} />
       </View>
     </View>
     <View testID="order-table-row" style={[layout.identityFooter, !inlineTables && layout.identityFooterStacked]}>
-      <View style={[layout.tableGroup, inlineTables && { width: plateWidth * 10 + 36 }]}>
-        <Text style={layout.identityLabel}>{t('Mesa')}</Text>
-        <View testID="order-table-choices" style={layout.tableChoices}>{PLATES.map(value => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Mesa ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, layout.compactPlate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
+      <View style={[layout.tableGroup, inlineTables && { width: plateWidth * 10 + 36 + (compactIdentity ? 46 : 0) }, compactIdentity && layout.landscapeIdentityGroup]}>
+        <Text style={[layout.identityLabel, compactIdentity && layout.landscapeIdentityLabel]}>{t('Mesa')}</Text>
+        <View testID="order-table-choices" style={[layout.tableChoices, compactIdentity && { flex: 1, width: undefined }]}>{PLATES.map(value => <Pressable key={value} onPress={() => { setPlate(value); setCustomPlate(''); }} accessibilityRole="radio" accessibilityLabel={t('Mesa ') + value} accessibilityState={{ checked: value === plate && !customPlate }} style={[styles.plate, layout.compactPlate, { width: plateWidth }, value === plate && !customPlate && styles.selectedPlate]}><Text style={[styles.plateText, value === plate && !customPlate && styles.selectedPlateText]}>{t(value)}</Text></Pressable>)}</View>
       </View>
-      <View testID="order-custom-table-group" style={[layout.customTableGroup, !inlineTables && { flexBasis: 'auto', width: '100%' }]}><Text style={layout.identityLabel}>{t('Outra mesa')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outro número de mesa')} placeholder={t('Número')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput, layout.compactInput]} maxLength={50} /></View>
+      <View testID="order-custom-table-group" style={[layout.customTableGroup, !inlineTables && { flexBasis: 'auto', width: '100%' }, compactIdentity && layout.landscapeIdentityGroup]}><Text style={[layout.identityLabel, compactIdentity && layout.landscapeIdentityLabel]}>{t('Outra mesa')}</Text><TextInput editable={!sending} value={customPlate} onChangeText={setCustomPlate} accessibilityLabel={t('Outro número de mesa')} placeholder={t('Número')} placeholderTextColor={COLORS.placeholder} style={[styles.input, layout.identityInput, layout.compactInput, compactIdentity && layout.landscapeIdentityInput]} maxLength={50} /></View>
       <Pressable testID="confirm-order-identification" disabled={sending} onPress={confirmIdentity} accessibilityRole="button" style={[layout.confirmIdentity, sending && styles.pressed]}><Text style={layout.finishButtonText}>{t('Avançar')}</Text></Pressable>
     </View>
     {serviceModeError && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t('Escolha se o pedido é para comer aqui ou para levar.')}</Text>}
@@ -118,11 +120,10 @@ export default function OrderScreen() {
     {searchOpen && <TextInput testID="product-search-input" autoFocus value={productSearch} onChangeText={setProductSearch} style={[styles.input, { marginBottom: 8 }]} maxLength={200} placeholder={t('Buscar produto')} accessibilityLabel={t('Buscar produto')} />}
     {filteredMenu.length === 0 && <Text style={styles.emptyText}>{t('Nenhum produto nesta categoria.')}</Text>}
     <View testID="order-product-grid" style={layout.productGrid} onLayout={event => setCatalogWidth(event.nativeEvent.layout.width)}>
-      {filteredMenu.map(product => <View testID={'order-product-' + product.id} key={product.id} style={[layout.productTile, productWidth !== undefined && { width: productWidth }]}>
+      {filteredMenu.map(product => <View testID={'order-product-' + product.id} key={product.id} style={[layout.productTile, compactLandscape && layout.landscapeProductTile, productWidth !== undefined && { width: productWidth }]}>
         <Pressable disabled={productOptions[product.id]?.available === false} style={layout.productDetails} onPress={() => openProduct(product)} accessibilityRole="button" accessibilityLabel={product.name}>
-          <Text style={layout.productName}>{product.name}{productOptions[product.id]?.available === false ? ` · ${t('Esgotado')}` : ''}</Text>
-          <Text style={layout.productCategory}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>
-          {modules.cash && <Text style={layout.productPrice}>{formatMoney(Math.round(product.price * 100), locale)}</Text>}
+          <Text numberOfLines={compactLandscape ? 2 : undefined} style={[layout.productName, compactLandscape && layout.landscapeProductName]}>{product.name}{productOptions[product.id]?.available === false ? ` · ${t('Esgotado')}` : ''}</Text>
+          {compactLandscape ? <View style={layout.landscapeProductMeta}><Text numberOfLines={1} style={[layout.productCategory, { flex: 1 }]}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{modules.cash && <Text style={layout.landscapeProductPrice}>{formatMoney(Math.round(product.price * 100), locale)}</Text>}</View> : <><Text style={layout.productCategory}>{[product.category, product.subcategory].filter(Boolean).map(value => t(value!)).join(' › ')}</Text>{modules.cash && <Text style={layout.productPrice}>{formatMoney(Math.round(product.price * 100), locale)}</Text>}</>}
         </Pressable>
         <View style={layout.productActions}>
           {!!product.description?.trim() && <Pressable testID={'product-info-' + product.id} accessibilityRole="button" accessibilityLabel={t('Ingredientes do produto') + ': ' + product.name} style={layout.infoButton} onPress={() => setInformation(product)}><Text style={layout.infoSymbol}>ⓘ</Text></Pressable>}
@@ -174,6 +175,11 @@ const layout = StyleSheet.create({
   catalogColumn: { gap: 10 },
   identityContainer: { paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   identityPanel: { padding: 12, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface, gap: 8 },
+  landscapeIdentity: { paddingVertical: 5, gap: 3, justifyContent: 'space-between' },
+  landscapeIdentityTitle: { fontSize: 14, lineHeight: 16 },
+  landscapeIdentityGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  landscapeIdentityLabel: { fontSize: 12, lineHeight: 16 },
+  landscapeIdentityInput: { flex: 1, width: undefined, height: 44, paddingVertical: 6 },
   identityTitle: { fontSize: 17, fontWeight: '800', color: COLORS.ink },
   identityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
   identityGroup: { maxWidth: '100%', minWidth: 0, flexShrink: 1, gap: 4 },
@@ -188,6 +194,10 @@ const layout = StyleSheet.create({
   orderHeaderActions: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
   productGrid: { width: '100%', minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   productTile: { maxWidth: '100%', minWidth: 0, backgroundColor: COLORS.surface, borderColor: COLORS.border, borderWidth: 1, borderRadius: 12, padding: 10, minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  landscapeProductTile: { height: 76, minHeight: 76, paddingVertical: 8 },
+  landscapeProductName: { fontSize: 13, lineHeight: 16 },
+  landscapeProductMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  landscapeProductPrice: { color: COLORS.ink, fontSize: 12, lineHeight: 16, fontWeight: '700' },
   productDetails: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center', gap: 3 },
   productName: { color: COLORS.ink, fontSize: 15, lineHeight: 20, fontWeight: '800' },
   productCategory: { color: COLORS.muted, fontSize: 12, lineHeight: 16 },

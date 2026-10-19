@@ -102,3 +102,8 @@ As mudanças de interface desta rodada exigem o APK atualizado para serem testad
 - Portais mantêm barra fixa, endpoints/cookies e navegação GET segura de idioma. Menus fecham ao escolher, clicar fora ou pressionar Escape. Tema persiste localmente e respeita o sistema no primeiro acesso.
 - Validação local: lint e TypeScript sem erros; 19 testes Node de aparência/idioma; 450 casos de aparência app/portais; 90 de preferências compactas do app; 48 cenários com 190 trocas de idioma nos portais; 18 de login do cliente; 18 de layout de pedidos. Componentes reais em navegador com serviços sintéticos; validação física permanece separada.
 - Publicação autorizada somente em homologação. Retornar o link de geração do APK sem acompanhá-lo.
+
+
+## Proporções de pedidos aprovadas pelo proprietário — paisagem
+
+Após ajustar a prévia interativa, o proprietário definiu Pedido atual em 34% da largura útil, produtos no espaço restante, dados do pedido com 124px e produtos com 76px de altura. As bases flex explícitas evitam que o conteúdo do pedido altere essa divisão. Rótulos ficam ao lado dos campos em paisagem. Nomes de produtos ocupam até duas linhas, com nome completo no botão acessível e na abertura dos detalhes; categoria/preço compartilham uma linha. Fontes ampliadas e erros de validação mantêm expansão acessível. Dimensões de retrato preservadas.
