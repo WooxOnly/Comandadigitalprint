@@ -1,5 +1,9 @@
 # Pendências e preferências
 
+## Remoção do resumo textual abaixo de Pedidos por hora
+
+- Proprietário dispensou a linha de horário/média como “09:00 PM · 0.03 Average orders/hour”. Removidos o resumo automático de pico e a linha similar após clicar em uma barra. O gráfico e o popup de detalhes continuam disponíveis. Alteração somente do portal, sem novo APK.
+
 ## TMA do período e controles +/funil — publicado em homologação
 
 - Código publicado `1abe2f470bd1091158ebfff0cab2cacc5a8480fd`. Execução https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39206219795 : validação completa e portais aprovados; APK/release ignorados intencionalmente. Saúde e entrada do gestor HTTP 200 após publicação. 18 verificações de navegador PT/EN/ES, 30 testes específicos de relatórios/idiomas/vendas, lint e TypeScript aprovados.
