@@ -1,6 +1,12 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Não foi possível salvar as regras do pedido. Tente novamente.": ["Could not save order rules. Try again.", "No se pudieron guardar las reglas del pedido. Inténtalo de nuevo."],
+  "Escolha uma mesa antes de avançar.": ["Select a table before continuing.", "Selecciona una mesa antes de continuar."],
+  "Informe uma mesa com até 3 dígitos.": ["Enter a table number with up to 3 digits.", "Introduce un número de mesa de hasta 3 dígitos."],
+  "Exigir mesa também nos pedidos para levar": ["Require a table for takeaway orders too", "Exigir mesa también en los pedidos para llevar"],
+  "Para comer aqui sempre exige mesa. Para levar, a mesa é opcional quando esta opção está desligada. Regra salva por loja e disponível offline.": ["Dine-in always requires a table. For takeaway, a table is optional when this option is off. This rule is saved per location and available offline.", "Comer aquí siempre requiere mesa. Para llevar, la mesa es opcional cuando esta opción está desactivada. La regla se guarda por local y está disponible sin conexión."],
+  "Fechar busca": ["Close search", "Cerrar búsqueda"],
   "Hoje": ["Today", "Hoy"],
   "Últimos 7 dias": ["Last 7 days", "Últimos 7 días"],
   "Últimos 30 dias": ["Last 30 days", "Últimos 30 días"],

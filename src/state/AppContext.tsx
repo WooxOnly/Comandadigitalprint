@@ -16,7 +16,7 @@ import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../
 import { isValidMenu } from '../../shared/menu-validation.mjs';
 import { DEFAULT_PRINTER_SETTINGS } from '../ui/theme';
 import { getStoreId, LEGACY_STORE_ID } from '../config/store';
-import { ORDER_SETTINGS_KEY, DEFAULT_ORDER_SETTINGS, parseOrderSettings, customerValidationMessage } from '../services/orderSettings';
+import { ORDER_SETTINGS_KEY, DEFAULT_ORDER_SETTINGS, parseOrderSettings, customerValidationMessage, tableValidationMessage } from '../services/orderSettings';
 import { createOrderSubmitter } from '../services/orderSubmission';
 import { localOrderDay, nextDailyOrderNumber, tabletLabelForDay } from '../services/orderNumber';
 import { persistSettings, PRINTER_SETTINGS_KEY } from '../services/settings';
@@ -36,7 +36,7 @@ function useAppState() {
   const [selectedCategory, setCategoryState] = useState<string | null>(null);
   const [subcategory, setSubcategory] = useState('');
   function setCategory(value: string) { setCategoryState(value); setSubcategory(''); }
-  const [plate, setPlate] = useState('1');
+  const [plate, setPlate] = useState('');
   const [serviceMode, setServiceMode] = useState<ServiceMode | null>(null);
   const [customPlate, setCustomPlate] = useState('');
   const [customer, setCustomer] = useState('');
@@ -179,19 +179,19 @@ function useAppState() {
     if (customerError) setCustomerError(customerValidationMessage(value, orderSettings.requireCustomer));
   }
 
-  async function setRequireCustomer(required: boolean) {
+  async function saveOrderRule(change: Partial<typeof orderSettings>) {
     if (orderSettingsLock.current) return;
     orderSettingsLock.current = true;
     setSavingOrderSettings(true);
     try {
       checkAccess('settings');
-      const next = { requireCustomer: required };
+      const next = { ...orderSettings, ...change };
       await AsyncStorage.setItem(ORDER_SETTINGS_KEY, JSON.stringify(next));
       setOrderSettings(next);
       setCustomerError('');
     } catch (error) {
       logError('settings.save_failed', error);
-      Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar a regra do cliente. Tente novamente.'));
+      Alert.alert(t('Falha ao salvar'), t('Não foi possível salvar as regras do pedido. Tente novamente.'));
     } finally {
       orderSettingsLock.current = false;
       setSavingOrderSettings(false);
@@ -348,6 +348,9 @@ function useAppState() {
     }
   }
 
+  function setRequireCustomer(required: boolean) { return saveOrderRule({ requireCustomer: required }); }
+  function setRequireTableForTakeout(required: boolean) { return saveOrderRule({ requireTableForTakeout: required }); }
+
   async function sendOrder(onOrderSaved?: () => void) {
     if (!isReady || submitter.busy || orderSettingsLock.current) return;
     if (printerSettings.automatic === true && printDispatcher.busy) { Alert.alert(t('Impressão em andamento'), t('Aguarde a impressão em andamento.')); return; }
@@ -359,6 +362,8 @@ function useAppState() {
       Alert.alert(t('Tipo de pedido'), t('Escolha se o pedido é para comer aqui ou para levar.'));
       return;
     }
+    const tableError = tableValidationMessage(serviceMode, customPlate.trim() || plate, orderSettings.requireTableForTakeout);
+    if (tableError) { Alert.alert(t('Mesa'), t(tableError)); return; }
     const validation = customerValidationMessage(customer, orderSettings.requireCustomer);
     setCustomerError(validation);
     if (validation) {
@@ -375,7 +380,7 @@ function useAppState() {
     try {
       await submitter.submit(order, historyRef.current, {
         persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
-        onSaved: (next) => { historyRef.current = next; setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
+        onSaved: (next) => { historyRef.current = next; setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
         print: order => printSavedOrder(order, true),
         onBusy: setSending,
       });
@@ -386,7 +391,7 @@ function useAppState() {
   }
 
 
-  return { printedDestinations, productOptions, updateProductOption, productSearch, setProductSearch, subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
+  return { printedDestinations, productOptions, updateProductOption, productSearch, setProductSearch, subcategories, subcategory: activeSubcategory, setSubcategory, orderSettings, setRequireCustomer, setRequireTableForTakeout, savingOrderSettings, customerError, changeCustomer, category, setCategory, plate, setPlate, serviceMode, setServiceMode, customPlate, setCustomPlate, customer, setCustomer, items, setItems, history, setHistory, menu, setMenu, updatingMenu, menuUpdateStatus, setMenuUpdateStatus, logoUri, setLogoUri, selectedProduct, setSelectedProduct, productNote, setProductNote, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, printerSettings, setPrinterSettings, feedback, setFeedback, previewOrder, setPreviewOrder, printing, confirmPrint, isReady, sending, isWide, filteredMenu, categories, pizzaMenu, openProduct, addSelectedProduct, changeQuantity, updateNote, updatePrinterSettings, chooseLogo, saveMenu, addMenuProduct, updateMenuProduct, removeMenuProduct, savePrinterSettings, updateMenu, showFeedback, printSavedOrder, testPrinter, sendOrder };
 }
 const AppContext = createContext<ReturnType<typeof useAppState> | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {

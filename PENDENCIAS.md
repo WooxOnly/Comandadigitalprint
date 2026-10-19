@@ -1,5 +1,42 @@
 # Pendências e preferências
 
+## Entrega autorizada deste conjunto — 19/10/2026
+
+- Proprietário: “Ok, pode postar tudo”. Autorização para publicar este conjunto em homologação e solicitar o APK correspondente, sem estender a autorização a compilações futuras.
+- Inclui busca animada na linha das categorias, identificação em uma linha nos dois modos do tablet, ícones sem legenda, limites dos campos, mesa obrigatória/opcional configurável e comanda sem mesa vazia. Alterações anteriores de Histórico e remoção do contador já estão no histórico da branch e seguem incluídas.
+- Validação final da entrega: 350 testes Node aprovados, além dos cenários de interface já registrados; lint, TypeScript, conferência de destinos e diff-check aprovados.
+- A compilação APK será solicitada sem acompanhar seu andamento; portais/servidor recebem a validação compatível da nova regra de pedidos. Produção permanece fora do escopo.
+
+## Faixa única também em retrato — aprovada e implementada localmente
+
+- Aplicada a prévia aprovada em retrato: ícones, cliente, mesas 1–10, outra mesa e Avançar compartilham uma linha no tablet. Em retrato, os rótulos de mesa ficam acima dos campos para caber; paisagem mantém a disposição aprovada. Sem legenda dos ícones.
+- Conferência dos componentes reais em navegador: 48 combinações de PT/EN/ES, claro/escuro e oito tamanhos, incluindo retratos 768×1024 e 800×1280 e paisagens 960×600 e 1280×800; sem sobreposição ou rolagem horizontal. Seis fluxos de validação/configuração com rotação preservam tipo, cliente e mesa. Lint, TypeScript e diff-check passaram. Android físico continua separado.
+- Sem publicação ou compilação APK.
+
+## Regra permanente: duas orientações — esclarecimento do proprietário
+
+- Toda alteração visual deve ser pensada, implementada e revisada em paisagem E retrato. Se a proposta não funcionar bem em uma delas, informar a limitação concreta e discutir alternativas antes de implementar essa parte. Apenas não haver sobreposição não significa que a demanda foi atendida no outro modo.
+- Atualização: o proprietário aprovou a prévia em retrato e autorizou prosseguir. A faixa única agora está implementada e revisada nos dois modos do tablet, conforme registro acima.
+
+## Dados do pedido em uma linha e regra de mesa — 19/10/2026 — implementado localmente
+
+- Prévia aprovada e implementação autorizada por “Ok, pode seguir”. Faixa única nos tablets onde cabe, com ícones próprios (mesa / sacola no balcão), sem legenda. Continuam sendo Para comer aqui / Para levar, inclusive na comanda. Cliente até 20 caracteres; outra mesa só números, até 3 dígitos. Layout estreito/fontes grandes preservam adaptação sem sobreposição.
+- Novo pedido inicia sem mesa automática. Comer aqui exige escolha de mesa; levar permite vazio, exceto com a opção por loja **Ajustes → Pedidos → Exigir mesa também nos pedidos para levar**. Regra guardada/sincronizada junto de order-settings, disponível offline; exige permissão de Ajustes e preserva a regra independente de cliente obrigatório. Validação em Avançar e Finalizar, e limpeza da mesa após salvar o pedido.
+- Comandas HTML/ESC-POS mantêm nomes completos dos tipos de atendimento e omitem a mesa vazia. Histórico/detalhes não mostram identificador de mesa vazio para levar.
+- Verificado com 42 cenários de identificação (PT/EN/ES, dois temas, sete tamanhos), 18 do fluxo compacto, seis fluxos da regra/configuração com rotação e 21 testes de regras/impressão/idiomas. Evidência em navegador com provedores sintéticos, sem alegar validação Android física.
+- Sem publicação ou nova compilação APK; aguardam autorização explícita.
+
+## Busca de produtos na mesma linha — 19/10/2026 — implementação local
+
+- Lupa menor em cápsula delimitada. Ao tocar, o campo se expande à esquerda da lupa, entre ela e Todos, sem abrir outra linha ou deslocar os produtos para baixo. A faixa de categorias mostra Todos ao concluir a abertura.
+- Animação curta com redução de movimento respeitada; foco para digitar, texto mantido ao girar o tablet e busca limpa ao fechar. PT/EN/ES e temas claro/escuro preservados.
+- Verificações: 18 cenários específicos de busca (PT/EN/ES, dois temas, três tamanhos, movimento reduzido e rotação), 18 cenários do fluxo compacto de pedidos e três testes de cobertura de idiomas. Lint e TypeScript aprovados; evidência em navegador com dados sintéticos.
+- Implementação aguardando autorização específica para nova compilação APK; nenhuma publicação ou compilação solicitada para este ajuste.
+
+## Autorização de compilação APK — esclarecimento 19/10/2026
+
+- O proprietário contestou novos APKs automáticos. A autorização anterior de publicar tudo não cobre futuras compilações: cada nova compilação precisa de autorização explícita. Continuar implementação/testes; não solicitar APK automaticamente nem cancelar os já solicitados sem instrução.
+
 ## Remoção do aviso flutuante de preparo — 19/10/2026
 
 - Removida a faixa global “Etapa alterada” com contador e botão Desfazer, inclusive sua sobreposição e temporizador.

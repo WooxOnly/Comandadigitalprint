@@ -7,14 +7,14 @@ const { loadTs } = require('../helpers/load-ts.cjs'), { translate } = loadTs('sr
   const server = http.createServer((req, res) => { const file = req.url.startsWith('/tablet-preview.js') ? 'tablet-preview.js' : 'tablet-preview.html'; res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : 'text/html'); res.end(fs.readFileSync(path.join(dir, file))); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] }); const errors = []; let cases = 0;
-  const sizes = [[1552,900], [1280,800], [960,600], [800,1280], [530,900], [390,844], [320,568]];
+  const sizes = [[1552,900], [1280,800], [960,600], [800,1280], [768,1024], [530,900], [390,844], [320,568]];
   try {
     for (const language of ['pt','en','es']) for (const theme of ['light','dark']) {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: theme }); page.on('pageerror', error => errors.push(error.message));
       const t = text => translate(text, language);
       await page.goto('http://127.0.0.1:' + server.address().port + '/tablet-preview.html?language=' + language + '#/order');
       assert.equal(await page.getByText(t('Do pedido à cozinha'),{exact:true}).count(),0);
-      await page.getByRole('textbox', { name: t('Nome do cliente, opcional'), exact: true }).fill('Will · Cliente com nome longo');
+      await page.getByRole('textbox', { name: t('Nome do cliente, opcional'), exact: true }).fill('Ana Paula Fernandes');
       await page.getByRole('textbox', { name: t('Outro número de mesa'), exact: true }).fill('18');
       await page.getByRole('radio', { name: t('Para levar'), exact: true }).click();
       for (const [width,height] of sizes) {
@@ -34,12 +34,13 @@ const { loadTs } = require('../helpers/load-ts.cjs'), { translate } = loadTs('sr
         });
         assert.deepEqual(result.collisions, [], JSON.stringify({language,theme,width,result}));assert.deepEqual(result.contained, []);assert.deepEqual(result.tableCollisions, []);assert.equal(result.tableCount,10);assert.ok(result.minTableWidth>=21.9);assert.equal(result.overflow,false);
         assert.equal(await page.getByTestId('confirm-order-identification').textContent(),t('Avançar'));
-        assert.equal(await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).inputValue(),'Will · Cliente com nome longo');
+        assert.equal(await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).inputValue(),'Ana Paula Fernandes');
         assert.equal(await page.getByRole('textbox',{name:t('Outro número de mesa'),exact:true}).inputValue(),'18');
+        if(width>=768){const r=await page.getByTestId('order-identity-single-row').boundingBox();const input=await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).boundingBox();const next=await page.getByTestId('confirm-order-identification').boundingBox();assert.ok(Math.abs(input.y+input.height/2-next.y-next.height/2)<2,'All controls share one row');assert.ok(r.height<=66,'Controls remain on one row, with compact captions above in portrait');}
         cases++;
-        if(language==='pt' && [1280,530].includes(width)) {await page.getByTestId('order-identification').screenshot({path:path.join(dir,theme+'-'+width+'.png')});}
+        if(language==='pt' && [1280,800,768,530].includes(width)) {await page.getByTestId('order-identification').screenshot({path:path.join(dir,theme+'-'+width+'.png')});}
       }
-      await page.getByTestId('confirm-order-identification').click();const summary=await page.getByTestId('order-identification-summary').textContent();assert.ok(summary.includes('18')&&summary.includes('Will · Cliente com nome longo')&&summary.includes(t('Para levar')));await page.getByTestId('edit-order-identification').click();assert.equal(await page.getByRole('textbox',{name:t('Outro número de mesa'),exact:true}).inputValue(),'18');await page.close();
+      await page.getByTestId('confirm-order-identification').click();const summary=await page.getByTestId('order-identification-summary').textContent();assert.ok(summary.includes('18')&&summary.includes('Ana Paula Fernandes')&&summary.includes(t('Para levar')));await page.getByTestId('edit-order-identification').click();assert.equal(await page.getByRole('textbox',{name:t('Outro número de mesa'),exact:true}).inputValue(),'18');await page.close();
     }
     assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,cases,screenshots:dir,evidence:'Real screen in Chromium with synthetic providers; Android device validation remains separate.'}));
   } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }

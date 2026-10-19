@@ -27,8 +27,8 @@ export default function HistoryDetailScreen() {
     {!order ? <View style={styles.panel}><Text style={styles.mutedText}>{t('Pedido não encontrado.')}</Text></View> : <View style={[styles.panel, { gap: 10 }]}>
       <View style={{ flexDirection: sideBySide ? 'row' : 'column', gap: 20 }}>
         <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
-          <Text style={styles.panelTitle}>{orderNumberLabel(order) ? `${t('Pedido nº')} ${orderNumberLabel(order)}` : `${t('Mesa')} ${order.plate}`}</Text>
-          {orderNumberLabel(order) && <Text style={styles.cardTitle}>{t('Mesa')} {order.plate}</Text>}
+          <Text style={styles.panelTitle}>{orderNumberLabel(order) ? `${t('Pedido nº')} ${orderNumberLabel(order)}` : order.plate ? `${t('Mesa')} ${order.plate}` : t('Para levar')}</Text>
+          {orderNumberLabel(order) && !!order.plate && <Text style={styles.cardTitle}>{t('Mesa')} {order.plate}</Text>}
           <Text style={styles.mutedText}>{new Date(order.createdAt).toLocaleString(locale)} · {order.items.length} {order.items.length === 1 ? t('item') : t('itens')}</Text>
           {order.serviceMode && <Text style={styles.cardTitle}>{t('Tipo de pedido')}: {t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}</Text>}
           <Text style={styles.mutedText}>{t('Cliente')}: {order.customer || t('Cliente não informado')}</Text>

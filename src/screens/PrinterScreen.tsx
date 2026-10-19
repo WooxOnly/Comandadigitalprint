@@ -20,7 +20,7 @@ export default function PrinterScreen() {
   const canRestore = useAccess('restore');
   const canSettings = useAccess('settings');
   const modules = useStoreModules();
-  const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, savingOrderSettings } = useApp();
+  const { printerSettings, updatePrinterSettings, isWide, savePrinterSettings, testPrinter, menuUpdateStatus, updateMenu, updatingMenu, orderSettings, setRequireCustomer, setRequireTableForTakeout, savingOrderSettings } = useApp();
   return <ScreenFrame><View style={[styles.columns, isWide && styles.columnsWide]}>
                   <View style={[styles.column, isWide && styles.columnWide, { gap: 12 }]}>
                     <UserSettings />
@@ -50,6 +50,11 @@ export default function PrinterScreen() {
                       <Switch value={orderSettings.requireCustomer} onValueChange={(value) => { Keyboard.dismiss(); setRequireCustomer(value); }} disabled={savingOrderSettings || !canSettings} accessibilityLabel={t("Obrigar informar cliente")} trackColor={{ false: COLORS.border, true: COLORS.green }} />
                     </View>
                     <Text style={styles.helperText}>{savingOrderSettings ? t("Salvando…") : t("Salvo automaticamente. Quando ativado, exige o nome do cliente antes de enviar a comanda.")}</Text>
+                    <View style={styles.orderLine}>
+                      <Text style={[styles.cardTitle, styles.productInfo]}>{t('Exigir mesa também nos pedidos para levar')}</Text>
+                      <Switch aria-checked={orderSettings.requireTableForTakeout} accessibilityState={{ checked: orderSettings.requireTableForTakeout, disabled: savingOrderSettings || !canSettings }} value={orderSettings.requireTableForTakeout} onValueChange={value => { Keyboard.dismiss(); setRequireTableForTakeout(value); }} disabled={savingOrderSettings || !canSettings} accessibilityLabel={t('Exigir mesa também nos pedidos para levar')} trackColor={{ false: COLORS.border, true: COLORS.green }} />
+                    </View>
+                    <Text style={styles.helperText}>{t('Para comer aqui sempre exige mesa. Para levar, a mesa é opcional quando esta opção está desligada. Regra salva por loja e disponível offline.')}</Text>
                     <Text style={styles.sectionTitle}>{t("Impressora")}</Text>
                     <Text style={styles.settingsIntro}>{t("Escolha a conexão e a largura do papel para suas comandas.")}</Text>
                     <Text style={styles.label}>{t("Método de conexão")}</Text>

@@ -14,7 +14,7 @@ export function validCloudValue(key, value) {
   if (/^device:[a-f0-9-]{36}$/.test(key)) return value && key === 'device:' + value.id && text(value.name, 80) && value.name.length > 0;
   if (key === 'menu') return isValidMenu(value);
   if (key === 'language') return ['pt', 'en', 'es'].includes(value);
-  if (key === 'order-settings') return value && typeof value.requireCustomer === 'boolean';
+  if (key === 'order-settings') return value && typeof value.requireCustomer === 'boolean' && (value.requireTableForTakeout === undefined || typeof value.requireTableForTakeout === 'boolean');
   if (key === 'printer') return value && ['system', 'wifi', 'bluetooth', 'usb'].includes(value.connection) && ['58', '80', '88'].includes(value.paperWidth) && ['name', 'address', 'port'].every((k) => text(value[k], 200)) && (value.automatic === undefined || typeof value.automatic === 'boolean') && (value.routing === undefined || validPrinterRouting(value.routing));
   if (key === 'logo') return value === null || (text(value, 700000) && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value));
   if (/^user:[a-z0-9._-]{3,24}$/.test(key)) return value && key === 'user:' + value.username && value.username !== 'admin' && typeof value.active === 'boolean' && (value.cancelPreorders === undefined || typeof value.cancelPreorders === 'boolean') && (value.correctPreparation === undefined || typeof value.correctPreparation === 'boolean') && (value.role === undefined || validRole(value.role)) && /^[a-f0-9]{32}$/.test(value.login?.salt) && /^[a-f0-9]{64}$/.test(value.login?.hash) && [100000, 600000].includes(value.login.iterations ?? 600000);

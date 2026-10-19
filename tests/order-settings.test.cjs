@@ -18,3 +18,28 @@ test('required customer rejects blank and whitespace but accepts names with acce
   assert.equal(customerValidationMessage(' João ', true), '');
   assert.equal(customerValidationMessage('', false), '');
 });
+
+test('takeaway table requirement defaults off for legacy settings and survives reload independently of customer rule', () => {
+  assert.equal(parseOrderSettings(null).requireTableForTakeout, false);
+  assert.equal(parseOrderSettings('{"requireCustomer":true}').requireTableForTakeout, false);
+  const settings = parseOrderSettings('{"requireCustomer":false,"requireTableForTakeout":true}');
+  assert.equal(settings.requireCustomer, false);
+  assert.equal(parseOrderSettings(JSON.stringify(settings)).requireTableForTakeout, true);
+});
+test('table selection is required for dine-in and optionally required for takeaway, with a three digit numeric limit', () => {
+  const { tableValidationMessage: validate } = exportsForTest;
+  assert.match(validate('dine_in', '', false), /Escolha uma mesa/);
+  assert.equal(validate('takeout', '', false), '');
+  assert.match(validate('takeout', ' ', true), /Escolha uma mesa/);
+  for(const mode of ['dine_in','takeout']) for(const required of [true,false]) {
+    assert.equal(validate(mode, '999', required), '');
+    assert.match(validate(mode, '1234', required), /3 dígitos/);
+    assert.match(validate(mode, 'abc', required), /3 dígitos/);
+  }
+});
+test('synchronized per-store settings accept legacy and new booleans, reject forged nonbooleans', async () => {
+  const {validCloudValue}=await import('../shared/cloud-validation.mjs');
+  assert.equal(validCloudValue('order-settings',{requireCustomer:false}),true);
+  assert.equal(validCloudValue('order-settings',{requireCustomer:true,requireTableForTakeout:true}),true);
+  assert.equal(validCloudValue('order-settings',{requireCustomer:false,requireTableForTakeout:'false'}),false);
+});

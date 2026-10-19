@@ -68,7 +68,7 @@ export function buildOrderEscpos(order: PrintableOrder, paperWidth: PrinterSetti
   if (order.dailyNumber && order.tabletLabel) {
     receipt.line(`${t('Pedido nº')}: ${order.tabletLabel}-${String(order.dailyNumber).padStart(3, '0')}`, true, 0x11);
   }
-  receipt.line(`${t('Mesa')}: ${order.plate}`, true, 0x11);
+  if (order.plate.trim()) receipt.line(`${t('Mesa')}: ${order.plate}`, true, 0x11);
   if (order.serviceMode) {
     receipt.line(`${t('Tipo de pedido')}: ${t(order.serviceMode === 'dine_in' ? 'Para comer aqui' : 'Para levar')}`, true);
   }

@@ -156,3 +156,16 @@ test('native print dialog patch is compatible with installed expo-print and idem
   assert.equal(patchPrintModule(patched), patched);
   assert.throws(() => patchPrintModule('unrecognized native code'), /expo-print changed/);
 });
+
+test('takeaway without a table retains localized service text and omits empty table lines in HTML and ESC/POS', async () => {
+  const jobs=[];
+  const printer=loadPrinter('android',async bytes=>jobs.push(Buffer.from(bytes)));
+  const order={plate:'',customer:'Ana',serviceMode:'takeout',createdAt:'2026-10-19T12:00:00Z',items:[{name:'Pizza',quantity:1,note:''}]};
+  for(const [language,label,table] of [['pt','Para levar','Mesa:'],['en','To go','Table:'],['es','Para llevar','Mesa:']]) {
+    await printer.printOrder(order,{connection:'system',paperWidth:'80'},language);
+    const html=printer.files.at(-1).html;
+    assert.ok(html.includes(label));assert.ok(!html.includes(table));
+    await printer.printOrder(order,{connection:'wifi',paperWidth:'80',address:'192.0.2.1',port:'9100'},language);
+    assert.ok(jobs.at(-1).includes(Buffer.from(label)));assert.ok(!jobs.at(-1).includes(Buffer.from(table)));
+  }
+});
