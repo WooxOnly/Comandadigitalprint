@@ -1,5 +1,7 @@
 ## Médias e acompanhamento de consumo — atualização de 20/10/2026
 
+- Ajuste aplicado na base: 7.658 amostras, média 37,6 min, mínimo 30 e máximo 45. Workflow 39455426262 concluído com backup. Primeira publicação web 39455430486 validada; saúde HTTP 200. Revisão final também corrige o acesso direto ao favorito /gestor/login com redirecionamento para /gestor.
+
 - Requisitos anteriores de totais por hora e eixo por faixas substituídos pela decisão mais recente: médias por hora (30 dias completos) e por dia da semana (120 dias completos), janelas individuais configuráveis de 7 a 366 dias. Independentes do período geral, incluem dias sem pedidos e excluem hoje. Dia da semana divide pelas ocorrências correspondentes. TMA continua ponderado pelo período geral.
 - Todos os gráficos de barras usam valores em cada barra, barras mais finas e linha conectando os pontos dentro do gráfico, com escala linear automática. Horários mantêm a sequência americana expressamente solicitada e rolagem contida. Pizzas Top 10 preservadas.
 - Ajuste autorizado apenas na base demonstrativa seabra-1 de homologação: tempos reais fictícios registrados de 30–45 minutos; cópia original em demo_tma_backup e eventos sincronizáveis. Pedidos em fila e outras lojas preservados.

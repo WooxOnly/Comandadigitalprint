@@ -162,3 +162,11 @@ test('failed database preference save returns an error without claiming the acco
   const response = await f.choose('es'); assert.equal(response.status, 503); assert.deepEqual(await response.json(), { error: 'Dashboard temporarily unavailable.' });
   assert.equal(f.preference('alice'), 'en'); assert.equal(response.headers.getSetCookie().length, 0);
 });
+
+
+test('legacy manager login bookmark redirects to the clean sign-in page without submitting credentials', async t => {
+  const f=await setup(t), response=await f.request('/gestor/login');
+  assert.equal(response.status,303);assert.equal(response.headers.get('Location'),'/gestor');assert.equal(response.headers.get('Cache-Control'),'no-store');
+  const page=await f.request('/gestor');assert.equal(page.status,200);assert.match(await page.text(),/name="csrf"/);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM manager_login_limits').get().n,0);
+});

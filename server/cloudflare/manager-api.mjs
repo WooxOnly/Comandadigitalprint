@@ -35,6 +35,7 @@ export async function managerResponse(request, env, now = Date.now(), context) {
   const reply = (value, status = 200) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status);
   try {
     if (!env.DB) return reply({ error: 'Portal indisponível.' }, 503);
+    if(path==='/gestor/login'&&request.method==='GET')return new Response(null,{status:303,headers:{Location:'/gestor','Cache-Control':'no-store'}});
     if(['/gestor/recover','/gestor/reset-password'].includes(path)){
       if(request.method==='GET'){const csrf=crypto.randomUUID();return html(managerRecoveryPage(nonce,csrf,language,path.endsWith('reset-password')),nonce,200,{'Set-Cookie':cookie(CSRF_COOKIE,csrf,3600),'Content-Language':language,'Referrer-Policy':'no-referrer'})}
       if(request.method!=='POST')return reply({error:'Método indisponível.'},405);
