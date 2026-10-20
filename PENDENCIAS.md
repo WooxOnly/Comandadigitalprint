@@ -1,3 +1,7 @@
+## Ajuste de ordem dos horários — 20/10/2026
+
+- Ordem solicitada pelo proprietário: 1 AM até 12 AM, depois 1 PM até 12 PM, no gráfico de pedidos por hora e sua tabela. Mover os dados junto aos horários; manter os totais, datas e agrupamento local. Esta preferência substitui a sequência cronológica anterior. Entrega somente web, sem novo APK.
+
 # Pendências e preferências
 
 ## Eixos explícitos e pizzas Top 10 — 20/10/2026
