@@ -1,5 +1,12 @@
 # Pendências e preferências
 
+## Atualizar relatório preserva o período — 20/10/2026
+
+- Reproduzido: botão de carregar chamava a rotina de edição de data, marcando o período como Personalizado mesmo sem alterar nenhuma data.
+- Separada validação do formulário da marcação de edição manual. Atualizar mantém Hoje/7 dias/30 dias/mês/mês anterior/ano, inclusive no financeiro; digitar datas e usar o calendário continuam selecionando Personalizado. Datas inválidas e rascunhos mantêm a proteção existente.
+- Correção somente dos portais da entrega autorizada; nenhum APK adicional.
+- Conferidos 18 cenários de portal (PT/EN/ES, claro/escuro e três larguras), preservação de todos os períodos e de Personalizado, produção/financeiro, edição manual e calendário. 11 testes de idioma, lint, TypeScript e diff-check aprovados.
+
 ## Entrega completa autorizada — 20/10/2026
 
 - Proprietário: “Quando terminar TUDO pode subir a atualizacao”. Autorizados portais de homologação e um APK deste conjunto, sem acompanhar a compilação. Produção fora do escopo.
