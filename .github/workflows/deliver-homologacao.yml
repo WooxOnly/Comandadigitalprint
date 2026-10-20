@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   validate:
-    if: github.ref == 'refs/heads/homologacao'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/homologacao'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -70,7 +70,7 @@ jobs:
           NODE
 
   apk:
-    if: github.event_name != 'workflow_dispatch' || inputs.build_apk
+    if: github.event_name == 'workflow_dispatch' && inputs.build_apk
     needs: [validate, portals]
     runs-on: ubuntu-latest
     timeout-minutes: 90
