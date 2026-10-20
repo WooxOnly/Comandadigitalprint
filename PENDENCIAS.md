@@ -10,7 +10,7 @@
 - Requisitos anteriores de totais por hora e eixo por faixas substituídos pela decisão mais recente: médias por hora (30 dias completos) e por dia da semana (120 dias completos), janelas individuais configuráveis de 7 a 366 dias. Independentes do período geral, incluem dias sem pedidos e excluem hoje. Dia da semana divide pelas ocorrências correspondentes. TMA continua ponderado pelo período geral.
 - Todos os gráficos de barras usam valores em cada barra, barras mais finas e linha conectando os pontos dentro do gráfico, com escala linear automática. Horários mantêm a sequência americana expressamente solicitada e rolagem contida. Pizzas Top 10 preservadas.
 - Ajuste autorizado apenas na base demonstrativa seabra-1 de homologação: tempos reais fictícios registrados de 30–45 minutos; cópia original em demo_tma_backup e eventos sincronizáveis. Pedidos em fila e outras lojas preservados.
-- Monitoramento Cloudflare a cada três horas: snapshot privado na branch consumption-status e avisos aqui no ChatGPT em 80/90/95/100%, ou dados desconhecidos/desatualizados. Estimativa conservadora dos últimos 31 dias, pois a credencial de métricas não tem acesso à assinatura/ciclo. Plano Workers Paid mínimo US$5/mês não limita cobrança adicional. Sem alterar plano ou compilar APK.
+- Monitoramento Cloudflare a cada três horas: snapshot privado na branch consumption-status e avisos aqui no ChatGPT em 30/80/90/95/100%, ou dados desconhecidos/desatualizados. Estimativa conservadora dos últimos 31 dias, pois a credencial de métricas não tem acesso à assinatura/ciclo. Plano Workers Paid mínimo US$5/mês não limita cobrança adicional. Sem alterar plano ou compilar APK.
 
 ## Login e recuperação do gestor — 20/10/2026
 

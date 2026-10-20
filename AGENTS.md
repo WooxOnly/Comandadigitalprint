@@ -24,7 +24,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## Consumption monitoring — authorized 2026-10-20
 
-- Owner upgraded Cloudflare Workers Paid and authorized checks every three hours with notifications to the owner. Included monthly quotas: 10M Workers requests, 30M CPU milliseconds, 25B D1 rows read, 50M rows written and 5GB storage. The $5 minimum is not a spending cap. Read-only account analytics are available; the existing credential cannot read billing cycle/subscription (403), so use explicitly labeled conservative rolling 31-day snapshots. GitHub workflow runs every 3h; ChatGPT condition monitoring alerts at 80/90/95/100% or stale/unknown metrics. Never interpret missing metrics as zero or claim these alerts block charges. No plan/billing changes or APK builds authorized by monitoring.
+- Owner upgraded Cloudflare Workers Paid and authorized checks every three hours with notifications to the owner. Included monthly quotas: 10M Workers requests, 30M CPU milliseconds, 25B D1 rows read, 50M rows written and 5GB storage. The $5 minimum is not a spending cap. Read-only account analytics are available; the existing credential cannot read billing cycle/subscription (403), so use explicitly labeled conservative rolling 31-day snapshots. GitHub workflow runs every 3h; ChatGPT condition monitoring alerts at 30/80/90/95/100% or stale/unknown metrics. Never interpret missing metrics as zero or claim these alerts block charges. No plan/billing changes or APK builds authorized by monitoring.
 
 ## Presentation kitchen names — 2026-10-20
 
