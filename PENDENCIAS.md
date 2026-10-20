@@ -1,3 +1,8 @@
+## Correção da escala horária — 20/10/2026
+
+- Proprietário reafirmou as marcas 0, 10, 50, 100, 500 e 1.000 no gráfico horário; restaurada escala por faixas com aviso localizado. Mantidas médias de 30 dias, arredondamento com exceção do meio exato e os 24 horários na ordem americana aprovada.
+- Indicação explícita de rolagem horizontal para evitar confundir os horários de madrugada visíveis inicialmente com o dia inteiro. Consulta remota apenas de leitura preparada para conferir totais reais por horário, sem nomes de clientes ou itens.
+
 ## Nomes da cozinha na apresentação — 20/10/2026
 
 - Nomes aprovados e fixos: Kainan (com K), Davi, Carla e Elizabeth. Identificadores fictícios canônicos compatíveis com o app, nomes próprios exatos no gráfico e nos detalhes do portal. Outros operadores mantêm seus nomes originais.

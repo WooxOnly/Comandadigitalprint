@@ -1,0 +1,27 @@
+name: Conferir totais reais por horario em homologacao
+on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/inspect-hour-flow.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Executar apenas a consulta real do relatorio sem dados pessoais
+        run: |
+          node --input-type=module - <<'JS'
+          import {execFileSync} from 'node:child_process';import{flowReport}from'./server/cloudflare/flow-report.mjs';
+          const DB={prepare:sql=>({bind:(...values)=>({all:async()=>{let n=0;const bound=sql.replace(/\?/g,()=>"'"+String(values[n++]).replaceAll("'","''")+"'");const raw=execFileSync('npx',['--yes','wrangler@4','d1','execute','seabra-cardapio-homologacao','--remote','--config','server/cloudflare/wrangler.homologacao.jsonc','--command',bound,'--json'],{encoding:'utf8',maxBuffer:10*1024*1024});return{results:JSON.parse(raw)[0].results}}})})};
+          const report=await flowReport({DB},[{id:'seabra-1'}],'America/New_York');console.log('ACTUAL_HOUR_FLOW='+JSON.stringify({from:report.hours.from,to:report.hours.to,days:report.hours.days,total:report.hours.buckets.reduce((s,v)=>s+v.total,0),buckets:report.hours.buckets}));
+          JS
