@@ -1,3 +1,4 @@
+import { DEMO_KITCHEN_ACTORS } from '../shared/demo-kitchen-names.mjs';
 // Explicit, additive demo import. No credentials, permissions or catalog writes.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -57,8 +58,8 @@ export function demoDataset(inventory,storeId,now=new Date()){
       const wait=1+seed%9,handoff=1+hash(orderId+'handoff')%8,target=30+hash(orderId+'prep')%16,prep=target-wait-handoff;
       const started=active?emitted+minute:emitted+wait*minute,ready=active?started+minute:started+prep*minute,completed=ready+handoff*minute;
       const preparation={orderId,status,updatedAt:iso(emitted)};
-      if(status!=='received')Object.assign(preparation,{startedAt:iso(started),startedBy:'demo.cozinha.'+(seed%4+1),updatedAt:iso(started)});
-      if(['ready','completed'].includes(status))Object.assign(preparation,{readyAt:iso(ready),readyBy:'demo.cozinha.'+(seed%4+1),updatedAt:iso(ready)});
+      if(status!=='received')Object.assign(preparation,{startedAt:iso(started),startedBy:DEMO_KITCHEN_ACTORS[seed%4],updatedAt:iso(started)});
+      if(['ready','completed'].includes(status))Object.assign(preparation,{readyAt:iso(ready),readyBy:DEMO_KITCHEN_ACTORS[seed%4],updatedAt:iso(ready)});
       if(status==='completed')Object.assign(preparation,{completedAt:iso(completed),completedBy:cashier,updatedAt:iso(completed)});
       if(Date.parse(preparation.updatedAt)>now.getTime())throw Error('Future preparation generated');
       orders.push(order);preparations.push(preparation);event('order:'+order.id,order);event('preparation:'+order.id,preparation);

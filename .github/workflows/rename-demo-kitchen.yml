@@ -1,0 +1,45 @@
+name: Nomes da cozinha demonstrativa
+on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/rename-demo-kitchen.yml']
+  workflow_dispatch:
+jobs:
+  rename:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-demo-data
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Guardar ponto de restauracao
+        run: |
+          mkdir -p names-output
+          npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > names-output/restore-point.json
+      - name: Renomear somente operadores ficticios autorizados com backup e sincronizacao
+        run: npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file scripts/demo/rename-kitchen-operators.sql --yes
+      - name: Conferir nomes e ausencia dos identificadores genericos
+        run: |
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT json_extract(r.data,'$.startedBy') name,COUNT(*) orders FROM demo_operator_name_backup b JOIN store_records r ON r.store_id=b.store_id AND r.key=b.key WHERE b.store_id='seabra-1' GROUP BY name;" --json > names-output/after.json
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT COUNT(*) remaining FROM store_records WHERE store_id='seabra-1' AND key GLOB 'preparation:*' AND (json_extract(data,'$.startedBy') GLOB 'demo.cozinha.[1-4]' OR json_extract(data,'$.readyBy') GLOB 'demo.cozinha.[1-4]');" --json > names-output/remaining.json
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';import{DEMO_KITCHEN_ACTORS,demoKitchenName}from'./shared/demo-kitchen-names.mjs';
+          const rows=JSON.parse(fs.readFileSync('names-output/after.json'))[0].results,remaining=JSON.parse(fs.readFileSync('names-output/remaining.json'))[0].results[0].remaining;
+          console.log('DEMO_NAMES_RESULT='+JSON.stringify({rows:rows.map(r=>({...r,name:demoKitchenName(r.name)||r.name})),remaining}));if(remaining||!DEMO_KITCHEN_ACTORS.every(name=>rows.some(r=>r.name===name&&r.orders>0)))throw Error('Presentation names verification failed');
+          JS
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: homologacao-demo-names-result
+          path: names-output/
+          retention-days: 7

@@ -1,0 +1,10 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),{fixture}=require('./helpers/business-fixture.cjs');
+test('presentation kitchen names preserve complete records, accounts, other stores and repeatability',async t=>{
+ const f=await fixture(t),names=['Kainan','Davi','Carla','Elizabeth'],records=[];
+ for(let n=0;n<4;n++)for(const store of ['seabra-1','seabra-2']){const p={orderId:'demo-'+n,status:'ready',startedBy:'demo.cozinha.'+(n+1),readyBy:'demo.cozinha.'+(n+1),startedAt:'2026-10-19T12:00:00Z',readyAt:'2026-10-19T12:35:00Z',updatedAt:'2026-10-19T12:35:00Z'};records.push({store,p});f.db.prepare('INSERT INTO store_records VALUES(?,?,?,1)').run(store,'preparation:'+p.orderId,JSON.stringify(p))}
+ const real={orderId:'real',status:'preparing',startedBy:'real-operator',updatedAt:'2026-10-19T12:00:00Z'};f.db.prepare('INSERT INTO store_records VALUES(?,?,?,1)').run('seabra-1','preparation:real',JSON.stringify(real));
+ const sql=fs.readFileSync('scripts/demo/rename-kitchen-operators.sql','utf8');f.db.exec(sql);
+ for(const {store,p}of records){const after=JSON.parse(f.db.prepare('SELECT data FROM store_records WHERE store_id=? AND key=?').get(store,'preparation:'+p.orderId).data);assert.deepEqual(after,store==='seabra-1'?{...p,startedBy:'demo.cozinha.'+names[Number(p.orderId.slice(-1))].toLowerCase(),readyBy:'demo.cozinha.'+names[Number(p.orderId.slice(-1))].toLowerCase()}:p)}
+ assert.deepEqual(JSON.parse(f.db.prepare("SELECT data FROM store_records WHERE key='preparation:real'").get().data),real);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM demo_operator_name_backup').get().n,4);assert.equal(f.db.prepare("SELECT COUNT(*) n FROM store_events WHERE actor='demo.names'").get().n,4);f.db.exec(sql);assert.equal(f.db.prepare("SELECT COUNT(*) n FROM store_events WHERE actor='demo.names'").get().n,4);
+ const {DEMO_KITCHEN_NAMES,demoKitchenName}=await import('../shared/demo-kitchen-names.mjs');assert.deepEqual(DEMO_KITCHEN_NAMES,names);for(const n of names)assert.equal(demoKitchenName('demo.cozinha.'+n.toLowerCase()),n);assert.equal(demoKitchenName('real'),null);
+});

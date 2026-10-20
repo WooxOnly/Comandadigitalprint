@@ -36,6 +36,7 @@ test('120-day demo preserves existing data and sync, is repeatable, and reconcil
   assert.equal(report.summary.count,data.orders.length);assert.equal(report.tma.samples,data.orders.length-9);
   assert.ok(report.tma.seconds>600&&report.tma.seconds<2400);assert.equal(report.breakdowns.days.length,120);
   assert.equal(report.operators.filter(o=>o.username?.startsWith('demo.cozinha.')).length,4);
+  assert.deepEqual(report.operators.filter(o=>o.username?.startsWith('demo.cozinha.')).map(o=>o.displayName).sort(),['Kainan','Davi','Carla','Elizabeth'].sort());
   const cash=await managerSalesReport(env,[store],period);
   assert.equal(cash.totals.salesCount,data.sales.length);assert.equal(cash.closingCount,120);
   assert.ok(cash.averageTicketCents>0&&cash.totals.refundCount>0);

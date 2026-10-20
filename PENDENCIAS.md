@@ -1,3 +1,8 @@
+## Nomes da cozinha na apresentação — 20/10/2026
+
+- Nomes aprovados e fixos: Kainan (com K), Davi, Carla e Elizabeth. Identificadores fictícios canônicos compatíveis com o app, nomes próprios exatos no gráfico e nos detalhes do portal. Outros operadores mantêm seus nomes originais.
+- Renomeação restrita aos quatro identificadores demo.cozinha.1–4 na loja seabra-1 de homologação, com cópia original e eventos sincronizáveis. Não altera pedidos, tempos, etapas ou contas/permissões. Gerador e reparo demonstrativo passam a conservar esses nomes.
+
 ## Médias e acompanhamento de consumo — atualização de 20/10/2026
 
 - Ajuste aplicado na base: 7.658 amostras, média 37,6 min, mínimo 30 e máximo 45. Workflow 39455426262 concluído com backup. Primeira publicação web 39455430486 validada; saúde HTTP 200. Revisão final também corrige o acesso direto ao favorito /gestor/login com redirecionamento para /gestor.

@@ -26,6 +26,10 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 - Owner upgraded Cloudflare Workers Paid and authorized checks every three hours with notifications to the owner. Included monthly quotas: 10M Workers requests, 30M CPU milliseconds, 25B D1 rows read, 50M rows written and 5GB storage. The $5 minimum is not a spending cap. Read-only account analytics are available; the existing credential cannot read billing cycle/subscription (403), so use explicitly labeled conservative rolling 31-day snapshots. GitHub workflow runs every 3h; ChatGPT condition monitoring alerts at 80/90/95/100% or stale/unknown metrics. Never interpret missing metrics as zero or claim these alerts block charges. No plan/billing changes or APK builds authorized by monitoring.
 
+## Presentation kitchen names — 2026-10-20
+
+- Owner explicitly chose Kainan (with K), Davi, Carla and Elizabeth for the four fictional kitchen operators. Keep these exact spellings in the homologação presentation dataset and future demo generators. Rename only synthetic demo.cozinha.1–4 actor labels, preserve times/counts/statuses and real accounts, back up originals and synchronize changes via events.
+
 ## Permanent BistroHub requirements
 
 - Portal sign-in errors distinguish infrastructure/quota, network/offline/timeout, credentials, CSRF/cookies, validation and cooldowns in the selected PT/EN/ES language. Never label an HTTP server failure as no internet. Manager password recovery uses configured email delivery, hashed 15-minute single-use fragment tokens, CSRF/origin/rate limits, revision-based revocation and no account enumeration. Apply the additive recovery schema before publication; production order reports use the partial emission-date index to avoid full-history reads for short periods. Never change paid service plans without explicit authorization.
