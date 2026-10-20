@@ -197,7 +197,7 @@ test('independent flow windows enforce manager store grants, kitchen modules and
   for(const store of ['seabra-1','seabra-2']) f.db.prepare('INSERT INTO store_records VALUES(?,?,?,1)').run(store,'order:flow',JSON.stringify({id:'flow',createdAt:'2026-10-06T13:00:00Z'}));
   f.modules(f.a.storeId,false,false,false,true);
   let response=await f.manager(endpoint+'&from=invalid&to=invalid',cookie);assert.equal(response.status,200);
-  let data=await response.json();assert.equal(data.hours.buckets[13].total,1);assert.equal(data.hours.buckets[13].average,1/30);assert.equal(data.hours.to,'2026-10-06');
+  let data=await response.json();assert.equal(data.hours.buckets[13].total,1);assert.equal('average' in data.hours.buckets[13],false);assert.equal(data.hours.to,'2026-10-06');
   f.modules(f.a.storeId,false,false,false,false);
   data=await (await f.manager(endpoint,cookie)).json();assert.ok(data.hours.buckets.every(v=>v.total===0));
 });

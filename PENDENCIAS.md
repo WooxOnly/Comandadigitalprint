@@ -1,3 +1,9 @@
+## Pedidos por horário: total acumulado e padrão de sete dias — 20/10/2026
+
+- Decisão mais recente substitui a média horária: somar os pedidos de cada horário, sem dividir pelos dias. Padrão de sete dias completos, janela configurável entre 1 e 366 dias. Título Pedidos por horário e detalhes com hora/total.
+- Legenda mostra a janela efetivamente aplicada e suas datas; sete por padrão, dez ao selecionar dez, inclusive quando o período global é diferente. Valores, legenda e detalhes usam a mesma resposta. Preferência antiga de média migra para nova chave para não restaurar 30 dias em navegadores antigos.
+- Preservadas marcas 0/10/50/100/500/1.000, ordem americana dos 24 horários e rolagem interna. Média por dia da semana e TMA mantêm os cálculos já aprovados.
+
 ## Correção da escala horária — 20/10/2026
 
 - Proprietário reafirmou as marcas 0, 10, 50, 100, 500 e 1.000 no gráfico horário; restaurada escala por faixas com aviso localizado. Mantidas médias de 30 dias, arredondamento com exceção do meio exato e os 24 horários na ordem americana aprovada.
