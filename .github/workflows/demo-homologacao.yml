@@ -36,13 +36,13 @@ jobs:
       - name: Inspecionar somente homologacao
         run: |
           mkdir -p demo-output
-          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT s.id,s.name,s.active,COALESCE(m.cash,0) cash,COALESCE(m.preorders,0) preorders,COALESCE(c.enabled,0) customers,COALESCE(p.enabled,0) preparation,(SELECT COUNT(*) FROM store_records r WHERE r.store_id=s.id AND r.key LIKE 'order:%') orders_count FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id LEFT JOIN store_customer_modules c ON c.store_id=s.id LEFT JOIN store_preparation_modules p ON p.store_id=s.id; SELECT store_id,data FROM store_records WHERE key='menu'; SELECT store_id,data FROM store_cash_settings;" --json > demo-output/inventory.json
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT s.id,s.name,s.active,COALESCE(m.cash,0) cash,COALESCE(m.preorders,0) preorders,COALESCE(c.enabled,0) customers,COALESCE(p.enabled,0) preparation,(SELECT COUNT(*) FROM store_records r WHERE r.store_id=s.id AND r.key LIKE 'order:%') orders_count FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id LEFT JOIN store_customer_modules c ON c.store_id=s.id LEFT JOIN store_preparation_modules p ON p.store_id=s.id; SELECT store_id,data FROM store_records WHERE key='menu'; SELECT store_id,data FROM store_cash_settings; SELECT name,sql FROM sqlite_master WHERE name LIKE 'manager_%';" --json > demo-output/inventory.json
       - name: Resumo sem credenciais
         run: |
           node --input-type=module - <<'JS'
           import fs from 'node:fs';
           const rows=JSON.parse(fs.readFileSync('demo-output/inventory.json'));
-          console.log('DEMO_INVENTORY='+JSON.stringify(rows.map((result,i)=>({results:i<2?result.results:result.results.map(row=>({store_id:row.store_id,data:JSON.stringify({tax:JSON.parse(row.data).tax})}))}))));
+          console.log('DEMO_INVENTORY='+JSON.stringify(rows.map((result,i)=>({results:i!==2?result.results:result.results.map(row=>({store_id:row.store_id,data:JSON.stringify({tax:JSON.parse(row.data).tax})}))}))));
           JS
       - name: Gerar, validar e carregar dados
         if: inputs.mode == 'load' || inputs.mode == 'verify'
