@@ -1,0 +1,37 @@
+name: Consumo Cloudflare a cada tres horas
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/cloudflare-consumption.yml']
+permissions:
+  contents: write
+concurrency:
+  group: bistro-cloudflare-consumption
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: homologacao
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Consultar consumo da conta sem executar consultas D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/cloudflare-consumption.mjs --publish
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: cloudflare-consumption
+          path: consumption-output/
+          retention-days: 7
