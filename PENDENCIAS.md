@@ -1,3 +1,9 @@
+## Top 10 aprovado em duas colunas — 20/10/2026
+
+- Modelo visual aprovado: balão único, legenda em duas colunas com divisória central, posições 1–5 à esquerda e 6–10 à direita; pizza grande e centralizada abaixo. Aplicado a produtos e grupos, com os nomes completos, quantidade e percentual.
+- Disposição dos valores acompanha a largura do próprio cartão: abaixo do nome em espaços estreitos, à direita quando há espaço. Mantidas seleção por toque/teclado, cores, percentuais sobre Top 10 e detalhes; sem alterar cálculos/dados.
+- Se houver até cinco entradas, mostrar uma coluna sem criar posições ou produtos fictícios. Estados vazios preservados. Celulares, tablets e PC, retrato/paisagem, PT/EN/ES e claro/escuro.
+
 ## Pedidos por mês: ano completo independente — 20/10/2026
 
 - Decisão do proprietário: gráfico de pedidos por mês ignora o período geral e mostra janeiro a dezembro do ano atual no fuso local, inclusive meses zerados e futuros. Ano/base independente informados no cartão; totais da loja e suas permissões preservados.
