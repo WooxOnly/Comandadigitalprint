@@ -10,7 +10,7 @@ O painel do gestor passa a ter **Esqueceu a senha?**, `/gestor/recover` e `/gest
 - Link em fragmento, removido do endereço ao abrir, sem token em query, logs, markup, storage ou resposta pública. Banco recebe somente SHA-256; validade de 15 minutos e uso único.
 - Resposta condicional uniforme para e-mail desconhecido/inativo e falha individual de entrega, sem revelar cadastro. Falta global de configuração retorna indisponibilidade explícita. Falha de entrega invalida o token correspondente e registra apenas provedor/status.
 - CSRF renovado antes de enviar; origem e tipos/tamanho do corpo validados. Limites separados por IP e por conta para pedidos e resgates.
-- Senha mínima de oito caracteres, confirmação e novo salt. A troca incrementa a revisão, revoga sessões anteriores e invalida convites pendentes. Não altera lojas, cliente, módulos, permissões ou senhas dos tablets.
+- Senha mínima de oito caracteres, confirmação e novo salt. A troca incrementa a revisão, revoga sessões anteriores, invalida convites pendentes e limpa o bloqueio de login dessa conta/IP após a troca confirmada. Não altera lojas, cliente, módulos, permissões ou senhas dos tablets.
 - Mudança de revisão, cliente/lojas ou desativação revoga o link. Escritas de senha/consumo executam em uma transação D1 com comparações de revisão e salt/hash únicos.
 
 Aplicar `server/cloudflare/migrations/20261020-manager-recovery.sql` antes de publicar. Inclui as tabelas aditivas e índice parcial por loja/data de emissão dos pedidos. As seis consultas de produção usam o índice de intervalo, evitando ler todo o histórico para Hoje/intervalos curtos. A cota gratuita permanece aplicável a períodos grandes e ao restante da conta.

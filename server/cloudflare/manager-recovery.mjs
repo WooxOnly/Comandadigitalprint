@@ -34,13 +34,14 @@ export async function resetManagerPassword(request,env,token,password,now=Date.n
  if(typeof token!=='string'||!/^[a-f0-9]{64}$/.test(token))return invalid();
  if(typeof password!=='string'||password.length<8||password.length>256)return{status:400,message:'A nova senha deve ter pelo menos 8 caracteres.'};
  const hash=await hashToken(token);
- const valid=await env.DB.prepare(`SELECT r.user_id FROM manager_password_recovery r JOIN manager_users u ON u.id=r.user_id JOIN manager_clients c ON c.id=u.client_id WHERE r.token_hash=? AND r.used_at IS NULL AND r.expires_at>? AND u.active=1 AND c.active=1 AND u.revision=r.password_revision AND u.client_id=r.client_id AND c.revision=r.client_revision`).bind(hash,now).first();
+ const valid=await env.DB.prepare(`SELECT r.user_id,u.username FROM manager_password_recovery r JOIN manager_users u ON u.id=r.user_id JOIN manager_clients c ON c.id=u.client_id WHERE r.token_hash=? AND r.used_at IS NULL AND r.expires_at>? AND u.active=1 AND c.active=1 AND u.revision=r.password_revision AND u.client_id=r.client_id AND c.revision=r.client_revision`).bind(hash,now).first();
  if(!valid)return invalid();
  const salt=hex(crypto.getRandomValues(new Uint8Array(16))),passwordHash=await digest(password,salt);
  const result=await env.DB.batch([
   env.DB.prepare(`UPDATE manager_users SET salt=?,hash=?,revision=revision+1 WHERE id=? AND active=1 AND EXISTS(SELECT 1 FROM manager_password_recovery r JOIN manager_clients c ON c.id=manager_users.client_id WHERE r.user_id=manager_users.id AND r.token_hash=? AND r.used_at IS NULL AND r.expires_at>? AND r.password_revision=manager_users.revision AND r.client_id=manager_users.client_id AND r.client_revision=c.revision AND c.active=1) RETURNING id`).bind(salt,passwordHash,valid.user_id,hash,now),
   env.DB.prepare(`UPDATE manager_password_recovery SET used_at=?,token_hash=NULL WHERE user_id=? AND token_hash=? AND used_at IS NULL AND EXISTS(SELECT 1 FROM manager_users u WHERE u.id=manager_password_recovery.user_id AND u.salt=? AND u.hash=? AND u.revision=manager_password_recovery.password_revision+1) RETURNING user_id`).bind(now,valid.user_id,hash,salt,passwordHash),
   env.DB.prepare(`UPDATE manager_user_invitations SET needs_password=0,token_hash=NULL,used_at=?,delivery_status='accepted' WHERE user_id=? AND EXISTS(SELECT 1 FROM manager_users u WHERE u.id=? AND u.salt=? AND u.hash=?)`).bind(now,valid.user_id,valid.user_id,salt,passwordHash),
+  env.DB.prepare(`DELETE FROM manager_login_limits WHERE key=? AND EXISTS(SELECT 1 FROM manager_users u WHERE u.id=? AND u.salt=? AND u.hash=?)`).bind(await loginLimitKey(request,valid.username),valid.user_id,salt,passwordHash),
  ]);
  if(result[0].results?.length!==1||result[1].results?.length!==1)return invalid();
  return{status:200,success:true,message:'Senha alterada. Entre com seu e-mail e a nova senha.'};
