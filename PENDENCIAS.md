@@ -1,5 +1,13 @@
 # Pendências e preferências
 
+## Eixos explícitos e pizzas Top 10 — 20/10/2026
+
+- Proprietário esclareceu que as marcas verticais são fixas: 0, 10, 50, 100, 500, 1.000. Implementada escala por faixas com aviso explícito de intervalos diferentes, preservando valores reais e ordem das quantidades; estende o padrão somente para volumes acima de 1.000.
+- Todas as 24 horas em padrão americano, de 12 AM até 11 PM, com rótulos em duas linhas e rolagem interna quando o cartão é estreito. Quantidades continuam somadas entre todos os dias; pico e detalhes usam as mesmas horas AM/PM.
+- Produtos e categorias mostram somente os 10 primeiros nas pizzas, legendas e detalhes, sem Outros. Percentuais calculados entre os dez exibidos e essa base indicada no cartão; demais totais do relatório continuam integrais. SVGs maiores e responsivos, percentuais internos, seleção por ponteiro/toque/teclado. Para fatias pequenas, o percentual selecionado aparece dentro do gráfico sem sobrepor rótulos.
+- Inclui a correção d59468f de carregar sem trocar Hoje/presets por Personalizado. Proprietário: “Depois que fizer tudo pode publicar”. Somente portais em homologação, sem outro APK.
+- Validados 24 testes Node (escala/idiomas/agrupamento) e 18 cenários do portal PT/EN/ES claro/escuro em três larguras: marcas fixas, todas as horas, faixas acima de 1.000, 12 produtos/grupos reais reduzidos aos 10 primeiros, percentuais e interação por teclado/toque. Lint, TypeScript, diff-check e destinos aprovados.
+
 ## Atualizar relatório preserva o período — 20/10/2026
 
 - Reproduzido: botão de carregar chamava a rotina de edição de data, marcando o período como Personalizado mesmo sem alterar nenhuma data.

@@ -7,6 +7,10 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  'Selecione uma fatia para ver a quantidade e o percentual.': ['Select a slice to see its quantity and percentage.', 'Selecciona un segmento para ver la cantidad y el porcentaje.'],
+  'Exibindo {shown} de {count} produtos. Percentuais calculados entre os exibidos.': ['Showing {shown} of {count} items. Percentages are calculated among the displayed items.', 'Se muestran {shown} de {count} productos. Los porcentajes se calculan entre los mostrados.'],
+  'Exibindo {shown} de {count} categorias. Percentuais calculados entre as exibidas.': ['Showing {shown} of {count} categories. Percentages are calculated among the displayed categories.', 'Se muestran {shown} de {count} categorías. Los porcentajes se calculan entre las mostradas.'],
+  'Escala por faixas: os intervalos do eixo vertical são diferentes.': ['Banded scale: intervals on the vertical axis are unequal.', 'Escala por tramos: los intervalos del eje vertical son diferentes.'],
   'Total de pedidos em cada horário, somando todos os dias do período selecionado.': ['Total orders in each hour, adding all days in the selected period.', 'Total de pedidos en cada horario, sumando todos los días del período seleccionado.'],
   "Vendas por mês": ["Sales by month", "Ventas por mes"],
   "Vendas por dia": ["Sales by day", "Ventas por día"],
