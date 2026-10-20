@@ -18,9 +18,10 @@ jobs:
           node --input-type=module - <<'JS'
           const token=process.env.CLOUDFLARE_API_TOKEN,account=process.env.CLOUDFLARE_ACCOUNT_ID;
           const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
-          const response=await fetch('https://api.cloudflare.com/client/v4/graphql',{method:'POST',headers,body:JSON.stringify({query:'{ __schema { types { name fields { name type { name ofType { name } } } } } }'})});
+          const response=await fetch('https://api.cloudflare.com/client/v4/graphql',{method:'POST',headers,body:JSON.stringify({query:'{ __schema { types { name fields { name description type { name ofType { name } } } } } }'})});
           const data=await response.json();
           console.log('SCHEMA_HTTP',response.status);if(data.errors)console.log('SCHEMA_ERRORS',JSON.stringify(data.errors.map(e=>({message:e.message}))));
-          for(const type of data.data?.__schema?.types||[])if(/d1AnalyticsAdaptiveGroups.*(Sum|Dimensions)$|d1StorageAdaptiveGroups.*(Max|Dimensions)$|workersInvocationsAdaptive.*(Sum|Dimensions)$/.test(type.name))console.log('METRIC_TYPE',JSON.stringify(type));
+          for(const type of data.data?.__schema?.types||[])if(/d1AnalyticsAdaptiveGroups.*(Sum|Dimensions)$|d1StorageAdaptiveGroups.*(Max|Dimensions)$|workersInvocationsAdaptive.*(Sum|Dimensions)$|WorkersInvocationsAdaptiveGroups.*Sum/i.test(type.name))console.log('METRIC_TYPE',JSON.stringify(type));
+          const metrics=await fetch('https://api.cloudflare.com/client/v4/graphql',{method:'POST',headers,body:JSON.stringify({query:'{viewer{accounts(filter:{accountTag:"'+account+'"}){d1AnalyticsAdaptiveGroups(limit:100,filter:{date_geq:"2026-10-20",date_leq:"2026-10-20"}){sum{rowsRead rowsWritten}}}}}'})});console.log('ANALYTICS',JSON.stringify(await metrics.json()));
           const r=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+'/subscriptions',{headers});const b=await r.json();console.log('BILLING_HTTP',r.status);console.log('PLANS',JSON.stringify(b.result?.map?.(s=>({id:s.id,rate_plan:s.rate_plan?.public_name||s.rate_plan?.id,state:s.state,price:s.price,current_period_start:s.current_period_start,current_period_end:s.current_period_end,component_values:s.component_values}))||b.errors?.map(e=>({code:e.code,message:e.message}))));
           JS
