@@ -27,10 +27,12 @@ test('120-day demo preserves existing data and sync, is repeatable, and reconcil
   assert.equal(db.prepare("SELECT COUNT(*) n FROM store_events WHERE key LIKE 'order:demo120-%'").get().n,data.orders.length);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM cash_sessions WHERE closed_at IS NULL").get().n,0);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM cash_sessions').get().n,120);
-  const prepare=(sql,args=[])=>({bind:(...values)=>prepare(sql,values),all:async()=>({results:db.prepare(sql).all(...args)})});
+  const plans=[];
+  const prepare=(sql,args=[])=>({bind:(...values)=>prepare(sql,values),all:async()=>{plans.push(db.prepare('EXPLAIN QUERY PLAN '+sql).all(...args).map(row=>row.detail));return{results:db.prepare(sql).all(...args)}}});
   const env={DB:{prepare,batch:async queries=>Promise.all(queries.map(q=>q.all()))}};
   const period={start:Date.parse('2026-06-23T04:00:00Z'),end:Date.parse('2026-10-21T04:00:00Z'),timeZone:'America/New_York'};
   const report=await productionReport(env,[store],period);
+  assert.ok(plans.slice(0,6).every(plan=>plan.some(detail=>detail.includes('production_orders_by_date'))),'Every production query must use the date-range index instead of scanning all sync records');
   assert.equal(report.summary.count,data.orders.length);assert.equal(report.tma.samples,data.orders.length-9);
   assert.ok(report.tma.seconds>600&&report.tma.seconds<2400);assert.equal(report.breakdowns.days.length,120);
   assert.equal(report.operators.filter(o=>o.username?.startsWith('demo.cozinha.')).length,4);

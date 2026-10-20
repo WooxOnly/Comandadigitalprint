@@ -1,15 +1,17 @@
+import { LOGIN_ERRORS, dailyServiceLimit } from './login-errors.mjs';
+import { requestManagerRecovery, resetManagerPassword } from './manager-recovery.mjs';
 import { normalizeEmail, validEmail, acceptManagerInvitation } from './manager-invitations.mjs';
 import { CSRF_COOKIE, MANAGER_COOKIE, cookie, digest, equal, html, issueSession, json, loginLimitKey, managerSession, readBody, readCookie } from './manager-auth.mjs';
-import { managerLoginPage, managerPortalPage, managerInvitationPage } from './manager-pages.mjs';
+import { managerLoginPage, managerPortalPage, managerInvitationPage, managerRecoveryPage } from './manager-pages.mjs';
 import { TMA_BASES } from '../../shared/production-metrics.mjs';
 import { reportPeriod } from '../../shared/report-period.mjs';
 import { productionReport } from './production-report.mjs';
 import { managerSalesReport } from './manager-sales.mjs';
 import { LANGUAGE_COOKIE, LANGUAGE_CHOICE_COOKIE, validLanguage, requestLanguage, translate } from './manager-i18n.mjs';
 
-function loginPage(nonce, language, message = '', status = 200) {
+function loginPage(nonce, language, message = '', status = 200, retryAfterSeconds = 0) {
   const csrf = crypto.randomUUID();
-  return html(managerLoginPage(nonce, csrf, translate(language, message), language), nonce, status, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language, ...(status === 403 && message === 'Sessão de login expirada. Entre novamente.' ? { 'X-Bistro-Login-Retry': 'csrf' } : {}) });
+  return html(managerLoginPage(nonce, csrf, translate(language, message), language), nonce, status, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language, ...(retryAfterSeconds?{'Retry-After':String(retryAfterSeconds)}:{}), ...(status === 403 && message === 'Sessão de login expirada. Entre novamente.' ? { 'X-Bistro-Login-Retry': 'csrf' } : {}) });
 }
 async function savedLanguage(env, userId) {
   const preference = await env.DB.prepare('SELECT language FROM manager_user_preferences WHERE user_id = ?').bind(userId).first();
@@ -24,7 +26,7 @@ async function storesFor(env, client) {
   const { results } = await env.DB.prepare(`SELECT s.id, s.name, m.preorders, m.cash, c.enabled AS customers, p.enabled AS preparation FROM stores s LEFT JOIN store_modules m ON m.store_id = s.id LEFT JOIN store_customer_modules c ON c.store_id = s.id LEFT JOIN store_preparation_modules p ON p.store_id = s.id WHERE s.active = 1 AND s.id IN (SELECT value FROM json_each(?)) ORDER BY s.name, s.id`).bind(JSON.stringify(ids)).all();
   return results.map(store => ({ id: store.id, name: store.name, modules: { preparation: store.preparation === 1, preorders: store.preorders === 1, cash: store.cash === 1, customers: store.customers === 1 } }));
 }
-export async function managerResponse(request, env, now = Date.now()) {
+export async function managerResponse(request, env, now = Date.now(), context) {
   const url = new URL(request.url), path = url.pathname;
   if (path !== '/gestor' && !path.startsWith('/gestor/')) return null;
   const nonce = crypto.randomUUID(), sameOrigin = request.headers.get('Origin') === url.origin;
@@ -32,6 +34,19 @@ export async function managerResponse(request, env, now = Date.now()) {
   const reply = (value, status = 200) => json(value.error ? { ...value, error: translate(language, value.error) } : value, status);
   try {
     if (!env.DB) return reply({ error: 'Portal indisponível.' }, 503);
+    if(['/gestor/recover','/gestor/reset-password'].includes(path)){
+      if(request.method==='GET'){const csrf=crypto.randomUUID();return html(managerRecoveryPage(nonce,csrf,language,path.endsWith('reset-password')),nonce,200,{'Set-Cookie':cookie(CSRF_COOKIE,csrf,3600),'Content-Language':language,'Referrer-Policy':'no-referrer'})}
+      if(request.method!=='POST')return reply({error:'Método indisponível.'},405);
+      if(!sameOrigin||!request.headers.get('Content-Type')?.startsWith('application/json'))return reply({error:'Formulário inválido.'},403);
+      let input;try{input=JSON.parse(await readBody(request,4096))}catch(error){return reply({error:error.status===413?'Formulário muito grande.':'Formulário inválido.'},error.status||400)}
+      const csrf=readCookie(request,CSRF_COOKIE);
+      if(!csrf||!/^[a-f0-9-]{36}$/.test(csrf)||input?.csrf!==csrf){const response=reply({error:'Sessão de login expirada. Entre novamente.'},403);response.headers.set('X-Bistro-Login-Retry','csrf');return response}
+      if(!input||typeof input!=='object'||Array.isArray(input))return reply({error:'Formulário inválido.'},400);
+      if(path.endsWith('reset-password')&&input.password!==input.confirmation)return reply({error:'A confirmação não corresponde à nova senha.'},400);
+      const result=path.endsWith('reset-password')?await resetManagerPassword(request,env,input.token,input.password,now):await requestManagerRecovery(request,env,input.email,language,now,fetch,context);
+      const response=result.success?reply({success:true,message:translate(language,result.message)},result.status):reply({error:result.message},result.status);
+      if(result.retryAfter)response.headers.set('Retry-After',String(result.retryAfter));return response;
+    }
     if (path === '/gestor/convite' && request.method === 'GET') {
       const csrf = crypto.randomUUID();
       return html(managerInvitationPage(nonce, csrf, language), nonce, 200, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language, 'Referrer-Policy': 'no-referrer' });
@@ -57,12 +72,12 @@ export async function managerResponse(request, env, now = Date.now()) {
       if (!validEmail(username) || password.length > 256) return loginPage(nonce, language, 'E-mail ou senha incorretos.', 401);
       const limitKey = await loginLimitKey(request, username);
       const limit = await env.DB.prepare('SELECT attempts, reset_at FROM manager_login_limits WHERE key = ?').bind(limitKey).first();
-      if (limit?.reset_at > now && limit.attempts >= 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429);
+      if (limit?.reset_at > now && limit.attempts >= 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429, Math.max(1,Math.ceil((limit.reset_at-now)/1000)));
       // Reserve an attempt before expensive password verification, including
       // simultaneous requests. Successful logins clear this account/IP limit.
       await env.DB.prepare('INSERT INTO manager_login_limits(key, attempts, reset_at) VALUES(?, 1, ?) ON CONFLICT(key) DO UPDATE SET attempts = CASE WHEN reset_at <= ? THEN 1 ELSE attempts + 1 END, reset_at = CASE WHEN reset_at <= ? THEN excluded.reset_at ELSE reset_at END').bind(limitKey, now + 900000, now, now).run();
       const reserved = await env.DB.prepare('SELECT attempts FROM manager_login_limits WHERE key = ?').bind(limitKey).first();
-      if (reserved.attempts > 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429);
+      if (reserved.attempts > 5) return loginPage(nonce, language, 'Muitas tentativas. Aguarde 15 minutos.', 429,900);
       const user = await env.DB.prepare('SELECT * FROM manager_users WHERE lower(username) = ? AND active = 1').bind(username).first();
       const client = user ? await env.DB.prepare('SELECT id, name, revision FROM manager_clients WHERE id = ? AND active = 1').bind(user.client_id).first() : null;
       // A dummy digest keeps nonexistent or disabled accounts on the same slow path.
@@ -115,5 +130,5 @@ export async function managerResponse(request, env, now = Date.now()) {
     const selected = stores.filter(store => !selectedId || store.id === selectedId), enabled = selected.filter(store => store.modules.preparation);
     const report = await productionReport(env, enabled, period, basis);
     return reply({ updatedAt: new Date(now).toISOString(), ...report, disabledStores: selected.filter(store => !store.modules.preparation).map(({ id, name }) => ({ id, name })) });
-  } catch (error) { return reply({ error: error.status ? error.message : 'Portal temporariamente indisponível.' }, error.status || 503); }
+  } catch (error) { if(path==='/gestor/login'){const response=loginPage(nonce,language,dailyServiceLimit(error)?LOGIN_ERRORS.limit:LOGIN_ERRORS.unavailable,503);if(dailyServiceLimit(error))response.headers.set('X-Bistro-Login-Error','service_limit');return response}return reply({ error: dailyServiceLimit(error)?LOGIN_ERRORS.limit:error.status ? error.message : 'Portal temporariamente indisponível.' }, error.status || 503); }
 }

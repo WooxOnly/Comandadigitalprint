@@ -1,3 +1,7 @@
+## Login e recuperação do gestor — 20/10/2026
+
+- Causa real do 503 identificada: Cloudflare D1 7500, cota diária de leituras excedida no plano gratuito. Limite externo renova à meia-noite UTC; cobrança não alterada. Mensagens específicas PT/EN/ES para os dois logins e recuperação por e-mail do gestor implementadas/testadas. Índice por data reduz leituras dos relatórios. Detalhes em RECUPERACAO-GESTOR.md. Publicação somente web; nenhum novo APK.
+
 ## Dados para apresentação — 20/10/2026
 
 - Proprietário autorizou carregar 120 dias na loja atual de homologação. Gerador e workflow aditivos preparados: 7.659 pedidos, 240 encomendas, TMA variável e quatro operadores fictícios. Preservar registros existentes e módulos desativados. Roteiro em DEMONSTRACAO-HOMOLOGACAO.md; sem novo APK.

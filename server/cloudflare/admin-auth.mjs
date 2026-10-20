@@ -1,3 +1,4 @@
+import { LOGIN_ERRORS, dailyServiceLimit } from './login-errors.mjs';
 import { licenseAdminResponse } from './licenses.mjs';
 import { preparationSettings, storeAccess, validAccessUsers } from './operations.mjs';
 import { validAccess } from '../../shared/operations-validation.mjs';
@@ -317,7 +318,7 @@ export async function adminResponse(request, env, now = Date.now(), context) {
       headers.append('Set-Cookie', cookie(LANGUAGE_COOKIE, language, 31536000));
       headers.append('Set-Cookie', cookie(LANGUAGE_CHOICE_COOKIE, '', 0));
       return new Response(null, { status: 303, headers });
-    } catch { return loginResponse(nonce, 'Login temporariamente indisponível.', 503, language); }
+    } catch(error) {const response=loginResponse(nonce,dailyServiceLimit(error)?LOGIN_ERRORS.limit:LOGIN_ERRORS.unavailable,503,language);if(dailyServiceLimit(error))response.headers.set('X-Bistro-Login-Error','service_limit');return response; }
   }
 
   if (pathname === '/admin/login' && request.method === 'GET') return new Response(null, { status: 303, headers: { Location: '/admin', 'Cache-Control': 'no-store' } });

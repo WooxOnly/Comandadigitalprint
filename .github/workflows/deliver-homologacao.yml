@@ -60,6 +60,7 @@ jobs:
           NODE
           npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json
           npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file server/cloudflare/migrations/20261019-manager-invitations.sql --yes
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file server/cloudflare/migrations/20261020-manager-recovery.sql --yes
           npx --yes wrangler@4 deploy --keep-vars --config server/cloudflare/wrangler.homologacao.jsonc
       - name: Conferir saude do servidor
         run: |

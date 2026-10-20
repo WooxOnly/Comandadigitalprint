@@ -24,6 +24,8 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## Permanent BistroHub requirements
 
+- Portal sign-in errors distinguish infrastructure/quota, network/offline/timeout, credentials, CSRF/cookies, validation and cooldowns in the selected PT/EN/ES language. Never label an HTTP server failure as no internet. Manager password recovery uses configured email delivery, hashed 15-minute single-use fragment tokens, CSRF/origin/rate limits, revision-based revocation and no account enumeration. Apply the additive recovery schema before publication; production order reports use the partial emission-date index to avoid full-history reads for short periods. Never change paid service plans without explicit authorization.
+
 - Latest portrait order adjustment supersedes the former single-row tablet portrait layout: use two rows in portrait, with service icons and Customer side by side first, then table choices/custom table/Continue together when tablet width permits. Keep landscape identification in its existing single row; retain accessible wrapping on narrow phones and large fonts. Use the explicitly approved option 1 service drawings: table with two chairs and a standalone handled paper bag, without visible mode legends. Preserve button dimensions, selected states and original printed service labels.
 - All filter icons in the app and portals use approved option 2: three horizontal adjustment lines with hollow circular handles at different positions. Use the shared SVG geometry and bundled native mask, with theme-aware foreground ink. This supersedes the old funnel symbol; keep filter functionality, positions and accessible names.
 

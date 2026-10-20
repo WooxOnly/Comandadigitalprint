@@ -1,5 +1,14 @@
+import { LOGIN_ERROR_TRANSLATIONS } from './login-errors.mjs';
 // Shared portal catalog: source text in Brazilian Portuguese, then EN and ES.
-export const ADMIN_TRANSLATIONS = Object.fromEntries([
+export const ADMIN_TRANSLATIONS = { ...LOGIN_ERROR_TRANSLATIONS, ...Object.fromEntries([
+  ['Informe seu e-mail.', 'Enter your email address.', 'Introduce tu correo electrónico.'],
+  ['Informe seu usuário ou e-mail.', 'Enter your username or email.', 'Introduce tu usuario o correo electrónico.'],
+  ['Informe sua senha.', 'Enter your password.', 'Introduce tu contraseña.'],
+  ['Informe um e-mail válido.', 'Enter a valid email address.', 'Introduce un correo electrónico válido.'],
+  ['Informe o e-mail do painel do gestor para receber um link de recuperação.', 'Enter your Manager Dashboard email to receive a recovery link.', 'Introduce el correo electrónico del panel del gestor para recibir un enlace de recuperación.'],
+  ['Solicitar novo link', 'Request a new link', 'Solicitar un nuevo enlace'],
+  ['Senha alterada. Entre com seu e-mail e a nova senha.', 'Password changed. Sign in with your email and new password.', 'Contraseña cambiada. Inicia sesión con tu correo electrónico y la nueva contraseña.'],
+
   ["Inativo", "Inactive", "Inactivo"],
   ["As permissões são definidas pelo perfil no cadastro de cada usuário.", "Permissions are defined by the profile in each user’s record.", "Los permisos se definen mediante el perfil en la ficha de cada usuario."],
   ["Também respeita o perfil de acesso do usuário. A impressora deve estar configurada no tablet da cozinha.", "The user’s access profile also applies. The printer must be configured on the kitchen tablet.", "También se respeta el perfil de acceso del usuario. La impresora debe estar configurada en la tableta de cocina."],
@@ -293,4 +302,4 @@ export const ADMIN_TRANSLATIONS = Object.fromEntries([
   ["Grupo salvo.", "Group saved.", "Grupo guardado."],
   ["Vincule até 100 lojas distintas.", "Link up to 100 distinct locations.", "Vincula hasta 100 locales distintos."],
   ['Escolha um grupo.', 'Choose a group.', 'Elige un grupo.'],
-].map(([source, en, es]) => [source, [en, es]]));
+].map(([source, en, es]) => [source, [en, es]])) };

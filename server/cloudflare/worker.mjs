@@ -32,7 +32,7 @@ async function readBody(request) {
 
 export default {
   async fetch(request, env, context) {
-    const manager = await managerResponse(request, env);
+    const manager = await managerResponse(request, env, Date.now(), context);
     if (manager) return manager;
     const cloud = await cloudResponse(request, env);
     if (cloud) return cloud;
