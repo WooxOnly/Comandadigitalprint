@@ -1,3 +1,9 @@
+## Identidade da empresa no portal — 20/10/2026
+
+- Nome da empresa separado do usuário, ao lado da logo já sincronizada pelo tablet. Usuário junto de Sair à direita, com quebra em telas pequenas, sem sobrepor a empresa. Mantida a marca BistroHub na barra geral.
+- Logo servida somente com sessão válida e autorização atual da loja, sem alterar a imagem salva. Visão de várias lojas usa a logo comum; logos diferentes aparecem somente ao selecionar a loja correspondente. Imagem ausente/inválida não deixa ícone quebrado.
+- Testes de autorização, formatos, ausência, divergência entre lojas e nomes próprios PT/EN/ES aprovados. Layout verificado em navegador, claro/escuro, celulares/tablets/PC e ambas as orientações. Entrega web em homologação, sem APK.
+
 ## Top 10 aprovado em duas colunas — 20/10/2026
 
 - Modelo visual aprovado: balão único, legenda em duas colunas com divisória central, posições 1–5 à esquerda e 6–10 à direita; pizza grande e centralizada abaixo. Aplicado a produtos e grupos, com os nomes completos, quantidade e percentual.

@@ -97,3 +97,24 @@ test('known stage actors cannot be rewritten or added retroactively and foreign 
   const response = await write('preparation:' + order.id, { ...first, startedBy: 'admin' }); assert.equal(response.status, 200); const revision = (await response.json()).revision;
   assert.equal((await write('preparation:' + order.id, { ...first, status: 'ready', updatedAt: '2026-10-07T14:02:00Z', readyAt: '2026-10-07T14:02:00Z', startedBy: undefined }, revision)).status, 409);
 });
+
+test('manager logo reuses synchronized raster images and enforces current store grants', async t => {
+  const f = await manager(t, ['seabra-1', 'seabra-2']);
+  const logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=';
+  const save = (store, value) => f.db.prepare('INSERT INTO store_records(store_id,key,data,revision) VALUES(?,?,?,1) ON CONFLICT(store_id,key) DO UPDATE SET data=excluded.data').run(store, 'logo', JSON.stringify(value));
+  assert.equal((await f.report('logo')).status, 204);
+  save('seabra-1', logo);
+  let response = await f.report('logo');
+  assert.equal(response.status, 200); assert.equal(response.headers.get('Content-Type'), 'image/png');
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), Buffer.from(logo.split(',')[1], 'base64'));
+  save('seabra-2', logo); assert.equal((await f.report('logo')).status, 200);
+  save('seabra-2', 'data:image/jpeg;base64,YWJj');
+  assert.equal((await f.report('logo')).status, 204, 'Different store logos do not impersonate the whole company');
+  assert.equal((await f.report('logo', { storeId: 'seabra-1' })).status, 200);
+  save('seabra-1', 'data:image/svg+xml;base64,YWJj'); assert.equal((await f.report('logo', { storeId: 'seabra-1' })).status, 204);
+  save('seabra-1', null); assert.equal((await f.report('logo', { storeId: 'seabra-1' })).status, 204);
+  f.db.prepare('UPDATE manager_clients SET store_ids=?').run('["seabra-1"]');
+  assert.equal((await f.report('logo', { storeId: 'seabra-2' })).status, 403);
+  response = await f.managerResponse(new Request(origin + '/gestor/api/logo'), f.env); assert.equal(response.status, 401);
+});

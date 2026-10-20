@@ -151,7 +151,8 @@ test('all manager screens translate static text and keep scripts valid, CSP inta
       for (const script of content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) { assert.match(script[1], /^ nonce=['"]test-nonce['"]$/); new Script(script[2]); }
       if (language !== 'pt') for (const text of textNodes(content)) if (Object.hasOwn(TRANSLATIONS, text)) assert.ok(TRANSLATIONS[text].includes(text), `Untranslated ${language}: ${text}`);
     }
-    assert.ok(pages[1].includes('&lt;script&gt;Vendas&lt;/script&gt; · Pedidos'));
+    assert.ok(pages[1].includes('data-original-text>&lt;script&gt;Vendas&lt;/script&gt;</span>'));
+    assert.ok(pages[1].includes("class='manager-user' data-original-text>Pedidos</span>"));
     assert.ok(!pages[1].includes('<script>Vendas</script>'));
   }
 });

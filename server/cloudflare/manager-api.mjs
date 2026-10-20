@@ -1,3 +1,4 @@
+import { managerLogo } from './manager-brand.mjs';
 import { flowReport } from './flow-report.mjs';
 import { LOGIN_ERRORS, dailyServiceLimit } from './login-errors.mjs';
 import { requestManagerRecovery, resetManagerPassword } from './manager-recovery.mjs';
@@ -118,9 +119,10 @@ export async function managerResponse(request, env, now = Date.now(), context) {
     if (request.method !== 'GET') return reply({ error: 'Método indisponível.' }, 405);
     const stores = await storesFor(env, session.client);
     if (path === '/gestor/api/stores') return reply({ stores });
-    if (!['/gestor/api/production', '/gestor/api/sales', '/gestor/api/flow'].includes(path)) return reply({ error: 'Recurso indisponível.' }, 404);
+    if (!['/gestor/api/production', '/gestor/api/sales', '/gestor/api/flow', '/gestor/api/logo'].includes(path)) return reply({ error: 'Recurso indisponível.' }, 404);
     const selectedId = url.searchParams.get('storeId');
     if (selectedId && !stores.some(store => store.id === selectedId)) return reply({ error: 'Loja não autorizada.' }, 403);
+    if(path==='/gestor/api/logo')return await managerLogo(env,stores.filter(store=>!selectedId||store.id===selectedId));
     if(path==='/gestor/api/flow'){const enabled=stores.filter(s=>(!selectedId||s.id===selectedId)&&s.modules.preparation);return reply(await flowReport(env,enabled,url.searchParams.get('timeZone')||'UTC',Number(url.searchParams.get('hourDays')||7),Number(url.searchParams.get('weekdayDays')||120),now))}
     const period = reportPeriod(url.searchParams);
     if (path === '/gestor/api/sales') {
