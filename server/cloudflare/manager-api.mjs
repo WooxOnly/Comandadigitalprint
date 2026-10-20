@@ -9,7 +9,7 @@ import { LANGUAGE_COOKIE, LANGUAGE_CHOICE_COOKIE, validLanguage, requestLanguage
 
 function loginPage(nonce, language, message = '', status = 200) {
   const csrf = crypto.randomUUID();
-  return html(managerLoginPage(nonce, csrf, translate(language, message), language), nonce, status, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language });
+  return html(managerLoginPage(nonce, csrf, translate(language, message), language), nonce, status, { 'Set-Cookie': cookie(CSRF_COOKIE, csrf, 3600), 'Content-Language': language, ...(status === 403 && message === 'Sessão de login expirada. Entre novamente.' ? { 'X-Bistro-Login-Retry': 'csrf' } : {}) });
 }
 async function savedLanguage(env, userId) {
   const preference = await env.DB.prepare('SELECT language FROM manager_user_preferences WHERE user_id = ?').bind(userId).first();

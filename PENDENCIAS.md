@@ -1,5 +1,14 @@
 # Pendências e preferências
 
+## Correção complementar do login dos dois portais — 20/10/2026
+
+- Proprietário reportou novamente a expiração em /gestor/login e /admin/login. Conferido que a publicação anterior dos portais foi concluída e contém a primeira correção.
+- Reproduzida uma corrida não coberta: cookie do desafio rotacionado por outra aba DEPOIS da renovação e ANTES do POST; o comportamento anterior navegava para a tela de expiração.
+- Envio agora permanece no formulário via fetch. Somente o 403 explicitamente marcado pelo servidor como CSRF permite renovar e repetir uma vez, sem novo clique; senha incorreta, bloqueio e erro de conexão não geram repetição automática. Após sucesso, navega por GET para /admin ou /gestor.
+- Respostas antigas de /login são normalizadas para a entrada GET e não mantêm o aviso de desafio expirado na tela. Credenciais ficam apenas no formulário/requisição; sem armazenamento, logs ou HTML refletindo senha. Sessão, CSRF e limites continuam validados no servidor.
+- Navegador: 12 fluxos (dois portais × três idiomas × duas orientações), incluindo corrida entre abas, cookies vencidos, falha de conexão, retorno de POST antigo/recarregamento, senha incorreta sem repetição e cooldown aprovados. Lint, TypeScript e diff-check aprovados.
+- Correção somente dos portais da entrega autorizada; não iniciar outro APK.
+
 ## Demandas retomadas em 19/10/2026 — implementação local
 
 - Proprietário autorizou implementar e, depois, “Ok, sobe tudo”, esclarecendo “Portais e apk”. Autorizada publicação deste conjunto em homologação e uma compilação do APK correspondente, sem monitorar a compilação.

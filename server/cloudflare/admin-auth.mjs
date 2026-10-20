@@ -155,7 +155,7 @@ function htmlResponse(content, nonce, status = 200, extra = {}) {
 
 function loginResponse(nonce, message = '', status = 200, language = 'pt', retryAfterSeconds = 0) {
   const csrf = crypto.randomUUID();
-  return htmlResponse(loginPage(nonce, translate(language, message, { count: retryAfterSeconds }), csrf, language, retryAfterSeconds), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf), 'Content-Language': language, ...(retryAfterSeconds ? { 'Retry-After': String(retryAfterSeconds) } : {}) });
+  return htmlResponse(loginPage(nonce, translate(language, message, { count: retryAfterSeconds }), csrf, language, retryAfterSeconds), nonce, status, { 'Set-Cookie': csrfCookieHeader(csrf), 'Content-Language': language, ...(retryAfterSeconds ? { 'Retry-After': String(retryAfterSeconds) } : {}), ...(status === 403 && message === 'A sessão de login expirou. Tente novamente.' ? { 'X-Bistro-Login-Retry': 'csrf' } : {}) });
 }
 
 function recoveryResponse(nonce, language, options = {}, status = 200) {
