@@ -54,7 +54,7 @@ export function demoDataset(inventory,storeId,now=new Date()){
       const items=Array.from({length:1+seed%4},(_,j)=>{const p=menu[(hash(orderId+'item'+j)%100<55?(seed+j*3)%Math.min(menu.length,12):hash(orderId+j)%menu.length)];return {id:id('item',day,n,j),productId:p.id,name:p.name,category:p.category,quantity:1+hash(orderId+'qty'+j)%3,note:j===0&&seed%7===0?'Sem cebola — demonstração':'',unitPriceCents:Math.round(p.price*100)}});
       const order={id:orderId,createdAt:iso(emitted),numberDay:day,dailyNumber:n+1,tabletLabel:'DEMO',serviceMode,plate:serviceMode==='dine_in'?String(1+seed%10):seed%4===0?String(1+seed%10):'',customer:customer.name,items};
       const status=active?['received','preparing','ready'][Math.floor(activeIndex/3)]:'completed';
-      const wait=1+seed%9,prep=5+hash(orderId+'prep')%26,handoff=1+hash(orderId+'handoff')%8;
+      const wait=1+seed%9,handoff=1+hash(orderId+'handoff')%8,target=30+hash(orderId+'prep')%16,prep=target-wait-handoff;
       const started=active?emitted+minute:emitted+wait*minute,ready=active?started+minute:started+prep*minute,completed=ready+handoff*minute;
       const preparation={orderId,status,updatedAt:iso(emitted)};
       if(status!=='received')Object.assign(preparation,{startedAt:iso(started),startedBy:'demo.cozinha.'+(seed%4+1),updatedAt:iso(started)});

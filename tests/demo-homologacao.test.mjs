@@ -13,7 +13,7 @@ test('120-day demo preserves existing data and sync, is repeatable, and reconcil
  assert.ok(data.days.every(d=>d.orders>=30&&d.orders<=100));assert.ok(data.summary.orders>6000&&data.summary.orders<10000);
  assert.ok(data.preparations.every(p=>p.updatedAt<='2026-10-20T11:50:00.000Z'));
  const durations=data.preparations.filter(p=>p.completedAt).map(p=>(Date.parse(p.completedAt)-Date.parse(data.orders.find(o=>o.id===p.orderId).createdAt))/60000);
- assert.ok(Math.max(...durations)-Math.min(...durations)>20);
+ assert.ok(Math.min(...durations)>=30&&Math.max(...durations)<=45&&Math.max(...durations)-Math.min(...durations)>=14);
  const db=new DatabaseSync(':memory:');
  try{
   for(const file of ['schema.sql','cloud-schema.sql','diagnostics-schema.sql','store-schema.sql'])db.exec(readFileSync('server/cloudflare/'+file,'utf8'));

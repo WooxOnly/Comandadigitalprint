@@ -8,6 +8,17 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  'Média de pedidos por hora':['Average orders by hour','Promedio de pedidos por hora'],
+  'Média de pedidos por dia da semana':['Average orders by weekday','Promedio de pedidos por día de la semana'],
+  'Dias de análise':['Analysis days','Días de análisis'],
+  'Média de pedidos':['Average orders','Promedio de pedidos'],
+  'Total de pedidos':['Total orders','Total de pedidos'],
+  'Dias analisados':['Days analyzed','Días analizados'],
+  'Informe uma janela entre 7 e 366 dias.':['Enter a window between 7 and 366 days.','Introduce un intervalo de entre 7 y 366 días.'],
+  'Base: últimos {days} dias completos ({from} a {to}). Independente do período geral.':['Based on the last {days} complete days ({from} to {to}). Independent of the global period.','Base: últimos {days} días completos ({from} a {to}). Independiente del período general.'],
+  'Total de cada horário dividido pelos dias analisados, incluindo dias sem pedidos.':['The total for each hour divided by the days analyzed, including days without orders.','Total de cada horario dividido entre los días analizados, incluidos los días sin pedidos.'],
+  'Total de cada dia da semana dividido pela quantidade de ocorrências desse dia, incluindo dias sem pedidos.':['Each weekday total divided by the number of occurrences of that weekday, including days without orders.','Total de cada día de la semana dividido entre la cantidad de veces que aparece ese día, incluidos los días sin pedidos.'],
+
   'Selecione uma fatia para ver a quantidade e o percentual.': ['Select a slice to see its quantity and percentage.', 'Selecciona un segmento para ver la cantidad y el porcentaje.'],
   'Exibindo {shown} de {count} produtos. Percentuais calculados entre os exibidos.': ['Showing {shown} of {count} items. Percentages are calculated among the displayed items.', 'Se muestran {shown} de {count} productos. Los porcentajes se calculan entre los mostrados.'],
   'Exibindo {shown} de {count} categorias. Percentuais calculados entre as exibidas.': ['Showing {shown} of {count} categories. Percentages are calculated among the displayed categories.', 'Se muestran {shown} de {count} categorías. Los porcentajes se calculan entre las mostradas.'],

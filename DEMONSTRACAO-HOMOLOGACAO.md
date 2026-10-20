@@ -4,7 +4,7 @@ Carga solicitada pelo proprietário em 20/10/2026 para apresentação do app e p
 
 - 120 dias inclusivos, de 23/06/2026 a 20/10/2026, calendário America/New_York.
 - 7.659 pedidos sintéticos, de 30 a 100 por dia, usando nomes, categorias e preços do catálogo atual. Os oito pedidos anteriores permanecem intactos.
-- 7.650 concluídos, com TMA entre 7 e 47 minutos e média próxima de 27 minutos; quatro identificadores fictícios de operadores de cozinha, sem criar contas ou permissões.
+- 7.650 concluídos, com TMA entre 30 e 45 minutos e média próxima de 37,5 minutos (ajuste de apresentação autorizado em 20/10; originais guardados em demo_tma_backup); quatro identificadores fictícios de operadores de cozinha, sem criar contas ou permissões.
 - Nove pedidos recentes na fila: três recebidos, três em preparo e três prontos. Os tempos continuam correndo após a carga, como em qualquer pedido real.
 - 240 encomendas: histórico concluído e duas futuras para demonstração. O fluxo operacional futuro de encomendas/cozinha/caixa continua adiado.
 - Caixa e Cadastro de Clientes estavam desativados nessa loja. A carga respeita esses módulos, sem ativá-los, modificar configurações ou cadastrar vendas/clientes escondidos. O gerador também suporta lojas com esses módulos já ativos, usando os cálculos reais de preço, impostos, pagamentos e relatórios.
