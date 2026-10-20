@@ -1,0 +1,50 @@
+name: Dados demonstrativos de homologacao
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [inspect, load]
+        default: inspect
+      store_id:
+        type: string
+        default: seabra-1
+jobs:
+  demo:
+    if: github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-demo-data
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+      DEMO_STORE_ID: ${{ inputs.store_id }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Inspecionar somente homologacao
+        run: |
+          mkdir -p demo-output
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT s.id,s.name,s.active,COALESCE(m.cash,0) cash,COALESCE(m.preorders,0) preorders,COALESCE(c.enabled,0) customers,COALESCE(p.enabled,0) preparation,(SELECT COUNT(*) FROM store_records r WHERE r.store_id=s.id AND r.key LIKE 'order:%') orders_count FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id LEFT JOIN store_customer_modules c ON c.store_id=s.id LEFT JOIN store_preparation_modules p ON p.store_id=s.id; SELECT store_id,data FROM store_records WHERE key='menu'; SELECT store_id,data FROM store_cash_settings;" --json > demo-output/inventory.json
+      - name: Gerar, validar e carregar dados
+        if: inputs.mode == 'load'
+        run: |
+          npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > demo-output/restore-point.json
+          node scripts/seed-demo-homologacao.mjs demo-output/inventory.json "$DEMO_STORE_ID" demo-output
+          for sql_file in demo-output/batch-*.sql; do
+            npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file "$sql_file" --yes > /dev/null
+          done
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file demo-output/verify.sql --json > demo-output/verification.json
+          node scripts/seed-demo-homologacao.mjs --verify demo-output
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: homologacao-demo-${{ inputs.mode }}
+          path: demo-output/
+          retention-days: 7
