@@ -1,3 +1,7 @@
+## Dados para apresentação — 20/10/2026
+
+- Proprietário autorizou carregar 120 dias na loja atual de homologação. Gerador e workflow aditivos preparados: 7.659 pedidos, 240 encomendas, TMA variável e quatro operadores fictícios. Preservar registros existentes e módulos desativados. Roteiro em DEMONSTRACAO-HOMOLOGACAO.md; sem novo APK.
+
 ## Ajuste de ordem dos horários — 20/10/2026
 
 - Ordem solicitada pelo proprietário: 1 AM até 12 AM, depois 1 PM até 12 PM, no gráfico de pedidos por hora e sua tabela. Mover os dados junto aos horários; manter os totais, datas e agrupamento local. Esta preferência substitui a sequência cronológica anterior. Entrega somente web, sem novo APK.

@@ -1,0 +1,18 @@
+# Base demonstrativa — homologação
+
+Carga solicitada pelo proprietário em 20/10/2026 para apresentação do app e portal. Destino exclusivo: Worker/D1 `seabra-cardapio-homologacao`, loja `seabra-1` (Seabra Hunters Creek). Nunca executar em produção.
+
+- 120 dias inclusivos, de 23/06/2026 a 20/10/2026, calendário America/New_York.
+- 7.659 pedidos sintéticos, de 30 a 100 por dia, usando nomes, categorias e preços do catálogo atual. Os oito pedidos anteriores permanecem intactos.
+- 7.650 concluídos, com TMA entre 7 e 47 minutos e média próxima de 27 minutos; quatro identificadores fictícios de operadores de cozinha, sem criar contas ou permissões.
+- Nove pedidos recentes na fila: três recebidos, três em preparo e três prontos. Os tempos continuam correndo após a carga, como em qualquer pedido real.
+- 240 encomendas: histórico concluído e duas futuras para demonstração. O fluxo operacional futuro de encomendas/cozinha/caixa continua adiado.
+- Caixa e Cadastro de Clientes estavam desativados nessa loja. A carga respeita esses módulos, sem ativá-los, modificar configurações ou cadastrar vendas/clientes escondidos. O gerador também suporta lojas com esses módulos já ativos, usando os cálculos reais de preço, impostos, pagamentos e relatórios.
+
+Todos os identificadores sintéticos usam o prefixo `demo120-v1-`; clientes nos pedidos têm nomes iniciados por Demo, contatos de encomendas usam `example.invalid` e números de pedido usam o tablet DEMO. Não há mensagens, impressão ou cobrança automática.
+
+O workflow manual `demo-homologacao.yml`, modo inspect, consulta somente catálogo, módulos e contagens. O modo load registra antes um ponto de restauração D1, gera SQL validado, adiciona eventos de sincronização com a sequência real e carrega lotes. IDs/mutações são determinísticos: repetir a mesma carga no mesmo dia não duplica pedidos nem sobrescreve registros existentes. Não usar este prefixo para outro intervalo/dia; preparar outro lote explicitamente se a apresentação exigir atualização futura.
+
+O resultado é conferido no D1 por total, 120 dias, limites diários, etapas, tempos e operadores. Dados entram pelo mecanismo de eventos, para o APK existente recebê-los na sincronização normal. O volume pode exigir alguns minutos para a primeira sincronização no tablet; o portal lê a base diretamente. Nenhum novo APK é necessário.
+
+Validação automatizada: teste SQLite com todos os módulos, importação repetida sem duplicação, preservação de registros anteriores, totais de produção e finanças, fechamentos reconciliados, módulos inativos e rejeição de loja inválida. Dados de demonstração não constituem validação física de impressão/tablet.
