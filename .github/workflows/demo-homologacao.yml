@@ -7,7 +7,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [inspect, load]
+        options: [inspect, load, verify]
         default: inspect
       store_id:
         type: string
@@ -27,6 +27,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WRANGLER_SEND_METRICS: 'false'
       DEMO_STORE_ID: ${{ inputs.store_id }}
+      DEMO_MODE: ${{ inputs.mode || 'inspect' }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -44,14 +45,16 @@ jobs:
           console.log('DEMO_INVENTORY='+JSON.stringify(rows.map((result,i)=>({results:i<2?result.results:result.results.map(row=>({store_id:row.store_id,data:JSON.stringify({tax:JSON.parse(row.data).tax})}))}))));
           JS
       - name: Gerar, validar e carregar dados
-        if: inputs.mode == 'load'
+        if: inputs.mode == 'load' || inputs.mode == 'verify'
         run: |
           npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > demo-output/restore-point.json
           node scripts/seed-demo-homologacao.mjs demo-output/inventory.json "$DEMO_STORE_ID" demo-output
+          if [ "$DEMO_MODE" = "load" ]; then
           for sql_file in demo-output/batch-*.sql; do
             npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file "$sql_file" --yes > /dev/null
           done
-          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file demo-output/verify.sql --json > demo-output/verification.json
+          fi
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "$(cat demo-output/verify.sql)" --json > demo-output/verification.json
           node scripts/seed-demo-homologacao.mjs --verify demo-output
       - uses: actions/upload-artifact@v7.0.2
         if: always()
