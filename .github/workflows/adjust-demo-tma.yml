@@ -1,0 +1,50 @@
+name: Ajustar TMA demonstrativo em homologacao
+on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/adjust-demo-tma.yml']
+  workflow_dispatch:
+    inputs:
+      apply:
+        type: boolean
+        default: false
+jobs:
+  adjust:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-demo-data
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Conferir tempos existentes sem dados pessoais
+        run: |
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT COUNT(*) samples,ROUND(AVG((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) average_minutes,ROUND(MAX((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) max_minutes FROM store_records o JOIN store_records p ON p.store_id=o.store_id AND p.key='preparation:'||substr(o.key,7) WHERE o.store_id='seabra-1' AND o.key GLOB 'order:*' AND json_extract(p.data,'$.status')='completed';" --json
+      - name: Ajustar somente dados de apresentacao autorizados
+        if: inputs.apply
+        run: |
+          mkdir -p tma-output
+          npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > tma-output/restore-point.json
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT p.key,p.data,p.revision,json_extract(o.data,'$.createdAt') created_at FROM store_records o JOIN store_records p ON p.store_id=o.store_id AND p.key='preparation:'||substr(o.key,7) WHERE o.store_id='seabra-1' AND o.key GLOB 'order:*' AND json_extract(p.data,'$.status')='completed' AND julianday(json_extract(o.data,'$.createdAt'))>=julianday('2026-06-23T04:00:00Z') AND julianday(json_extract(o.data,'$.createdAt'))<julianday('2026-10-21T04:00:00Z');" --json > tma-output/before.json
+          node scripts/adjust-demo-tma.mjs tma-output/before.json tma-output
+          for sql_file in tma-output/tma-*.sql; do
+            npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file "$sql_file" --yes > /dev/null
+          done
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT COUNT(*) samples,ROUND(AVG((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) average_minutes,ROUND(MIN((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) min_minutes,ROUND(MAX((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) max_minutes FROM store_records o JOIN store_records p ON p.store_id=o.store_id AND p.key='preparation:'||substr(o.key,7) WHERE o.store_id='seabra-1' AND o.key GLOB 'order:*' AND json_extract(p.data,'$.status')='completed';" --json > tma-output/after.json
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';const result=JSON.parse(fs.readFileSync('tma-output/after.json'))[0].results[0];console.log('DEMO_TMA_RESULT='+JSON.stringify(result));if(result.average_minutes<30||result.average_minutes>45)throw Error('Demo TMA outside requested interval');
+          JS
+      - uses: actions/upload-artifact@v7.0.2
+        if: always() && inputs.apply
+        with:
+          name: homologacao-demo-tma-backup
+          path: tma-output/
+          retention-days: 7
