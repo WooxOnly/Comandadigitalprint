@@ -1,5 +1,8 @@
 name: Dados demonstrativos de homologacao
 on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/demo-homologacao.yml']
   workflow_dispatch:
     inputs:
       mode:
