@@ -7,7 +7,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [inspect, load, verify]
+        options: [inspect, load, verify, diagnose-login]
         default: inspect
       store_id:
         type: string
@@ -44,6 +44,10 @@ jobs:
           const rows=JSON.parse(fs.readFileSync('demo-output/inventory.json'));
           console.log('DEMO_INVENTORY='+JSON.stringify(rows.map((result,i)=>({results:i!==2?result.results:result.results.map(row=>({store_id:row.store_id,data:JSON.stringify({tax:JSON.parse(row.data).tax})}))}))));
           JS
+      - name: Conferir gravacao de controle de acesso
+        if: inputs.mode == 'diagnose-login'
+        run: |
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "INSERT INTO manager_login_limits(key,attempts,reset_at) VALUES('bistro-login-healthcheck',0,0) ON CONFLICT(key) DO UPDATE SET attempts=0; DELETE FROM manager_login_limits WHERE key='bistro-login-healthcheck';" --json
       - name: Gerar, validar e carregar dados
         if: inputs.mode == 'load' || inputs.mode == 'verify'
         run: |
