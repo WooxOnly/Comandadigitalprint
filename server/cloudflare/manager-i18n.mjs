@@ -22,6 +22,8 @@ export const TRANSLATIONS = {
   'Selecione uma fatia para ver a quantidade e o percentual.': ['Select a slice to see its quantity and percentage.', 'Selecciona un segmento para ver la cantidad y el porcentaje.'],
   'Exibindo {shown} de {count} produtos. Percentuais calculados entre os exibidos.': ['Showing {shown} of {count} items. Percentages are calculated among the displayed items.', 'Se muestran {shown} de {count} productos. Los porcentajes se calculan entre los mostrados.'],
   'Exibindo {shown} de {count} categorias. Percentuais calculados entre as exibidas.': ['Showing {shown} of {count} categories. Percentages are calculated among the displayed categories.', 'Se muestran {shown} de {count} categorías. Los porcentajes se calculan entre las mostradas.'],
+  'Role na horizontal para ver os 12 meses.': ['Scroll horizontally to see all 12 months.', 'Desplázate horizontalmente para ver los 12 meses.'],
+  'Ano de {year}: janeiro a dezembro. Independente do período geral.': ['Year {year}: January through December. Independent of the global period.', 'Año {year}: enero a diciembre. Independiente del período general.'],
   'Pedidos por horário': ['Orders by hour', 'Pedidos por hora'],
   'Pedidos somados por horário dentro da janela, sem divisão pelo número de dias.': ['Orders added together for each hour in the window, without dividing by the number of days.', 'Pedidos sumados por hora dentro del intervalo, sin dividir por el número de días.'],
   'Informe uma janela entre 1 e 366 dias.': ['Enter a window between 1 and 366 days.', 'Introduce un intervalo de entre 1 y 366 días.'],

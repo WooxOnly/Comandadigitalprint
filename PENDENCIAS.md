@@ -1,3 +1,8 @@
+## Pedidos por mês: ano completo independente — 20/10/2026
+
+- Decisão do proprietário: gráfico de pedidos por mês ignora o período geral e mostra janeiro a dezembro do ano atual no fuso local, inclusive meses zerados e futuros. Ano/base independente informados no cartão; totais da loja e suas permissões preservados.
+- Mês atual inclui pedidos já emitidos até agora. Gráfico e detalhes compartilham doze totais anuais; filtros globais continuam valendo nos relatórios que dependem deles. Reutilizada a consulta indexada de fluxo para evitar uma leitura separada do histórico.
+
 ## Pedidos por horário: total acumulado e padrão de sete dias — 20/10/2026
 
 - Decisão mais recente substitui a média horária: somar os pedidos de cada horário, sem dividir pelos dias. Padrão de sete dias completos, janela configurável entre 1 e 366 dias. Título Pedidos por horário e detalhes com hora/total.
