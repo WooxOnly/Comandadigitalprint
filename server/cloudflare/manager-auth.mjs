@@ -1,3 +1,4 @@
+import { dailyServiceLimit } from './login-errors.mjs';
 const encode = value => new TextEncoder().encode(value);
 export const hex = value => Array.from(new Uint8Array(value), byte => byte.toString(16).padStart(2, '0')).join('');
 const unhex = value => Uint8Array.from(value.match(/../g) || [], part => parseInt(part, 16));
@@ -45,7 +46,7 @@ export async function managerSession(request, env, now) {
     const client = await env.DB.prepare('SELECT id, name, store_ids, revision FROM manager_clients WHERE id = ? AND active = 1').bind(user.client_id).first();
     if (!client || client.revision !== data.clientRevision) return null;
     return { user, client };
-  } catch { return null; }
+  } catch(error) { if(dailyServiceLimit(error))throw error;return null; }
 }
 // Bound actual bytes, including chunked requests without Content-Length.
 export async function readBody(request, max = 16384) {

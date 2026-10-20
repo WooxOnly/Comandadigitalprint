@@ -2,7 +2,7 @@
 
 Em 20/10/2026, a Cloudflare confirmou erro 7500: cota diária de linhas lidas do D1 gratuito excedida. O portal respondia 503 JSON e a tela confundia isso com falta de conexão. O limite é da conta, renova à meia-noite UTC e não pode ser removido por código. Alterar o plano tem custo e depende do proprietário; nenhuma alteração de cobrança foi feita.
 
-O login dos dois portais diferencia indisponibilidade, limite diário do serviço, conexão interrompida, modo offline, timeout, sessão/cookies, credenciais, formulário/tamanho inválido e limite de tentativas. Todas as mensagens estão em PT-BR/EN/ES, conforme o idioma selecionado. HTTP 5xx e JSON de erro não viram falha de internet. O cliente não exibe detalhes internos. Os campos permanecem preenchidos; somente a rejeição CSRF explicitamente marcada permite uma nova tentativa automática. Cooldowns seguem Retry-After, sem agendar credenciais; timeout de 20 segundos libera o botão.
+O login dos dois portais diferencia indisponibilidade, limite diário do serviço, conexão interrompida, modo offline, timeout, sessão/cookies, credenciais, formulário/tamanho inválido e limite de tentativas. Todas as mensagens estão em PT-BR/EN/ES, conforme o idioma selecionado. HTTP 5xx e JSON de erro não viram falha de internet. O cliente não exibe detalhes internos. Uma falha de cota ao conferir uma sessão de gestor já autenticada retorna 503, sem fingir expiração da sessão com 401. Os campos permanecem preenchidos; somente a rejeição CSRF explicitamente marcada permite uma nova tentativa automática. Cooldowns seguem Retry-After, sem agendar credenciais; timeout de 20 segundos libera o botão.
 
 O painel do gestor passa a ter **Esqueceu a senha?**, `/gestor/recover` e `/gestor/reset-password`:
 
