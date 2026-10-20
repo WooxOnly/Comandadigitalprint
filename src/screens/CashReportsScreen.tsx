@@ -1,3 +1,4 @@
+import { FilterIcon } from '../ui/FilterIcon';
 import { useAppRole } from '../ui/useAppRole';
 import { useRef, useState } from 'react';
 import { Text, View } from '../ui/ThemedNative';
@@ -15,6 +16,7 @@ import { logError } from '../services/diagnostics';
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
 export default function CashReportsScreen() {
   const { modules } = useBusiness(), { t, locale } = useLanguage();
+  const [showFilters, setShowFilters] = useState(true);
   const [from, setFrom] = useState(today), [through, setThrough] = useState(today);
   const [report, setReport] = useState<CashReport | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -36,9 +38,12 @@ export default function CashReportsScreen() {
   const current = report && loadedFilters === signature ? report : null;
   return <ScreenFrame><View style={{ gap: 12 }}>
     <Text style={styles.settingsIntro}>{t('Relatório da empresa com todos os tablets. As datas seguem o fuso horário deste aparelho.')}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><Text style={styles.cardTitle}>{t('Filtros')}</Text><Pressable accessibilityRole="button" accessibilityLabel={t('Filtros')} accessibilityState={{ expanded: showFilters }} aria-expanded={showFilters} onPress={() => setShowFilters(!showFilters)} style={[styles.addButton, { width: 44, paddingHorizontal: 0, alignItems: 'center' }]}><FilterIcon /></Pressable></View>
+    {showFilters && <View style={{ gap: 12 }}>
     <Text style={styles.fieldLabel}>{t('Data inicial (AAAA-MM-DD)')}</Text><TextInput value={from} onChangeText={setFrom} editable={!busy} maxLength={10} style={styles.input} accessibilityLabel={t('Data inicial (AAAA-MM-DD)')} />
     <Text style={styles.fieldLabel}>{t('Data final (AAAA-MM-DD)')}</Text><TextInput value={through} onChangeText={setThrough} editable={!busy} maxLength={10} style={styles.input} accessibilityLabel={t('Data final (AAAA-MM-DD)')} />
     <Pressable accessibilityRole="button" disabled={busy} style={styles.sendButton} onPress={() => void run(async () => { const period = reportPeriod(from, through); const value = await cloud.cashReport(period.start, period.end, period.timeZone); setReport(value); setLoadedFilters(signature); })}><Text style={styles.sendButtonText}>{t(busy ? 'Carregando…' : 'Consultar relatório')}</Text></Pressable>
+    </View>}
     {!!error && <Text style={styles.errorText} accessibilityLiveRegion="polite">{t(error)}</Text>}
     {current && <>
       <Text style={styles.helperText}>{current.storeName} · {current.timeZone} · {new Date(current.generatedAt).toLocaleString(locale)}</Text>

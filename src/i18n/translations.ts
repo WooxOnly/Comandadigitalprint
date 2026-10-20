@@ -1,6 +1,7 @@
 export type Language = 'pt' | 'en' | 'es';
 export const LOCALES: Record<Language, string> = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
 export const translations: Record<string, readonly [string, string]> = {
+  "Filtros": ["Filters", "Filtros"],
   "Não foi possível salvar as regras do pedido. Tente novamente.": ["Could not save order rules. Try again.", "No se pudieron guardar las reglas del pedido. Inténtalo de nuevo."],
   "Escolha uma mesa antes de avançar.": ["Select a table before continuing.", "Selecciona una mesa antes de continuar."],
   "Informe uma mesa com até 3 dígitos.": ["Enter a table number with up to 3 digits.", "Introduce un número de mesa de hasta 3 dígitos."],

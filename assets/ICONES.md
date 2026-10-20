@@ -24,3 +24,10 @@ Edição da primeira imagem, preservando o desenho do gorro:
 ```text
 Use case: precise-object-edit. Edit the attached chef hat icon into the complete launcher icon for the same kitchen order printing app. Preserve the exact chef toque silhouette, cream coloring, terracotta band, dark contour, proportions and folds of this reference. Place it on a perfectly solid opaque deep charcoal #202322 background covering the WHOLE square canvas edge to edge. Enlarge the hat uniformly to about 70% of the canvas width and center it optically. Production app icon, square PNG, ideally 1024x1024 pixels. No transparent margins, no rounded corners baked into the square, no enclosing frame, no text, no initials, no extra objects, no mockup. Only the final square icon asset.
 ```
+
+
+## Ícones aprovados de atendimento e filtros — 20/10/2026
+
+- `service/dine-in.svg` e `service/takeout.svg`: opção 1, mesa com duas cadeiras e sacola com alça. PNGs transparentes correspondentes a 288 × 288, exibidos a 28 × 28, sem rede e com a cor aplicada por `Image.tintColor`. Botões e nomes de acessibilidade continuam em OrderIdentification.
+- `ui/filter-adjustments.svg` / `.png`: opção 2, três linhas de ajustes com círculos vazados. A origem comum dos portais está em `shared/filter-icon.mjs`; o SVG branco foi exportado em PNG transparente para `FilterIcon`. Os controles seguem com pelo menos 44px de toque.
+- As máscaras são brancas para receber a tinta do tema (verde no claro, pêssego no escuro, branco quando selecionado). Não aplicar conversão de cor de superfície aos traços. Os SVGs são fontes de desenho; o app usa os PNGs locais para compatibilidade Android sem bibliotecas extras.

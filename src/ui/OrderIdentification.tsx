@@ -13,19 +13,20 @@ type Props = {
 };
 export function OrderIdentification(props: Props) {
   const { t } = useLanguage();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const portrait = windowHeight >= windowWidth;
   const [width, setWidth] = useState(0);
-  const single = width >= 700 && fontScale < 1.4;
+  const single = !portrait && width >= 700 && fontScale < 1.4;
   const compactRow = single && width < 850;
-  const split = width >= 680 && fontScale < 1.4;
+  const split = !single && width >= 300 && fontScale < 1.4;
   const inlineTables = width >= 460 && fontScale < 1.4;
   const plateWidth = compactRow ? 24 : single ? Math.max(22, Math.min(32, Math.floor((width - 630) / 10))) : inlineTables ? Math.min(44, Math.floor((width - 242) / 10)) : 44;
   const required = props.serviceMode === 'dine_in' || props.requireTableForTakeout;
-  const service = <View testID="order-service-group" style={single ? local.service : [local.field, { width: split ? (width - 10) / 2 : '100%' }]}>
+  const service = <View testID="order-service-group" style={single ? local.service : [local.field, split ? { width: 92, flexShrink: 0 } : { width: '100%' }]}>
     {!single && <Text style={local.label}>{t('Atendimento')}</Text>}
     <View testID="order-service-options" style={local.serviceRow}>{(['dine_in', 'takeout'] as const).map(mode => <Pressable key={mode} disabled={props.disabled} accessibilityRole="radio" accessibilityLabel={t(mode === 'dine_in' ? 'Para comer aqui' : 'Para levar')} accessibilityState={{ checked: props.serviceMode === mode, disabled: props.disabled }} aria-checked={props.serviceMode === mode} onPress={() => props.onService(mode)} style={[local.iconButton, props.serviceMode === mode && styles.selectedConnection]}><ServiceModeIcon mode={mode} selected={props.serviceMode === mode} /></Pressable>)}</View>
   </View>;
-  const customer = <View testID="order-customer-group" style={single ? [local.customer, compactRow && local.customerCompact] : [local.field, { width: split ? (width - 10) / 2 : '100%' }]}>
+  const customer = <View testID="order-customer-group" style={single ? [local.customer, compactRow && local.customerCompact] : [local.field, split ? { flex: 1, minWidth: 120 } : { width: '100%' }]}>
     {!single && <Text style={local.label}>{t('Cliente')}{props.requireCustomer ? ' *' : ''}</Text>}
     <TextInput editable={!props.disabled} value={props.customer} onChangeText={text => props.onCustomer(text.slice(0, 20))} maxLength={20} accessibilityLabel={t(props.requireCustomer ? 'Nome do cliente, obrigatório' : 'Nome do cliente, opcional')} placeholder={t('Nome do cliente') + (props.requireCustomer ? ' *' : '')} style={[styles.input, local.input]} />
   </View>;
@@ -35,12 +36,12 @@ export function OrderIdentification(props: Props) {
   </View>;
   const custom = <View testID="order-custom-table-group" style={single ? compactRow ? local.customCompact : local.customInline : [local.custom, !inlineTables && { width: '100%', flexBasis: 'auto' }]}>
     <Text style={[local.label, single && { width: compactRow ? 64 : 72, fontSize: 11, lineHeight: 14 }]}>{t('Outra mesa')}</Text>
-    <TextInput editable={!props.disabled} value={props.customPlate} onChangeText={text => props.onCustom(text.replace(/\D/g, '').slice(0, 3))} maxLength={3} keyboardType="number-pad" accessibilityLabel={t('Outro número de mesa')} placeholder={single ? '' : t('Número')} style={[styles.input, local.input, single && { width: compactRow ? 64 : 52, paddingHorizontal: 8 }]} />
+    <TextInput editable={!props.disabled} value={props.customPlate} onChangeText={text => props.onCustom(text.replace(/\D/g, '').slice(0, 3))} maxLength={3} keyboardType="number-pad" accessibilityLabel={t('Outro número de mesa')} placeholder={single || inlineTables ? '' : t('Número')} style={[styles.input, local.input, single && { width: compactRow ? 64 : 52, paddingHorizontal: 8 }]} />
   </View>;
   const advance = <Pressable testID="confirm-order-identification" disabled={props.disabled} accessibilityRole="button" onPress={props.onConfirm} style={[local.advance, props.disabled && styles.pressed]}><Text style={local.advanceText}>{t('Avançar')}</Text></Pressable>;
   return <View testID="order-identification" style={[local.panel, single && { paddingVertical: 6, gap: 4 }]}>
     <Text style={local.title}>{t('Dados do pedido')}</Text>
-    <View testID={single ? 'order-identity-single-row' : undefined} style={single ? [local.row, compactRow && local.rowCompact] : local.fields} onLayout={event => setWidth(event.nativeEvent.layout.width)}>{service}{customer}{single && <>{tables}{custom}{advance}</>}</View>
+    <View testID={single ? 'order-identity-single-row' : 'order-service-customer-row'} style={single ? [local.row, compactRow && local.rowCompact] : [local.fields, split && { flexWrap: 'nowrap', alignItems: 'flex-end' }]} onLayout={event => setWidth(event.nativeEvent.layout.width)}>{service}{customer}{single && <>{tables}{custom}{advance}</>}</View>
     {!single && <View testID="order-table-row" style={[local.footer, !inlineTables && { flexWrap: 'wrap' }]}>{tables}{custom}{advance}</View>}
     {!!props.error && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(props.error)}</Text>}
   </View>;

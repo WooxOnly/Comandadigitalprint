@@ -1,3 +1,4 @@
+import { FilterIcon } from '../ui/FilterIcon';
 import { cloud } from '../services/cloudStorage';
 import { PasswordField } from '../ui/AccessGate';
 import { ScheduledDateFields } from '../ui/ScheduledDateFields';
@@ -16,6 +17,7 @@ import { formatMoney, parseMoney, type Delivery, type BusinessItem, type Preorde
 
 const statusLabels = { scheduled: 'Agendada', preparing: 'Em preparo', ready: 'Pronta', completed: 'Concluída', cancelled: 'Cancelada' };
 export default function PreordersScreen() {
+  const [showFilters, setShowFilters] = useState(true);
   const { modules, preorders, customers, busy, savePreorder, setPreorderStatus, cancelPreorder } = useBusiness();
   const { t } = useLanguage();
   const [agendaMode, setAgendaMode] = useState<'all' | 'day' | 'week'>('all'), [agendaDate, setAgendaDate] = useState(() => localDayText(new Date())), [now, setNow] = useState(Date.now);
@@ -61,10 +63,12 @@ export default function PreordersScreen() {
   }
   return <ScreenFrame><View style={{ gap: 12 }}>
     <Text style={styles.settingsIntro}>{t('Agende retiradas e entregas sem alterar as comandas do dia.')}</Text>
-    <View style={styles.panel}><Text style={styles.panelTitle}>{t('Agenda de encomendas')}</Text><Text style={overdue ? styles.errorText : styles.helperText}>{t('Atrasadas')}: {overdue} · {t('Próxima hora')}: {upcoming}</Text>
+    <View style={styles.panel}><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><Text style={[styles.panelTitle, { flex: 1, minWidth: 0 }]}>{t('Agenda de encomendas')}</Text><Pressable accessibilityRole="button" accessibilityLabel={t('Filtros')} accessibilityState={{ expanded: showFilters }} aria-expanded={showFilters} onPress={() => setShowFilters(!showFilters)} style={[styles.addButton, { width: 44, paddingHorizontal: 0, alignItems: 'center' }]}><FilterIcon /></Pressable></View><Text style={overdue ? styles.errorText : styles.helperText}>{t('Atrasadas')}: {overdue} · {t('Próxima hora')}: {upcoming}</Text>
+      {showFilters && <View>
       <View style={styles.quickNotes}>{(['all', 'day', 'week'] as const).map(mode => <Pressable key={mode} accessibilityRole="button" accessibilityState={{ selected: mode === agendaMode }} style={[styles.noteChip, mode === agendaMode && styles.selectedCategory]} onPress={() => setAgendaMode(mode)}><Text style={[styles.noteChipText, mode === agendaMode && styles.selectedCategoryText]}>{t(mode === 'all' ? 'Todas' : mode === 'day' ? 'Dia' : 'Semana')}</Text></Pressable>)}</View>
       {agendaMode !== 'all' && <><ScheduledDateFields filter date={datePartsFromISO(agendaDate)} onDate={value => setAgendaDate(datePartsISO(value) || `${value.year}-${value.month}-${value.day}`)} />
       <View style={styles.quickNotes}>{[-1, 1].map(direction => <Pressable key={direction} disabled={!period} style={styles.noteChip} onPress={() => setAgendaDate(shiftAgenda(agendaDate, direction * (agendaMode === 'week' ? 7 : 1)))}><Text style={styles.noteChipText}>{t(direction < 0 ? 'Anterior' : 'Próximo')}</Text></Pressable>)}</View>{!period && <Text style={styles.errorText}>{t('Confira a data da agenda.')}</Text>}</>}
+      </View>}
     </View>
     <Pressable accessibilityRole="button" disabled={busy} style={styles.sendButton} onPress={() => setCreating(!creating)}><Text style={styles.sendButtonText}>{t(creating ? 'Fechar cadastro' : 'Nova encomenda')}</Text></Pressable>
     {creating && <View style={styles.panel}>

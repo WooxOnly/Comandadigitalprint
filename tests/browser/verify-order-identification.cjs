@@ -9,7 +9,7 @@ const { loadTs } = require('../helpers/load-ts.cjs'), { translate } = loadTs('sr
   const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] }); const errors = []; let cases = 0;
   const sizes = [[1552,900], [1280,800], [960,600], [800,1280], [768,1024], [530,900], [390,844], [320,568]];
   try {
-    for (const language of ['pt','en','es']) for (const theme of ['light','dark']) {
+    for (const language of (process.env.BISTRO_LANGUAGES||'pt,en,es').split(',')) for (const theme of (process.env.BISTRO_THEMES||'light,dark').split(',')) {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: theme }); page.on('pageerror', error => errors.push(error.message));
       const t = text => translate(text, language);
       await page.goto('http://127.0.0.1:' + server.address().port + '/tablet-preview.html?language=' + language + '#/order');
@@ -36,7 +36,8 @@ const { loadTs } = require('../helpers/load-ts.cjs'), { translate } = loadTs('sr
         assert.equal(await page.getByTestId('confirm-order-identification').textContent(),t('Avançar'));
         assert.equal(await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).inputValue(),'Ana Paula Fernandes');
         assert.equal(await page.getByRole('textbox',{name:t('Outro número de mesa'),exact:true}).inputValue(),'18');
-        if(width>=768){const r=await page.getByTestId('order-identity-single-row').boundingBox();const input=await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).boundingBox();const next=await page.getByTestId('confirm-order-identification').boundingBox();assert.ok(Math.abs(input.y+input.height/2-next.y-next.height/2)<2,'All controls share one row');assert.ok(r.height<=66,'Controls remain on one row, with compact captions above in portrait');}
+        if(width>=768&&width>height){const r=await page.getByTestId('order-identity-single-row').boundingBox();const input=await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).boundingBox();const next=await page.getByTestId('confirm-order-identification').boundingBox();assert.ok(Math.abs(input.y+input.height/2-next.y-next.height/2)<2,'All controls share one row');assert.ok(r.height<=66,'Landscape controls remain on one row');}
+        if(height>width&&width>=530){const a=await page.getByTestId('order-service-options').boundingBox(),b=await page.getByRole('textbox',{name:t('Nome do cliente, opcional'),exact:true}).boundingBox(),c=await page.getByTestId('order-table-row').boundingBox();assert.ok(Math.abs(a.y+a.height-b.y-b.height)<2,'Portrait service and customer share the first row '+JSON.stringify({width,height,a,b,c}));assert.ok(b.x>=a.x+a.width,'Customer is beside service icons');assert.ok(c.y>=a.y+a.height,'Tables on the second row');assert.ok(c.height<70,'Table choices, other table and Continue stay in one row');}
         cases++;
         if(language==='pt' && [1280,800,768,530].includes(width)) {await page.getByTestId('order-identification').screenshot({path:path.join(dir,theme+'-'+width+'.png')});}
       }

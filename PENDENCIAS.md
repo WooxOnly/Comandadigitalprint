@@ -1,5 +1,31 @@
 # Pendências e preferências
 
+## Entrega completa autorizada — 20/10/2026
+
+- Proprietário: “Quando terminar TUDO pode subir a atualizacao”. Autorizados portais de homologação e um APK deste conjunto, sem acompanhar a compilação. Produção fora do escopo.
+- Atendimento: opção 1 aprovada (mesa com duas cadeiras e sacola com alça), sem legenda visível, mesmos botões e estados selecionados. PNGs transparentes locais com tintas claro/escuro; SVGs de origem preservados.
+- Filtros: opção 2 aprovada em todos os controles: três linhas e círculos. Geometria compartilhada nos portais e máscara local no app. Histórico, Preparo, Encomendas e relatórios de Caixa; ícones à direita e controles preservam os rascunhos ao recolher/abrir.
+- Retrato do pedido: ícones e cliente juntos na primeira linha; mesas, outra mesa e Avançar na segunda em tablets. Paisagem segue em uma linha; celulares estreitos/fontes grandes mantêm quebra acessível. Proporção 66/34 e cartões do preparo preservados.
+- Inclui também totais por hora com escala automática, Últimos 30 dias e remoção do Voltar no desbloqueio dos Ajustes. Não há sugestões de ícones ainda aguardando escolha neste conjunto.
+- Validação: 351 testes Node aprovados; 48 cenários de identificação, 6 fluxos da regra de mesa, 48 cenários de filtros, 39 do Preparo, 24 do filtro de Histórico, 30 de controles escuros e 18 do portal. Claro/escuro, PT/EN/ES, retrato/paisagem e celulares. Lint, TypeScript, diff-check e destinos aprovados. Android físico e impressão seguem verificação separada.
+
+## Pedidos por hora: totais e escala automática — 20/10/2026
+
+- Esclarecimento do proprietário substitui o comportamento anterior de média: somar os pedidos de cada horário de emissão em todos os dias selecionados. Sem divisão por dias/horas. O horário de pico já usa essa contagem e fica coerente com as barras.
+- Gráfico e detalhes exibem apenas quantidades inteiras; removidas colunas de média e horas cobertas do diálogo. Descrição explícita em PT/EN/ES.
+- Eixo de quantidade linear com marcas inteiras e limite automático 10/50/100/500/1.000 e equivalentes maiores. Horários permanecem na horizontal. Rótulo do pico e margem adequada para números grandes; barras reais de zero permanecem vazias. TMA e cálculos financeiros preservados.
+- Validação: 23 testes Node de escala/idiomas/agrupamento, 18 cenários do portal PT/EN/ES claro/escuro, retrato/paisagem/celular; confirmada soma de 9 pedidos em dois dias e escala para 1.000. Lint, TypeScript e diff-check aprovados. Alteração local, sem publicação ou APK.
+
+## Ajustes protegidos sem botão Voltar — 20/10/2026
+
+- Removido o botão que levava ao Início, somente no formulário de desbloqueio dos Ajustes. Mantido Desbloquear como única ação principal, com margens internas e espaçamentos reajustados e cartão centralizado. Autenticação e bloqueio ao sair continuam iguais.
+- Conferidos 18 cenários em navegador com componentes reais: PT/EN/ES, claro/escuro, retrato/paisagem do tablet e celular. Campo e botão alinhados, senha preservada na rotação e sem rolagem horizontal. Lint, TypeScript e diff-check aprovados. Alteração local para próxima entrega; nenhum APK solicitado.
+
+## Últimos 30 dias no portal — 20/10/2026
+
+- Incluído no filtro global de produção e financeiro, depois de Últimos 7 dias. Inclui hoje e os 29 dias anteriores no calendário do fuso do relatório, sem confundir com mês atual/anterior. PT/EN/ES.
+- Validação local: 18 cenários do portal (três idiomas, claro/escuro, retrato/paisagem e celular), 11 testes de idioma, lint, TypeScript e diff-check aprovados. Pronto no código; ainda sem publicação desta alteração.
+
 ## Correção complementar do login dos dois portais — 20/10/2026
 
 - Proprietário reportou novamente a expiração em /gestor/login e /admin/login. Conferido que a publicação anterior dos portais foi concluída e contém a primeira correção.

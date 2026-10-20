@@ -1,7 +1,7 @@
 import { DropdownChevron } from './DropdownChevron';
 import { AppearanceSelector } from './AppearanceSelector';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, AppState, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View, SafeAreaView } from './ThemedNative';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../state/AuthContext';
@@ -43,7 +43,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
   }
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
-      <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }]}>
+      <View style={[styles.panel, { width: '100%', maxWidth: 440, alignSelf: 'center' }, settings && { padding: 20 }]}>
         {!settings && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginBottom: 8 }}><AppearanceSelector language={language} /><LanguageSettings compact /></View>}
         <Image source={require('../../assets/chef-icon.png')} style={{ width: 64, height: 64, alignSelf: 'center', marginBottom: 16, borderRadius: 16 }} />
         <Text style={[styles.eyebrow, { textAlign: 'center', marginBottom: 16 }]}>BistroHub</Text>
@@ -51,7 +51,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
         {!settings && <Text style={[styles.mutedText, { textAlign: 'center', marginBottom: 16 }]}>{t('Loja')}: {storeName}</Text>}
         <Text style={styles.panelTitle}>{t(settings ? 'Acesso protegido' : 'Entrar')}</Text>
         {!auth.ready ? <><Text style={styles.errorText}>{t(auth.error || 'Carregando dados salvos…')}</Text>{auth.error && <Pressable style={styles.secondaryWideButton} onPress={auth.load}><Text style={styles.secondaryButtonText}>{t('Tente novamente')}</Text></Pressable>}</> : <>
-          {settings ? <Text style={styles.settingsIntro}>{t('Digite a senha de Configurações para continuar.')}</Text> : <>
+          {settings ? <Text style={[styles.settingsIntro, { marginBottom: 0 }]}>{t('Digite a senha de Configurações para continuar.')}</Text> : <>
             <Text style={styles.fieldLabel}>{t('Usuário')}</Text>
             <View style={styles.userInputRow}>
               <TextInput style={[styles.input, styles.userInput, styles.usernameText]} accessibilityLabel={t('Usuário')} value={username} onChangeText={(value) => { setUsername(value); setShowUsers(false); }} editable={!offline} autoCapitalize="none" autoCorrect={false} maxLength={24} />
@@ -67,8 +67,7 @@ function AccessForm({ settings = false, onUnlock }: { settings?: boolean; onUnlo
           {!settings && !auth.exists && !offline && <><Text style={styles.helperText}>{t('Acesso do admin não encontrado. Recupere pela internet ou use sua chave de recuperação offline.')}</Text><Pressable disabled={auth.recovering || busy} style={styles.secondaryWideButton} onPress={auth.recover}><Text style={styles.secondaryButtonText}>{t(auth.recovering ? 'Verificando…' : 'Recuperar acesso do admin')}</Text></Pressable>{!!auth.recoveryError && <Text style={styles.errorText}>{t(auth.recoveryError)}</Text>}</>}
           {!settings && !auth.exists && <Pressable disabled={busy} style={styles.secondaryWideButton} onPress={() => { setOfflineMode(!offlineMode); setShowUsers(false); setUsername('admin'); setPassword(''); setConfirmation(''); setRecoveryCode(''); setError(''); }}><Text style={styles.secondaryButtonText}>{t(offline ? 'Voltar' : 'Recuperar sem internet')}</Text></Pressable>}
           {!!error && <Text accessibilityLiveRegion="polite" style={styles.errorText}>{t(error)}</Text>}
-          <Pressable disabled={busy} onPress={submit} style={[styles.sendButton, busy && styles.pressed]}>{busy ? <ActivityIndicator color={'#fff'} /> : <Text style={styles.sendButtonText}>{t(settings ? 'Desbloquear' : offline ? 'Ativar acesso offline' : 'Entrar')}</Text>}</Pressable>
-          {settings && <Pressable style={styles.cancelButton} onPress={() => router.replace('/')}><Text style={styles.cancelButtonText}>{t('Voltar')}</Text></Pressable>}
+          <Pressable accessibilityRole="button" disabled={busy} onPress={submit} style={[styles.sendButton, settings && { marginTop: 16 }, busy && styles.pressed]}>{busy ? <ActivityIndicator color={'#fff'} /> : <Text style={styles.sendButtonText}>{t(settings ? 'Desbloquear' : offline ? 'Ativar acesso offline' : 'Entrar')}</Text>}</Pressable>
         </>}
       </View>
     </ScrollView>

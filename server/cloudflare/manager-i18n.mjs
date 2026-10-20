@@ -7,6 +7,7 @@ export const validLanguage = value => typeof value === 'string' && Object.hasOwn
 // English terms follow restaurant/KDS reporting (fulfillment time, prep time,
 // average check). Every time metric still states its exact recorded interval.
 export const TRANSLATIONS = {
+  'Total de pedidos em cada horário, somando todos os dias do período selecionado.': ['Total orders in each hour, adding all days in the selected period.', 'Total de pedidos en cada horario, sumando todos los días del período seleccionado.'],
   "Vendas por mês": ["Sales by month", "Ventas por mes"],
   "Vendas por dia": ["Sales by day", "Ventas por día"],
   "Pedidos por mês": ["Orders by month", "Pedidos por mes"],
@@ -193,7 +194,7 @@ export const TRANSLATIONS = {
   'emissão até finalização': ['order sent to completed', 'envío del pedido hasta finalización'],
   'emissão até pronto': ['order sent to ready', 'envío del pedido hasta listo'],
   'início do preparo até pronto': ['prep started to ready', 'inicio de preparación hasta listo'],
-  'Hoje': ['Today', 'Hoy'], 'Últimos 7 dias': ['Last 7 days', 'Últimos 7 días'], 'Mês atual': ['This month', 'Mes actual'], 'Mês anterior': ['Last month', 'Mes anterior'],
+  'Hoje': ['Today', 'Hoy'], 'Últimos 7 dias': ['Last 7 days', 'Últimos 7 días'], 'Últimos 30 dias': ['Last 30 days', 'Últimos 30 días'], 'Mês atual': ['This month', 'Mes actual'], 'Mês anterior': ['Last month', 'Mes anterior'],
   'Escolher mês': ['Select month', 'Elegir mes'], 'Consultar mês': ['View month', 'Consultar mes'], 'Consultar período': ['View period', 'Consultar período'],
   'Comparar horários e períodos': ['Compare hours and periods', 'Comparar horarios y períodos'], 'Recorte': ['Group by', 'Agrupar por'],
   'Por hora do dia': ['Hour of day', 'Hora del día'], 'Por dia da semana': ['Day of week', 'Día de la semana'], 'Por dia': ['Day', 'Día'], 'Por mês': ['Month', 'Mes'],

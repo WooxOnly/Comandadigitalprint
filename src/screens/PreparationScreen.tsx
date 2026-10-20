@@ -1,3 +1,4 @@
+import { FilterIcon } from '../ui/FilterIcon';
 import { ActionIcon } from '../ui/ActionIcon';
 import { canUndoPreparation } from '../services/preparationUndo';
 import { PasswordField } from '../ui/AccessGate';
@@ -83,7 +84,7 @@ export default function PreparationScreen() {
     <View style={board.toolbar}>
       <View style={board.queueTitle}><Text style={board.title}>{t('Fila de preparo')} · {orders.length}</Text><Text style={board.caption}>{t('Ordem de emissão')}{filterDay ? ' · ' + date : ''}</Text></View>
       {alerts.unread.length > 0 && <Pressable accessibilityRole="button" style={board.newButton} onPress={() => { const first = orders.findIndex(order => alerts.unread.includes(order.id)); if (first >= 0) setPage(Math.floor(first / pageSize)); alerts.acknowledge(); }}><Text style={board.actionText}>{t('Novos pedidos')}: {alerts.unread.length}</Text></Pressable>}
-      <Pressable accessibilityRole="button" accessibilityLabel={t('Filtros e avisos')} style={board.smallButton} onPress={() => setFilters(true)}><Text style={board.actionText}>{t('Filtros e avisos')}</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Filtros e avisos')} accessibilityState={{ expanded: filters }} aria-expanded={filters} style={board.smallButton} onPress={() => setFilters(true)}><FilterIcon /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('Atualizar pedidos')} style={board.smallButton} onPress={() => void cloud.sync()}><Text style={board.actionText}>↻</Text></Pressable>
     </View>
     <View testID='preparation-pages' {...gestures.panHandlers} style={[board.viewport, { maxHeight: rows * maxCardHeight + (rows - 1) * 8 }]} onLayout={event => { const { width, height } = event.nativeEvent.layout; setArea(current => current.width === width && current.height === height ? current : { width, height }); }}>

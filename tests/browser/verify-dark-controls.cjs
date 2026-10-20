@@ -12,7 +12,7 @@ const {chromium}=require('playwright-core'),{buildTabletPreview}=require('./tabl
  for(const route of ['/','/order','/menu','/history','/preparation']){await p.evaluate(r=>location.hash=r,route);await p.waitForTimeout(100);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
  if(route==='/order'){
  const panel=p.getByTestId('current-order-panel'),items=p.getByTestId('current-order-items'),finish=p.getByTestId('finish-order');const a=await finish.boundingBox(),b=await items.boundingBox();assert.ok(b.y-a.y-a.height>=6,'Gap below Finish order');
- const colors=await p.getByTestId('order-service-options').locator('[role=radio]').evaluateAll(buttons=>buttons.map(b=>({selected:b.getAttribute('aria-checked'),ink:getComputedStyle(b.querySelector('[style*="position: absolute"]')).backgroundColor,background:getComputedStyle(b).backgroundColor})));
+ const colors=await p.getByTestId('order-service-options').locator('[role=radio]').evaluateAll(buttons=>buttons.map(b=>({selected:b.getAttribute('aria-checked'),ink:getComputedStyle(b.querySelector('feFlood')).floodColor,background:getComputedStyle(b).backgroundColor})));
  assert.equal(colors[0].ink,'rgb(255, 255, 255)');assert.equal(colors[1].ink,'rgb(243, 165, 136)');assert.notEqual(colors[0].background,colors[1].background);assert.ok(await panel.isVisible());
  }
  if(route==='/history'){
