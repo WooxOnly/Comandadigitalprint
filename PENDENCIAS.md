@@ -1,3 +1,10 @@
+## Pizzas vivas com todos os percentuais — 20/10/2026
+
+- Substituída a paleta opaca de produtos/grupos por dez cores mais vivas, iguais aos marcadores da lista. Outros gráficos mantêm suas cores.
+- Seleção da fatia com brilho/saturação e contorno branco fino de 1,5px sem ampliar com o SVG. Evita tanto o destaque quase invisível quanto o antigo contorno grosso.
+- Removida a regra que ocultava percentuais menores de 6%. Todas as fatias mostram o percentual inteiro: valores pequenos mais próximos da borda interna; fatias extremamente pequenas com chamadas externas espaçadas, sem ocultação nem sobreposição. Removido o aviso central que mostrava somente a fatia selecionada.
+- Mantidos os cartões fechados da lista com somente quantidades, arredondamento/aviso, proporções reais e acessibilidade. Verificação inclui 10 rótulos simultâneos e cenário com nove fatias minúsculas. Entrega web em homologação, sem APK.
+
 ## Legendas em cartões fechados — 20/10/2026
 
 - Nova orientação: cada item/grupo tem borda completa arredondada, espaçamento entre cartões e destaque suave de borda/fundo ao passar o mouse, tocar ou selecionar pelo teclado. Substitui a linha lateral e o círculo extra da seleção anterior.
