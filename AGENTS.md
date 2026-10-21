@@ -30,6 +30,10 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 - Only fictional Seabra homologação orders may be redistributed. Preserve all IDs, total orders, real/manual records, module flags and the exact existing kitchen stage durations/actors; the owner explicitly said TMA is already correct. Use local America/New_York hours 07:00–22:00, morning activity 07:30–10:00, weak lunch, modest afternoon and stronger late-day café movement. Weekday intensity: Friday > Saturday > Sunday > Thursday > Wednesday > Tuesday > Monday. Friday events peak 17:00–21:00, strongest 18:00–20:00; Saturday is second due to live music. Keep the existing 30–100/day demo bound and today's added-day count. Back up originals and apply only revision/data-guarded store_events, never direct record updates. No APK or portal deployment is needed for this data adjustment.
 
+## Demo-data scope clarification — latest 2026-10-21
+
+- Owner explicitly rejected changing report presentation or calculations for this traffic request: restore the existing hour order, labels and peak-card period behavior. Do not publish UI changes as part of data maintenance. Midnight orders are already zero; 12 PM represents noon. The nine current fictional kitchen samples had artificially concentrated today's peak at 07:00; redistribute only their emission/stage timestamps over 08:10–09:35, preserving exact durations, IDs, counts, completed history and real data, with guarded events and backup. No APK or portal deployment.
+
 ## Presentation day extension — 2026-10-21
 
 - Owner requested one more full local day for today’s presentation, including future evening samples, in homologação seabra-1 only. Append under a new date-scoped demo-day-v1 prefix, 30–100 orders, actual synthetic stage durations 30–45min and the same four named cooks. Keep nine current queued examples (three per stage); finish only prior-day synthetic queues through revision-guarded sync events with backup. Preserve existing orders, real pending work, modules and other stores. No APK or app deployment needed.

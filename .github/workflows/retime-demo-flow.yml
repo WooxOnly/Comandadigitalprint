@@ -5,6 +5,11 @@ on:
     paths: ['.github/workflows/retime-demo-flow.yml']
   workflow_dispatch:
     inputs:
+      scope:
+        description: Perfil completo ou somente nove exemplos atuais da cozinha
+        type: choice
+        options: [full-profile, morning-queue]
+        default: full-profile
       apply:
         description: Aplicar somente nos pedidos ficticios de seabra-1
         type: boolean
@@ -23,6 +28,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WRANGLER_SEND_METRICS: 'false'
+      FLOW_SCOPE: ${{ inputs.scope }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -32,7 +38,11 @@ jobs:
         run: |
           mkdir -p flow-output
           npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT store_id,key,data,revision FROM store_records WHERE store_id='seabra-1' AND (key GLOB 'order:demo120-v1-*' OR key GLOB 'preparation:demo120-v1-*' OR key GLOB 'order:demo-day-v1-*' OR key GLOB 'preparation:demo-day-v1-*'); SELECT s.id,COALESCE(m.cash,0) cash FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id WHERE s.id='seabra-1';" --json > flow-output/before.json
-          node scripts/retime-demo-flow.mjs flow-output/before.json flow-output
+          if [ "$FLOW_SCOPE" = "morning-queue" ]; then
+            node scripts/retime-demo-flow.mjs flow-output/before.json flow-output --morning-queue
+          else
+            node scripts/retime-demo-flow.mjs flow-output/before.json flow-output
+          fi
       - name: Registrar restauracao e aplicar eventos com revisao protegida
         if: inputs.apply
         run: |

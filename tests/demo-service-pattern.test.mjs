@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {demoDataset} from '../scripts/seed-demo-homologacao.mjs';
-import {retimeDemoFlow} from '../scripts/retime-demo-flow.mjs';
+import {retimeDemoFlow,retimeDemoMorning} from '../scripts/retime-demo-flow.mjs';
 import {demoHistoryCounts,demoEmission,demoInstant,demoWeekday} from '../shared/demo-service-pattern.mjs';
 import {flowReport} from '../server/cloudflare/flow-report.mjs';
 
@@ -49,11 +49,19 @@ test('preserves demo IDs, exact stage durations, people and total while redistri
   const actual=new Map(report.weekdays.buckets.map(b=>[b.key,b.average]));
   assert.ok(actual.get(5)>actual.get(6)&&actual.get(6)>actual.get(0)&&actual.get(0)>actual.get(4)&&actual.get(4)>actual.get(3)&&actual.get(3)>actual.get(2)&&actual.get(2)>actual.get(1));
   assert.ok(report.hours.buckets.filter(b=>b.key<7||b.key>=22).every(b=>b.total===0));
+  const morningBefore=db.prepare('SELECT * FROM store_records').all(),morning=retimeDemoMorning(morningBefore,new Date('2026-10-21T14:20:00Z'));
+  const previous=new Map(morningBefore.map(r=>[r.store_id+':'+r.key,r]));
+  const changed=morning.records.filter(r=>JSON.stringify(r.value)!==previous.get(r.store_id+':'+r.key).data);
+  assert.equal(changed.length,18);assert.equal(morning.summary.changedRecords,18);assert.equal(morning.summary.today,today.orders.length);
+  for(const row of changed){const prior=JSON.parse(previous.get(row.store_id+':'+row.key).data);if(row.key.startsWith('order:')){assert.equal(row.value.numberDay,'2026-10-21');assert.equal(morning.records.find(r=>r.key==='preparation:'+row.value.id).value.status==='completed',false)}else{const beforeOrder=JSON.parse(previous.get('seabra-1:order:'+row.value.orderId).data),afterOrder=morning.records.find(r=>r.key==='order:'+row.value.orderId).value;for(const f of ['updatedAt','startedAt','readyAt'])if(prior[f])assert.equal(Date.parse(row.value[f])-Date.parse(afterOrder.createdAt),Date.parse(prior[f])-Date.parse(beforeOrder.createdAt))}}
+  const morningHours=Array(24).fill(0);for(const row of morning.records.filter(r=>r.key.startsWith('order:')&&r.value.numberDay==='2026-10-21'))morningHours[Math.floor((Date.parse(row.value.createdAt)-demoInstant('2026-10-21',0))/3600000)]++;
+  assert.ok(morningHours[8]>morningHours[7]);assert.ok(morningHours[9]>morningHours[7]);
+  for(const sql of morning.sql)db.exec(sql);const morningEvents=db.prepare('SELECT COUNT(*) n FROM store_events').get().n;for(const sql of morning.sql)db.exec(sql);assert.equal(db.prepare('SELECT COUNT(*) n FROM store_events').get().n,morningEvents);assert.equal(retimeDemoMorning(db.prepare('SELECT * FROM store_records').all(),new Date('2026-10-21T14:20:00Z')).summary.changedRecords,0);
   // Stale snapshots must not overwrite later edits.
   const one=result.records[0];db.exec(`DELETE FROM store_events WHERE actor='demo.flow';UPDATE store_records SET revision=revision+1 WHERE key='${one.key}'`);
-  const changed=db.prepare('SELECT revision FROM store_records WHERE key=?').get(one.key).revision;
+  const changedRevision=db.prepare('SELECT revision FROM store_records WHERE key=?').get(one.key).revision;
   for(const sql of result.sql)db.exec(sql);
-  assert.equal(db.prepare('SELECT revision FROM store_records WHERE key=?').get(one.key).revision,changed);
+  assert.equal(db.prepare('SELECT revision FROM store_records WHERE key=?').get(one.key).revision,changedRevision);
  }finally{db.close()}
 });
 

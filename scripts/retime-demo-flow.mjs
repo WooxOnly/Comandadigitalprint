@@ -43,10 +43,40 @@ export function retimeDemoFlow(rows,now=new Date()){
  const totals=Array.from({length:7},()=>({days:0,orders:0}));for(const [day,count] of counts){totals[demoWeekday(day)].days++;totals[demoWeekday(day)].orders+=count}
  return {sql,records,summary:{batch,orders:orders.length,today:current.length,from:days[0],to:today,weekdays:totals.map((v,day)=>({day,...v,average:v.orders/v.days})),preserveTma:true}};
 }
+// Refresh only the nine current fictional queue examples. Completed history,
+// report code, weekday counts and exact stage durations remain untouched.
+export function retimeDemoMorning(rows,now=new Date()){
+ const today=demoDay(now),source=rows.filter(r=>r.store_id==='seabra-1'&&eligible(r.key));
+ const originals=new Map(source.map(r=>[r.key,r]));
+ const records=source.map(r=>({store_id:r.store_id,key:r.key,value:JSON.parse(r.data)}));
+ const values=new Map(records.map(r=>[r.key,r]));
+ const active=records.filter(r=>r.key.startsWith('order:')&&r.value.numberDay===today&&values.get('preparation:'+r.value.id)?.value.status!=='completed').sort((a,b)=>a.key.localeCompare(b.key));
+ if(active.length!==9)throw Error('Expected exactly nine current synthetic kitchen examples');
+ const batch='seabra-demo-morning-v1',sql=[`CREATE TABLE IF NOT EXISTS demo_flow_backup(batch TEXT,store_id TEXT,key TEXT,data TEXT,revision INTEGER,PRIMARY KEY(batch,store_id,key));`];
+ const minutes=[490,500,510,520,530,545,555,565,575];
+ active.forEach((row,index)=>{
+  const prep=values.get('preparation:'+row.value.id),oldTime=Date.parse(row.value.createdAt),time=demoInstant(today,minutes[index]);
+  if(!prep)throw Error('Missing synthetic preparation');
+  row.value={...row.value,createdAt:new Date(time).toISOString()};
+  prep.value={...prep.value};
+  for(const field of ['startedAt','readyAt','completedAt','updatedAt'])if(prep.value[field])prep.value[field]=new Date(time+Date.parse(prep.value[field])-oldTime).toISOString();
+  if(Date.parse(prep.value.updatedAt)>now.getTime())throw Error('Morning queue update requires time after 09:37 local');
+  for(const item of [row,prep]){
+   const old=originals.get(item.key);if(!Number.isSafeInteger(old.revision)||old.revision<1||!validCloudValue(item.key,item.value))throw Error('Invalid guarded queue snapshot');
+   const guard=`store_id='seabra-1' AND key=${q(item.key)} AND revision=${old.revision} AND data=${q(old.data)}`;
+   sql.push(`INSERT OR IGNORE INTO demo_flow_backup SELECT ${q(batch)},store_id,key,data,revision FROM store_records WHERE ${guard};`);
+   sql.push(`INSERT INTO store_events(store_id,mutation,key,data,actor,created_at) SELECT 'seabra-1',${q(batch+':'+item.key)},${q(item.key)},${q(JSON.stringify(item.value))},'demo.morning',${q(now.toISOString())} WHERE EXISTS(SELECT 1 FROM store_records WHERE ${guard}) ON CONFLICT(store_id,mutation) DO NOTHING;`);
+  }
+ });
+ const orders=records.filter(r=>r.key.startsWith('order:')),days=new Map(),totals=Array.from({length:7},()=>({days:0,orders:0}));
+ for(const row of orders)if(row.value.numberDay<today)days.set(row.value.numberDay,(days.get(row.value.numberDay)||0)+1);
+ for(const [day,count] of days){totals[demoWeekday(day)].days++;totals[demoWeekday(day)].orders+=count}
+ return {records,sql,summary:{batch,orders:orders.length,today:orders.filter(r=>r.value.numberDay===today).length,from:[...days.keys()].sort()[0],to:today,mode:'morning-queue',changedRecords:records.filter(r=>JSON.stringify(r.value)!==originals.get(r.key).data).length,weekdays:totals.map((v,day)=>({day,...v,average:v.orders/v.days})),preserveTma:true}};
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const [input,output]=process.argv.slice(2),snapshot=JSON.parse(fs.readFileSync(input)),modules=snapshot[1].results[0];
  if(!modules||modules.cash!==0)throw Error('Retiming is confined to the cash-disabled Seabra demo');
- const result=retimeDemoFlow(snapshot[0].results);fs.mkdirSync(output,{recursive:true});
+ const result=(process.argv.includes('--morning-queue')?retimeDemoMorning:retimeDemoFlow)(snapshot[0].results);fs.mkdirSync(output,{recursive:true});
  for(let i=0;i<result.sql.length;i+=500)fs.writeFileSync(path.join(output,'flow-'+String(i/500).padStart(3,'0')+'.sql'),result.sql.slice(i,i+500).join('\n'));
  fs.writeFileSync(path.join(output,'expected-records.json'),JSON.stringify(result.records));
  fs.writeFileSync(path.join(output,'expected.json'),JSON.stringify(result.summary));console.log('DEMO_FLOW_PLAN='+JSON.stringify(result.summary));
