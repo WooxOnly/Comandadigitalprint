@@ -1,3 +1,10 @@
+## Refinamento da seleção e percentuais das pizzas — 20/10/2026
+
+- Produtos e grupos: seleção da fatia por brilho sutil, sem contorno branco grosso. Foco de teclado continua perceptível com traço fino. Na legenda, removido o bloco claro e mantidos apenas uma linha discreta e o marcador da cor selecionada.
+- Números menores e centralizados no centro geométrico de cada setor, com contorno de texto mais fino. Fontes definidas no CSS autorizado, respeitando a política de segurança do portal.
+- Percentuais inteiros arredondados, consistentes entre pizza, legenda, seleção e nomes acessíveis. A proporção real das fatias, as quantidades e o denominador Top 10 não mudam. Aviso PT/EN/ES abaixo: percentuais arredondados; soma pode diferir de 100%.
+- Mantidos Top 10 em cinco mais cinco, nomes completos, seleção por toque/teclado, aviso de fatias pequenas e estados vazios. Entrega web em homologação, sem APK.
+
 ## Horários sem rolagem horizontal — 20/10/2026
 
 - Nova orientação do proprietário substitui a rolagem interna anterior: mostrar os 24 horários simultaneamente na largura do cartão. Removidas a largura mínima forçada e a instrução de rolar.
