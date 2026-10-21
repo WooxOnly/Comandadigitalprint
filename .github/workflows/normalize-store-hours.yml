@@ -1,0 +1,52 @@
+name: Conferir e corrigir horarios em todo historico de homologacao
+on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/normalize-store-hours.yml']
+  workflow_dispatch:
+    inputs:
+      apply:
+        type: boolean
+        default: false
+jobs:
+  hours:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-demo-data
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Copiar todos os pedidos e preparos sem filtro de data ou prefixo
+        run: |
+          mkdir -p hours-output
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT store_id,key,data,revision FROM store_records WHERE store_id='seabra-1' AND (key GLOB 'order:*' OR key GLOB 'preparation:*'); SELECT s.id,COALESCE(m.cash,0) cash FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id WHERE s.id='seabra-1';" --json > hours-output/before.json
+          node scripts/normalize-store-hours.mjs plan hours-output/before.json hours-output
+      - name: Copia de restauracao e eventos protegidos por revisao
+        if: inputs.apply
+        run: |
+          npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > hours-output/restore-point.json
+          for sql_file in hours-output/hours-*.sql; do
+            npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file "$sql_file" --yes > /dev/null
+          done
+      - name: Conferir todos os registros e duracoes apos a aplicacao
+        if: inputs.apply
+        run: |
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT store_id,key,data,revision FROM store_records WHERE store_id='seabra-1' AND (key GLOB 'order:*' OR key GLOB 'preparation:*');" --json > hours-output/after.json
+          node scripts/normalize-store-hours.mjs verify hours-output
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: homologacao-all-history-hours-backup
+          path: hours-output/
+          retention-days: 7

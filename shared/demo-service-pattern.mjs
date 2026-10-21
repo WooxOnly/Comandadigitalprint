@@ -6,8 +6,10 @@ export const demoDay=value=>new Intl.DateTimeFormat('en-CA',{timeZone:DEMO_ZONE,
 export const demoWeekday=day=>new Date(day+'T12:00:00Z').getUTCDay();
 export function demoInstant(day,minutes){
  const local=Date.parse(day+'T00:00:00Z')+minutes*60000;
- const offset=new Intl.DateTimeFormat('en-US',{timeZone:DEMO_ZONE,timeZoneName:'shortOffset'}).formatToParts(new Date(local)).find(p=>p.type==='timeZoneName').value;
- return local-Number(offset.replace('GMT',''))*3600000;
+ const formatter=new Intl.DateTimeFormat('en-US',{timeZone:DEMO_ZONE,timeZoneName:'shortOffset'});
+ let instant=local;
+ for(let i=0;i<3;i++){const offset=formatter.formatToParts(new Date(instant)).find(p=>p.type==='timeZoneName').value;instant=local-Number(offset.replace('GMT',''))*3600000}
+ return instant;
 }
 export function demoDayVolume(day){
  const weekday=demoWeekday(day),seed=demoHash(day);
