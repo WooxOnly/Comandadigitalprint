@@ -1,3 +1,9 @@
+## Horários sem rolagem horizontal — 20/10/2026
+
+- Nova orientação do proprietário substitui a rolagem interna anterior: mostrar os 24 horários simultaneamente na largura do cartão. Removidas a largura mínima forçada e a instrução de rolar.
+- Espaçamento calculado pela largura real, rótulos numéricos compactos com AM/PM agrupados em cartões estreitos, nomes completos acessíveis e todos os valores preservados. Mantidos sequência aprovada, escala 0/10/50/100/500/1.000, linha, totais e janela independente.
+- Redimensionamento/rotação redesenha somente o gráfico com os dados já carregados, sem nova consulta. Conferência de todas as horas dentro do cartão e números sem sobreposição, PT/EN/ES, claro/escuro, celular/tablet/PC e retrato/paisagem. Entrega web em homologação, sem APK.
+
 ## Identidade da empresa no portal — 20/10/2026
 
 - Nome da empresa separado do usuário, ao lado da logo já sincronizada pelo tablet. Usuário junto de Sair à direita, com quebra em telas pequenas, sem sobrepor a empresa. Mantida a marca BistroHub na barra geral.
