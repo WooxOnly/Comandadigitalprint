@@ -1,3 +1,9 @@
+## Resumos de consumo duas vezes ao dia e novo dia demonstrativo — 21/10/2026
+
+- Resumo curto com as cinco porcentagens sempre, às 9h e 18h de Orlando. Coletor reduzido para duas execuções diárias antes dos resumos; dados ausentes/desconhecidos ou com mais de 24h continuam sinalizados. Plano e cobrança preservados.
+- Preparado modo append-day para acrescentar o dia local completo na loja seabra-1 de homologação, com prefixo próprio e importação idempotente: 30–100 pedidos, TMA 30–45min e Kainan/Davi/Carla/Elizabeth. Horários fictícios até a noite autorizados para apresentação; nove exemplos atuais na fila.
+- Somente filas sintéticas antigas podem ser finalizadas, com backup e guarda de revisão. Nenhuma alteração de módulos, contas, outras lojas ou pedidos reais. Verificação de dados e relatórios reais em SQLite, repetição sem duplicações e preservação do histórico. Sem novo APK ou publicação do app.
+
 ## Cartões de ranking mais compactos e legenda da quantidade — 20/10/2026
 
 - Nomes das listas reduzidos de 12px para 11px, entrelinhas e preenchimento menores para reduzir quebras e altura, com nomes completos e área de toque mínima de 44px preservados.

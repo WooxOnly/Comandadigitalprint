@@ -10,7 +10,6 @@ import { calculateSale } from '../shared/cash-pricing.mjs';
 export const DEMO_PREFIX='demo120-v1-';
 const zone='America/New_York', minute=60000, dayMs=86400000;
 const q=value=>"'"+String(value).replaceAll("'","''")+"'";
-const id=(...parts)=>DEMO_PREFIX+parts.join('-');
 const hash=value=>createHash('sha256').update(String(value)).digest().readUInt32BE(0);
 const dateKey=date=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 const iso=value=>new Date(value).toISOString();
@@ -20,7 +19,29 @@ function atLocal(day,hour,minutes=0){
   const offset=Number(parts.timeZoneName.replace('GMT',''));
   return local-offset*60*minute;
 }
-export function demoDataset(inventory,storeId,now=new Date()){
+function closePreviousDemo(queue,storeId,today,now){
+  const sql=[],keys=[];
+  for(const row of queue){
+    if(row.store_id!==storeId||!/^preparation:(?:demo120-v1-|demo-day-v1-)/.test(row.key))continue;
+    const emitted=Date.parse(row.created_at);if(!Number.isFinite(emitted)||dateKey(new Date(emitted))>=today)continue;
+    if(!Number.isSafeInteger(row.revision)||row.revision<1)throw Error('Invalid demo preparation revision');
+    const old=JSON.parse(row.data);if(!['received','preparing','ready'].includes(old.status))continue;
+    const seed=hash(row.key),target=30+seed%16,actor=DEMO_KITCHEN_ACTORS[seed%4];
+    const value={...old,status:'completed',startedAt:iso(emitted+5*minute),startedBy:actor,readyAt:iso(emitted+(target-3)*minute),readyBy:actor,completedAt:iso(emitted+target*minute),completedBy:'demo.caixa.1',updatedAt:iso(emitted+target*minute)};
+    if(!validCloudValue(row.key,value)||Date.parse(value.updatedAt)>now.getTime())throw Error('Invalid previous demo closure');
+    if(!sql.length)sql.push('CREATE TABLE IF NOT EXISTS demo_day_preparation_backup(store_id TEXT,key TEXT,batch_day TEXT,data TEXT,revision INTEGER,PRIMARY KEY(store_id,key,batch_day));');
+    const guard=`store_id=${q(storeId)} AND key=${q(row.key)} AND revision=${Number(row.revision)} AND data=${q(row.data)}`;
+    sql.push(`INSERT INTO demo_day_preparation_backup SELECT store_id,key,${q(today)},data,revision FROM store_records WHERE ${guard} ON CONFLICT(store_id,key,batch_day) DO NOTHING;`);
+    sql.push(`INSERT INTO store_events(store_id,mutation,key,data,actor,created_at) SELECT ${q(storeId)},${q('demo-close-'+today+'-'+row.key)},${q(row.key)},${q(JSON.stringify(value))},'demo.day',${q(iso(now))} WHERE EXISTS(SELECT 1 FROM store_records WHERE ${guard}) ON CONFLICT(store_id,mutation) DO NOTHING;`);
+    keys.push(row.key);
+  }
+  return {sql,keys};
+}
+export function demoDataset(inventory,storeId,now=new Date(),options={}){
+  const dayCount=options.days??120,prefix=options.prefix??DEMO_PREFIX,throughDay=options.throughDay===true;
+  if(!Number.isInteger(dayCount)||dayCount<1||dayCount>120||!/^demo[a-zA-Z0-9-]+-$/.test(prefix))throw Error('Invalid demo batch options');
+  if(throughDay&&(dayCount!==1||prefix===DEMO_PREFIX))throw Error('Whole-day presentation requires a separate one-day batch');
+  const id=(...parts)=>prefix+parts.join('-');
   if(!/^[a-zA-Z0-9_-]{1,100}$/.test(storeId))throw Error('Invalid demo store');
   const store=inventory[0].results.find(v=>v.id===storeId);
   if(!store?.active)throw Error('Active homologacao store not found');
@@ -32,6 +53,7 @@ export function demoDataset(inventory,storeId,now=new Date()){
   const settings=JSON.parse(inventory[2]?.results.find(v=>v.store_id===storeId)?.data||'{}');
   const taxRate=settings.tax?.enabled?settings.tax.rateBps:0;
   const today=dateKey(now),todayUtc=Date.parse(today+'T00:00:00Z'),events=[],sql=[],orders=[],preparations=[],sales=[],days=[];
+  const retired=throughDay?closePreviousDemo(inventory[4]?.results||[],storeId,today,now):{sql:[],keys:[]};sql.push(...retired.sql);
   const event=(key,value)=>{
     if(!validCloudValue(key,value))throw Error('Invalid generated record '+key);
     events.push({key,value});
@@ -40,15 +62,15 @@ export function demoDataset(inventory,storeId,now=new Date()){
   };
   const customers=Array.from({length:40},(_,n)=>({id:id('customer',n),name:'Demo '+['Ana','Bruno','Carla','Diego','Elisa','Felipe','Giovana','Hugo'][n%8]+' '+(n+1),phone:'',email:'cliente'+(n+1)+'@example.invalid',addresses:['Endereço fictício para demonstração '+(n+1)],notes:'Dados sintéticos de apresentação; nenhum contato real.',active:true,createdAt:iso(todayUtc-119*dayMs),updatedAt:iso(todayUtc-119*dayMs)}));
   if(store.customers)for(const customer of customers)event('customer:'+customer.id,customer);
-  for(let d=119;d>=0;d--){
+  for(let d=dayCount-1;d>=0;d--){
     const day=iso(todayUtc-d*dayMs).slice(0,10),daySeed=hash(day),count=30+daySeed%71,sessionId=id('session',day),cashier='demo.caixa.'+(d%3+1);let cashBalance=20000;
-    const start=atLocal(day,9),end=d===0?Math.min(atLocal(day,22,30),now.getTime()-60*minute):atLocal(day,22,30);
+    const start=atLocal(day,9),end=d===0&&!throughDay?Math.min(atLocal(day,22,30),now.getTime()-60*minute):atLocal(day,22,30);
     const first=Math.min(start,end-3*60*minute),last=end;
-    const sessionOpen=Math.max(atLocal(day,0),first-30*minute),sessionClose=d===0?now.getTime():atLocal(day,23,45);
+    const sessionOpen=Math.max(atLocal(day,0),first-30*minute),sessionClose=d===0&&!throughDay?now.getTime():atLocal(day,23,45);
     if(store.cash)sql.push(`INSERT OR IGNORE INTO cash_sessions(store_id,id,device_id,opened_by,opened_at,opening_cents,closed_at,closed_by,counted_cents) VALUES(${q(storeId)},${q(sessionId)},'d364beef-0000-4000-8000-000000000120',${q(cashier)},${q(iso(sessionOpen))},20000,${q(iso(sessionClose))},${q(cashier)},0);`);
     for(let n=0;n<count;n++){
       const orderId=id('order',day,n+1),seed=hash(orderId),active=d===0&&n>=count-9,activeIndex=n-(count-9);
-      // Lunch/evening peaks, distinct minutes and all instants in the past.
+      // Lunch/evening peaks; future completed samples require explicit whole-day demo mode.
       const r=(seed%10000)/10000,fraction=r<0.4?0.18+r*0.55:r<0.85?0.58+(r-0.4)*0.65:(r-0.85)/0.15;
       const emitted=active?now.getTime()-(30-activeIndex*3)*minute:Math.round(first+fraction*(last-first));
       const serviceMode=seed%10<6?'dine_in':'takeout',customer=customers[seed%customers.length];
@@ -61,7 +83,7 @@ export function demoDataset(inventory,storeId,now=new Date()){
       if(status!=='received')Object.assign(preparation,{startedAt:iso(started),startedBy:DEMO_KITCHEN_ACTORS[seed%4],updatedAt:iso(started)});
       if(['ready','completed'].includes(status))Object.assign(preparation,{readyAt:iso(ready),readyBy:DEMO_KITCHEN_ACTORS[seed%4],updatedAt:iso(ready)});
       if(status==='completed')Object.assign(preparation,{completedAt:iso(completed),completedBy:cashier,updatedAt:iso(completed)});
-      if(Date.parse(preparation.updatedAt)>now.getTime())throw Error('Future preparation generated');
+      if(Date.parse(preparation.updatedAt)>(throughDay&&status==='completed'?atLocal(day,23,59):now.getTime()))throw Error('Future preparation generated');
       orders.push(order);preparations.push(preparation);event('order:'+order.id,order);event('preparation:'+order.id,preparation);
       if(store.cash&&status==='completed'){
         const saleId=id('sale',day,n),method=['cash','card','zelle'][seed%3];
@@ -84,24 +106,24 @@ export function demoDataset(inventory,storeId,now=new Date()){
     }
     days.push({day,orders:count});
   }
-  return {store,events,sql,orders,preparations,sales,days,summary:{storeId,storeName:store.name,from:days[0].day,to:today,days:120,orders:orders.length,sales:sales.length,customers:store.customers?40:0,preorders:store.preorders?240:0,activePreparations:9,operators:4,minDaily:Math.min(...days.map(d=>d.orders)),maxDaily:Math.max(...days.map(d=>d.orders)),prefix:DEMO_PREFIX}};
+  return {store,events,sql,orders,preparations,sales,days,retiredKeys:retired.keys,summary:{storeId,storeName:store.name,from:days[0].day,to:today,days:dayCount,wholeDayPresentation:throughDay,retiredPreparations:retired.keys.length,orders:orders.length,sales:sales.length,customers:store.customers?40:0,preorders:store.preorders?dayCount*2:0,activePreparations:9,operators:4,minDaily:Math.min(...days.map(d=>d.orders)),maxDaily:Math.max(...days.map(d=>d.orders)),prefix}};
 }
 function verify(output){
   const expected=JSON.parse(fs.readFileSync(path.join(output,'summary.json'))),results=JSON.parse(fs.readFileSync(path.join(output,'verification.json'))).map(r=>r.results);
   const actual=results[0][0],days=results[1],stages=results[2],timing=results[3][0];
-  if(actual.orders!==expected.orders||actual.preparations!==expected.orders||actual.sales!==expected.sales||days.length!==120||days.some(d=>d.orders<30||d.orders>100)||stages.reduce((s,r)=>s+(r.status==='completed'?0:r.count),0)!==9)throw Error('Remote demo totals do not match validated dataset');
+  if(actual.orders!==expected.orders||actual.preparations!==expected.orders||actual.sales!==expected.sales||days.length!==expected.days||days.some(d=>d.orders<30||d.orders>100)||stages.reduce((s,r)=>s+(r.status==='completed'?0:r.count),0)!==9)throw Error('Remote demo totals do not match validated dataset');
   if(timing.samples!==expected.orders-9||timing.min_minutes>=timing.max_minutes||timing.cooks!==4||timing.sync_orders!==expected.orders)throw Error('Remote preparation times, operators or synchronization are inconsistent');
   console.log(JSON.stringify({ok:true,...expected,stages,timing,remote:actual}));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   if(process.argv[2]==='--verify')verify(process.argv[3]);
   else{
-    const [input,storeId,output]=process.argv.slice(2),data=demoDataset(JSON.parse(fs.readFileSync(input)),storeId);
+    const [input,storeId,output]=process.argv.slice(2),now=new Date(),dayOnly=process.argv.includes('--day-only'),data=demoDataset(JSON.parse(fs.readFileSync(input)),storeId,now,dayOnly?{days:1,prefix:'demo-day-v1-'+dateKey(now).replaceAll('-','')+'-',throughDay:true}:{});
     fs.mkdirSync(output,{recursive:true});
     for(let n=0;n<data.sql.length;n+=1200)fs.writeFileSync(path.join(output,'batch-'+String(n/1200).padStart(4,'0')+'.sql'),data.sql.slice(n,n+1200).join('\n'));
     fs.writeFileSync(path.join(output,'summary.json'),JSON.stringify(data.summary,null,2));
-    const filter=`store_id=${q(storeId)} AND key LIKE ${q('order:'+DEMO_PREFIX+'%')}`;
-    fs.writeFileSync(path.join(output,'verify.sql'),`SELECT (SELECT COUNT(*) FROM store_records WHERE ${filter}) orders,(SELECT COUNT(*) FROM store_records WHERE store_id=${q(storeId)} AND key LIKE ${q('preparation:'+DEMO_PREFIX+'%')}) preparations,(SELECT COUNT(*) FROM cash_entries WHERE store_id=${q(storeId)} AND id LIKE ${q(DEMO_PREFIX+'sale-%')}) sales; SELECT json_extract(data,'$.numberDay') day,COUNT(*) orders FROM store_records WHERE ${filter} GROUP BY day ORDER BY day; SELECT json_extract(data,'$.status') status,COUNT(*) count FROM store_records WHERE store_id=${q(storeId)} AND key LIKE ${q('preparation:'+DEMO_PREFIX+'%')} GROUP BY status; SELECT COUNT(p.key) samples,ROUND(MIN((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) min_minutes,ROUND(MAX((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) max_minutes,ROUND(AVG((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) tma_minutes,COUNT(DISTINCT json_extract(p.data,'$.readyBy')) cooks,(SELECT COUNT(*) FROM store_events WHERE store_id=${q(storeId)} AND key LIKE ${q('order:'+DEMO_PREFIX+'%')}) sync_orders FROM store_records o JOIN store_records p ON p.store_id=o.store_id AND p.key='preparation:'||substr(o.key,7) WHERE o.store_id=${q(storeId)} AND o.key LIKE ${q('order:'+DEMO_PREFIX+'%')} AND json_extract(p.data,'$.status')='completed';`);
+    const filter=`store_id=${q(storeId)} AND key LIKE ${q('order:'+data.summary.prefix+'%')}`;
+    fs.writeFileSync(path.join(output,'verify.sql'),`SELECT (SELECT COUNT(*) FROM store_records WHERE ${filter}) orders,(SELECT COUNT(*) FROM store_records WHERE store_id=${q(storeId)} AND key LIKE ${q('preparation:'+data.summary.prefix+'%')}) preparations,(SELECT COUNT(*) FROM cash_entries WHERE store_id=${q(storeId)} AND id LIKE ${q(data.summary.prefix+'sale-%')}) sales; SELECT json_extract(data,'$.numberDay') day,COUNT(*) orders FROM store_records WHERE ${filter} GROUP BY day ORDER BY day; SELECT json_extract(data,'$.status') status,COUNT(*) count FROM store_records WHERE store_id=${q(storeId)} AND key LIKE ${q('preparation:'+data.summary.prefix+'%')} GROUP BY status; SELECT COUNT(p.key) samples,ROUND(MIN((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) min_minutes,ROUND(MAX((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) max_minutes,ROUND(AVG((julianday(json_extract(p.data,'$.completedAt'))-julianday(json_extract(o.data,'$.createdAt')))*1440),1) tma_minutes,COUNT(DISTINCT json_extract(p.data,'$.readyBy')) cooks,(SELECT COUNT(*) FROM store_events WHERE store_id=${q(storeId)} AND key LIKE ${q('order:'+data.summary.prefix+'%')}) sync_orders FROM store_records o JOIN store_records p ON p.store_id=o.store_id AND p.key='preparation:'||substr(o.key,7) WHERE o.store_id=${q(storeId)} AND o.key LIKE ${q('order:'+data.summary.prefix+'%')} AND json_extract(p.data,'$.status')='completed';`);
     console.log(JSON.stringify(data.summary));
   }
 }

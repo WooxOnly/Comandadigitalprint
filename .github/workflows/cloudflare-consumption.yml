@@ -1,7 +1,7 @@
-name: Consumo Cloudflare a cada tres horas
+name: Consumo Cloudflare duas vezes ao dia
 on:
   schedule:
-    - cron: '17 */3 * * *'
+    - cron: '30 12,21 * * *'
   workflow_dispatch:
   push:
     branches: [homologacao]

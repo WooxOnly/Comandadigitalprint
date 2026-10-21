@@ -24,7 +24,11 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## Consumption monitoring — authorized 2026-10-20
 
-- Owner upgraded Cloudflare Workers Paid and authorized checks every three hours with notifications to the owner. Included monthly quotas: 10M Workers requests, 30M CPU milliseconds, 25B D1 rows read, 50M rows written and 5GB storage. The $5 minimum is not a spending cap. Read-only account analytics are available; the existing credential cannot read billing cycle/subscription (403), so use explicitly labeled conservative rolling 31-day snapshots. GitHub workflow runs every 3h; ChatGPT condition monitoring alerts at 30/80/90/95/100% or stale/unknown metrics. Never interpret missing metrics as zero or claim these alerts block charges. No plan/billing changes or APK builds authorized by monitoring.
+- Owner upgraded Cloudflare Workers Paid and authorized twice-daily summaries at 09:00 and 18:00 America/New_York, always showing a short table of all five quota percentages (including below 30%). Included monthly quotas: 10M Workers requests, 30M CPU milliseconds, 25B D1 rows read, 50M rows written and 5GB storage. The $5 minimum is not a spending cap. Read-only account analytics are available; the existing credential cannot read billing cycle/subscription (403), so use explicitly labeled conservative rolling 31-day snapshots. GitHub collection runs twice daily at 12:30/21:30 UTC before the local summaries; allow 24 hours for stale monitoring with this reduced cadence. Unknown/missing metrics still require a short warning, never zero. Never interpret missing metrics as zero or claim these alerts block charges. No plan/billing changes or APK builds authorized by monitoring.
+
+## Presentation day extension — 2026-10-21
+
+- Owner requested one more full local day for today’s presentation, including future evening samples, in homologação seabra-1 only. Append under a new date-scoped demo-day-v1 prefix, 30–100 orders, actual synthetic stage durations 30–45min and the same four named cooks. Keep nine current queued examples (three per stage); finish only prior-day synthetic queues through revision-guarded sync events with backup. Preserve existing orders, real pending work, modules and other stores. No APK or app deployment needed.
 
 ## Presentation kitchen names — 2026-10-20
 

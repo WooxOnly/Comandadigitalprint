@@ -16,3 +16,9 @@ O workflow manual `demo-homologacao.yml`, modo inspect, consulta somente catálo
 O resultado é conferido no D1 por total, 120 dias, limites diários, etapas, tempos e operadores. Dados entram pelo mecanismo de eventos, para o APK existente recebê-los na sincronização normal. O volume pode exigir alguns minutos para a primeira sincronização no tablet; o portal lê a base diretamente. Nenhum novo APK é necessário.
 
 Validação automatizada: teste SQLite com todos os módulos, importação repetida sem duplicação, preservação de registros anteriores, totais de produção e finanças, fechamentos reconciliados, módulos inativos e rejeição de loja inválida. Dados de demonstração não constituem validação física de impressão/tablet.
+
+## Dia adicional para apresentação
+
+Modo manual `append-day` no mesmo workflow: acrescenta somente o dia local atual, com identificadores `demo-day-v1-AAAAMMDD-`, sem reutilizar o lote original de 120 dias. Os pedidos concluídos fictícios podem estar distribuídos até 22h30 e finalizar até 23h15, explicitamente para mostrar o dia inteiro na apresentação; a fila de três recebidos/três em preparo/três prontos usa horários atuais. A janela de Hoje contém o lote, enquanto relatórios de dias completos mantêm suas regras normais.
+
+TMA de cada concluído entre 30 e 45 minutos; Kainan, Davi, Carla e Elizabeth preservados. Encerra somente filas fictícias de dias anteriores com backup em `demo_day_preparation_backup`, confirmação de revisão/conteúdo e evento de sincronização. Histórico, pedidos reais, outras lojas e módulos desligados preservados. Repetir a importação não duplica nem substitui alterações já feitas pelo usuário. Ponto de restauração antes da carga e artefato privado no workflow; não gera APK nem publica aplicativo.
