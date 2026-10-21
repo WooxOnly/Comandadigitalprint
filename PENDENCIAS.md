@@ -1,3 +1,9 @@
+## Cartões de ranking mais compactos e legenda da quantidade — 20/10/2026
+
+- Nomes das listas reduzidos de 12px para 11px, entrelinhas e preenchimento menores para reduzir quebras e altura, com nomes completos e área de toque mínima de 44px preservados.
+- Legenda acima das listas: valores à direita representam a quantidade vendida. Texto, tooltip da quantidade e nome acessível do botão traduzidos PT/EN/ES. Quantidades continuam em 12px e percentuais somente na pizza.
+- Aplicado a produtos e grupos; ordinais, limites Top 10/Top 5, valores e cálculos preservados. Entrega web em homologação, sem APK.
+
 ## Quantidades compactas e posições ordinais — 20/10/2026
 
 - Listas de produtos e grupos: quantidades reduzidas de 14px para 12px, preservando contraste/alinhamento. Posições com ordinal no idioma selecionado: português 1º, 2º, 3º; inglês 1st, 2nd, 3rd, 4th…10th; espanhol 1.º, 2.º, 3.º.
