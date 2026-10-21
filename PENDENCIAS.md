@@ -1,5 +1,7 @@
 ## Resumos de consumo duas vezes ao dia e novo dia demonstrativo — 21/10/2026
 
+- Aplicado e validado no workflow 39589089383: 73 pedidos em 21/10, 64 concluídos, três recebidos/três em preparo/três prontos, duas encomendas, TMA 37,6min (30–45), quatro operadores e 73 pedidos sincronizáveis. Nove preparações fictícias antigas finalizadas com backup. Validação geral 39589059007 concluída com sucesso.
+
 - Resumo curto com as cinco porcentagens sempre, às 9h e 18h de Orlando. Coletor reduzido para duas execuções diárias antes dos resumos; dados ausentes/desconhecidos ou com mais de 24h continuam sinalizados. Plano e cobrança preservados.
 - Preparado modo append-day para acrescentar o dia local completo na loja seabra-1 de homologação, com prefixo próprio e importação idempotente: 30–100 pedidos, TMA 30–45min e Kainan/Davi/Carla/Elizabeth. Horários fictícios até a noite autorizados para apresentação; nove exemplos atuais na fila.
 - Somente filas sintéticas antigas podem ser finalizadas, com backup e guarda de revisão. Nenhuma alteração de módulos, contas, outras lojas ou pedidos reais. Verificação de dados e relatórios reais em SQLite, repetição sem duplicações e preservação do histórico. Sem novo APK ou publicação do app.
