@@ -1,3 +1,9 @@
+## Legendas em cartões fechados — 20/10/2026
+
+- Nova orientação: cada item/grupo tem borda completa arredondada, espaçamento entre cartões e destaque suave de borda/fundo ao passar o mouse, tocar ou selecionar pelo teclado. Substitui a linha lateral e o círculo extra da seleção anterior.
+- Lista e texto de seleção mostram nome e quantidade, sem percentual. Quantidades com alinhamento consistente e maior destaque. Percentuais arredondados continuam somente na pizza, com o aviso abaixo; valores reais e proporções preservados.
+- Mantidos cinco itens por coluna no Top 10, versão de uma coluna para até cinco grupos/itens, nomes completos e adaptação celular/tablet/PC em ambas as orientações. Entrega web em homologação, sem APK.
+
 ## Refinamento da seleção e percentuais das pizzas — 20/10/2026
 
 - Produtos e grupos: seleção da fatia por brilho sutil, sem contorno branco grosso. Foco de teclado continua perceptível com traço fino. Na legenda, removido o bloco claro e mantidos apenas uma linha discreta e o marcador da cor selecionada.
