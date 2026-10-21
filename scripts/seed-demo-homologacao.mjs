@@ -1,3 +1,4 @@
+import { demoDayVolume, demoEmission } from '../shared/demo-service-pattern.mjs';
 import { DEMO_KITCHEN_ACTORS } from '../shared/demo-kitchen-names.mjs';
 // Explicit, additive demo import. No credentials, permissions or catalog writes.
 import fs from 'node:fs';
@@ -63,16 +64,16 @@ export function demoDataset(inventory,storeId,now=new Date(),options={}){
   const customers=Array.from({length:40},(_,n)=>({id:id('customer',n),name:'Demo '+['Ana','Bruno','Carla','Diego','Elisa','Felipe','Giovana','Hugo'][n%8]+' '+(n+1),phone:'',email:'cliente'+(n+1)+'@example.invalid',addresses:['Endereço fictício para demonstração '+(n+1)],notes:'Dados sintéticos de apresentação; nenhum contato real.',active:true,createdAt:iso(todayUtc-119*dayMs),updatedAt:iso(todayUtc-119*dayMs)}));
   if(store.customers)for(const customer of customers)event('customer:'+customer.id,customer);
   for(let d=dayCount-1;d>=0;d--){
-    const day=iso(todayUtc-d*dayMs).slice(0,10),daySeed=hash(day),count=30+daySeed%71,sessionId=id('session',day),cashier='demo.caixa.'+(d%3+1);let cashBalance=20000;
-    const start=atLocal(day,9),end=d===0&&!throughDay?Math.min(atLocal(day,22,30),now.getTime()-60*minute):atLocal(day,22,30);
-    const first=Math.min(start,end-3*60*minute),last=end;
-    const sessionOpen=Math.max(atLocal(day,0),first-30*minute),sessionClose=d===0&&!throughDay?now.getTime():atLocal(day,23,45);
+    const day=iso(todayUtc-d*dayMs).slice(0,10),count=demoDayVolume(day),sessionId=id('session',day),cashier='demo.caixa.'+(d%3+1);let cashBalance=20000;
+    const start=atLocal(day,7),end=d===0&&!throughDay?Math.min(atLocal(day,21,15),now.getTime()-45*minute):atLocal(day,21,15);
+    if(end<start||now.getTime()<atLocal(today,7,2))throw Error('Generate demo queue after opening at 07:00');
+    const latestMinute=(end-atLocal(day,0))/minute;
+    const sessionOpen=start,sessionClose=d===0&&!throughDay?now.getTime():atLocal(day,22);
     if(store.cash)sql.push(`INSERT OR IGNORE INTO cash_sessions(store_id,id,device_id,opened_by,opened_at,opening_cents,closed_at,closed_by,counted_cents) VALUES(${q(storeId)},${q(sessionId)},'d364beef-0000-4000-8000-000000000120',${q(cashier)},${q(iso(sessionOpen))},20000,${q(iso(sessionClose))},${q(cashier)},0);`);
     for(let n=0;n<count;n++){
       const orderId=id('order',day,n+1),seed=hash(orderId),active=d===0&&n>=count-9,activeIndex=n-(count-9);
-      // Lunch/evening peaks; future completed samples require explicit whole-day demo mode.
-      const r=(seed%10000)/10000,fraction=r<0.4?0.18+r*0.55:r<0.85?0.58+(r-0.4)*0.65:(r-0.85)/0.15;
-      const emitted=active?now.getTime()-(30-activeIndex*3)*minute:Math.round(first+fraction*(last-first));
+      // Morning coffee and Friday evening peaks; future samples require explicit whole-day demo mode.
+      const emitted=active?Math.max(start,Math.min(atLocal(day,21,57),now.getTime()-(30-activeIndex*3)*minute)):demoEmission(day,n,count-9*(d===0),orderId,latestMinute);
       const serviceMode=seed%10<6?'dine_in':'takeout',customer=customers[seed%customers.length];
       const items=Array.from({length:1+seed%4},(_,j)=>{const p=menu[(hash(orderId+'item'+j)%100<55?(seed+j*3)%Math.min(menu.length,12):hash(orderId+j)%menu.length)];return {id:id('item',day,n,j),productId:p.id,name:p.name,category:p.category,quantity:1+hash(orderId+'qty'+j)%3,note:j===0&&seed%7===0?'Sem cebola — demonstração':'',unitPriceCents:Math.round(p.price*100)}});
       const order={id:orderId,createdAt:iso(emitted),numberDay:day,dailyNumber:n+1,tabletLabel:'DEMO',serviceMode,plate:serviceMode==='dine_in'?String(1+seed%10):seed%4===0?String(1+seed%10):'',customer:customer.name,items};

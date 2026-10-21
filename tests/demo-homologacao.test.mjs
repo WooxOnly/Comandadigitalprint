@@ -55,7 +55,7 @@ test('disabled optional modules remain empty; unknown/disabled kitchen stores fa
 
 test('one additional presentation day covers the evening, preserves history and imports idempotently', async()=>{
  const rows=[{results:[{...store,cash:0,customers:0}]},inventory[1],inventory[2]];
- const now=new Date('2026-10-21T10:56:00Z');
+ const now=new Date('2026-10-21T11:56:00Z');
  const history=demoDataset(rows,store.id,new Date('2026-10-20T18:00:00Z'));
  rows[4]={results:history.preparations.filter(p=>p.status!=='completed').map(p=>({store_id:store.id,key:'preparation:'+p.orderId,data:JSON.stringify(p),revision:history.events.findIndex(e=>e.key==='preparation:'+p.orderId)+1,created_at:history.orders.find(o=>o.id===p.orderId).createdAt}))};
  const data=demoDataset(rows,store.id,now,{days:1,prefix:'demo-day-v1-20261021-',throughDay:true});assert.equal(data.retiredKeys.length,9);

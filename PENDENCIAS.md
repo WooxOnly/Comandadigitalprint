@@ -838,3 +838,7 @@ Worker publicado: b99f8578-d90f-470f-9447-8b207b3ec789. Migração de logs aplic
 - Fazer apenas mudanças solicitadas, sem refatorações extras; executar verificações adequadas e não repeti-las sem razão concreta.
 - Ao solicitar commit: commit/push, nuvem aplicável e início do build Expo. Confirmar aceitação e fornecer links sem aguardar o build. Sem solicitação, acumular alterações locais.
 - Comunicar o andamento de forma curta e frequente.
+
+## Movimento da demonstração — 21/10/2026
+
+Ajuste em homologação: sexta > sábado > domingo > quinta > quarta > terça > segunda, com segunda mais fraca. Pedidos fictícios somente entre 07h e 22h de Orlando; café da manhã 07h30–10h, almoço fraco e retomada no fim do dia. Sexta concentra movimento das 17h às 21h, sobretudo 18h–20h. Preservar o total de pedidos e as durações exatas de cada etapa do TMA, além de Kainan, Davi, Carla e Elizabeth. Aplicação por workflow manual `retime-demo-flow.yml`, com cópia prévia, eventos protegidos por revisão e conferência após a escrita; não requer publicação/APK.

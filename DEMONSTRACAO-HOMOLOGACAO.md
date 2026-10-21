@@ -24,3 +24,7 @@ Modo manual `append-day` no mesmo workflow: acrescenta somente o dia local atual
 TMA de cada concluído entre 30 e 45 minutos; Kainan, Davi, Carla e Elizabeth preservados. Encerra somente filas fictícias de dias anteriores com backup em `demo_day_preparation_backup`, confirmação de revisão/conteúdo e evento de sincronização. Histórico, pedidos reais, outras lojas e módulos desligados preservados. Repetir a importação não duplica nem substitui alterações já feitas pelo usuário. Ponto de restauração antes da carga e artefato privado no workflow; não gera APK nem publica aplicativo.
 
 Carga adicional aplicada em 21/10/2026: 73 pedidos (64 concluídos e nove na fila), duas encomendas, TMA médio 37,6min, mínimo 30 e máximo 45. Workflow 39589089383 aprovado, com ponto de restauração e cópias das nove preparações fictícias antigas finalizadas.
+
+## Movimento da demonstração — 21/10/2026
+
+Ajuste em homologação: sexta > sábado > domingo > quinta > quarta > terça > segunda, com segunda mais fraca. Pedidos fictícios somente entre 07h e 22h de Orlando; café da manhã 07h30–10h, almoço fraco e retomada no fim do dia. Sexta concentra movimento das 17h às 21h, sobretudo 18h–20h. Preservar o total de pedidos e as durações exatas de cada etapa do TMA, além de Kainan, Davi, Carla e Elizabeth. Aplicação por workflow manual `retime-demo-flow.yml`, com cópia prévia, eventos protegidos por revisão e conferência após a escrita; não requer publicação/APK.

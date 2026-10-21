@@ -1,0 +1,61 @@
+name: Distribuir movimento demonstrativo de homologacao
+on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/retime-demo-flow.yml']
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Aplicar somente nos pedidos ficticios de seabra-1
+        type: boolean
+        default: false
+jobs:
+  retime:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    concurrency:
+      group: bistro-homologacao-demo-data
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Copiar e planejar somente dados ficticios de homologacao
+        run: |
+          mkdir -p flow-output
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT store_id,key,data,revision FROM store_records WHERE store_id='seabra-1' AND (key GLOB 'order:demo120-v1-*' OR key GLOB 'preparation:demo120-v1-*' OR key GLOB 'order:demo-day-v1-*' OR key GLOB 'preparation:demo-day-v1-*'); SELECT s.id,COALESCE(m.cash,0) cash FROM stores s LEFT JOIN store_modules m ON m.store_id=s.id WHERE s.id='seabra-1';" --json > flow-output/before.json
+          node scripts/retime-demo-flow.mjs flow-output/before.json flow-output
+      - name: Registrar restauracao e aplicar eventos com revisao protegida
+        if: inputs.apply
+        run: |
+          npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json > flow-output/restore-point.json
+          for sql_file in flow-output/flow-*.sql; do
+            npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file "$sql_file" --yes > /dev/null
+          done
+      - name: Conferir registros e duracoes exatas apos aplicacao
+        if: inputs.apply
+        run: |
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --command "SELECT store_id,key,data,revision FROM store_records WHERE store_id='seabra-1' AND (key GLOB 'order:demo120-v1-*' OR key GLOB 'preparation:demo120-v1-*' OR key GLOB 'order:demo-day-v1-*' OR key GLOB 'preparation:demo-day-v1-*');" --json > flow-output/after.json
+          node scripts/verify-demo-flow.mjs flow-output
+      - name: Conferir consulta real do painel
+        if: inputs.apply
+        run: |
+          node --input-type=module - <<'JS'
+          import {execFileSync} from 'node:child_process';import{flowReport}from'./server/cloudflare/flow-report.mjs';
+          const DB={prepare:sql=>({bind:(...values)=>({all:async()=>{let n=0;const bound=sql.replace(/\?/g,()=>"'"+String(values[n++]).replaceAll("'","''")+"'");const raw=execFileSync('npx',['--yes','wrangler@4','d1','execute','seabra-cardapio-homologacao','--remote','--config','server/cloudflare/wrangler.homologacao.jsonc','--command',bound,'--json'],{encoding:'utf8',maxBuffer:10*1024*1024});return{results:JSON.parse(raw)[0].results}}})})};
+          const report=await flowReport({DB},[{id:'seabra-1'}],'America/New_York');console.log('ACTUAL_DASHBOARD_FLOW='+JSON.stringify({hours:report.hours.buckets,weekdays:report.weekdays.buckets}));
+          JS
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: homologacao-flow-backup
+          path: flow-output/
+          retention-days: 7
