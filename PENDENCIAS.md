@@ -1,3 +1,8 @@
+## Grupos limitados aos cinco mais pedidos — 20/10/2026
+
+- Nova decisão do proprietário: grupos mostram no máximo cinco entradas, mesmo com mais grupos no período. Lista de uma coluna, pizza e detalhes usam os mesmos cinco mais pedidos. Percentuais sobre os cinco exibidos; nota mostra cinco de N, sem fatia Outros ou posições fictícias.
+- Produtos mantêm Top 10 em duas colunas. Totais gerais, permissões, períodos, quantidades e demais relatórios preservados. Verificação com doze grupos reais reduzidos aos cinco primeiros, inclusive a base dos percentuais. Entrega web em homologação, sem APK.
+
 ## Pizzas vivas com todos os percentuais — 20/10/2026
 
 - Substituída a paleta opaca de produtos/grupos por dez cores mais vivas, iguais aos marcadores da lista. Outros gráficos mantêm suas cores.
