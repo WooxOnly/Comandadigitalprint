@@ -1,3 +1,9 @@
+## Quantidades compactas e posições ordinais — 20/10/2026
+
+- Listas de produtos e grupos: quantidades reduzidas de 14px para 12px, preservando contraste/alinhamento. Posições com ordinal no idioma selecionado: português 1º, 2º, 3º; inglês 1st, 2nd, 3rd, 4th…10th; espanhol 1.º, 2.º, 3.º.
+- Coluna da posição ajustada para acomodar os sufixos sem invadir o marcador ou o nome. Nomes acessíveis também usam ordinal. Quantidades, classificação, limites Top 10/Top 5 e percentuais da pizza preservados.
+- Entrega web em homologação, sem APK.
+
 ## Logo BistroHub em todos os portais — 20/10/2026
 
 - Logo oficial existente adicionada à barra compartilhada, ao lado de BistroHub e do slogan localizado. Abrange administrativo, portal do cliente, telas internas, login, convite e recuperação/redefinição de senha.
