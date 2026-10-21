@@ -1,3 +1,9 @@
+## Logo BistroHub em todos os portais — 20/10/2026
+
+- Logo oficial existente adicionada à barra compartilhada, ao lado de BistroHub e do slogan localizado. Abrange administrativo, portal do cliente, telas internas, login, convite e recuperação/redefinição de senha.
+- SVG local incorporado, sem rede ou dependência nova; dimensões compactas e cores originais. Mantidos idioma/aparência no canto direito, marca do cliente separada e leitura acessível sem anunciar duas vezes BistroHub.
+- Verificações de ausência de sobreposição em celular/tablet/PC, retrato/paisagem, claro/escuro e PT/EN/ES. Entrega web em homologação, sem APK.
+
 ## Grupos limitados aos cinco mais pedidos — 20/10/2026
 
 - Nova decisão do proprietário: grupos mostram no máximo cinco entradas, mesmo com mais grupos no período. Lista de uma coluna, pizza e detalhes usam os mesmos cinco mais pedidos. Percentuais sobre os cinco exibidos; nota mostra cinco de N, sem fatia Outros ou posições fictícias.
