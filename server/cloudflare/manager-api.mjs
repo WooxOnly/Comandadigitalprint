@@ -1,3 +1,4 @@
+import { onlineManagerResponse } from './online-api.mjs';
 import { managerLogo } from './manager-brand.mjs';
 import { flowReport } from './flow-report.mjs';
 import { LOGIN_ERRORS, dailyServiceLimit } from './login-errors.mjs';
@@ -116,6 +117,8 @@ export async function managerResponse(request, env, now = Date.now(), context) {
     if (path === '/gestor/api/preferences' && request.method === 'GET') return session ? reply({ language }) : reply({ error: 'Acesso não autorizado.' }, 401);
     if (path === '/gestor' && request.method === 'GET') return session ? html(managerPortalPage(nonce, session, language), nonce, 200, { 'Content-Language': language }) : loginPage(nonce, language, url.searchParams.get('welcome') === '1' ? 'Senha criada. Entre com seu e-mail.' : '');
     if (!session) return reply({ error: 'Acesso não autorizado.' }, 401);
+    const online = await onlineManagerResponse(request, env, session, language, now);
+    if (online) return online;
     if (request.method !== 'GET') return reply({ error: 'Método indisponível.' }, 405);
     const stores = await storesFor(env, session.client);
     if (path === '/gestor/api/stores') return reply({ stores });

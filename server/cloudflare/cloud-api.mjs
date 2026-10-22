@@ -1,3 +1,4 @@
+import { onlineInbox, onlineDecision } from './online-orders.mjs';
 import { correctPreparation, preparationCorrectionUsers } from './preparation-correction.mjs';
 import { cancellationUsers, cancelPreorder } from './preorder-cancellation.mjs';
 import { tabletLicense, requireStoreLicense } from './licenses.mjs';
@@ -110,6 +111,12 @@ export async function cloudResponse(request, env) {
     await requireStoreLicense(env, actor.storeId);
     const requiredScreen = { '/cloud/preparation/correct': 'preparation', '/cloud/preparation/correction-users': 'preparation', '/cloud/preorders/cancellation-users': 'preorders', '/cloud/preorders/cancel': 'preorders', '/cloud/cash': 'cash', '/cloud/cash/report': 'cash-reports', '/cloud/customers/history': 'customers', '/cloud/preparation-reprint': 'preparation' }[url.pathname];
     if (requiredScreen && !roleScreen(actor.role, requiredScreen)) fail(403, 'ACCESS_DENIED');
+    if (url.pathname === '/cloud/online' || url.pathname === '/cloud/online/decision') {
+      if (!['admin','manager','cashier'].includes(actor.role)) fail(403,'ACCESS_DENIED');
+      if (url.pathname === '/cloud/online' && request.method === 'GET') return reply(await onlineInbox(env, actor.storeId));
+      if (url.pathname === '/cloud/online/decision' && request.method === 'POST') return reply(await onlineDecision(env, actor.storeId, await body(request), actor.username));
+      fail(405, 'INVALID_DATA');
+    }
     if (url.pathname === '/cloud/preorders/cancellation-users' && request.method === 'GET') return reply(await cancellationUsers(env, actor));
     if (url.pathname === '/cloud/preorders/cancel' && request.method === 'POST') {
       return reply(await cancelPreorder(env, actor, await body(request), async (username, password) => {

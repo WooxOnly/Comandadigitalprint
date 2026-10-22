@@ -277,6 +277,8 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
         throw new Error('Não foi possível autorizar a reimpressão. Confira a conexão e as permissões.');
       }
     },
+    async onlineInbox() { await load(); if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/online'); },
+    async onlineDecision(id: string, status: 'accepted' | 'declined') { await load(); if (!session) throw new CloudError('LOGIN_REQUIRED'); return request('/online/decision', { id, status }); },
     modules() { return state?.modules ?? DEFAULT_STORE_MODULES; },
     cashOverview() { return state?.cashOverview ?? null; },
     pendingCashCommand() { return state?.cashAttempt ?? null; },

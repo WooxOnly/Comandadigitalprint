@@ -897,3 +897,11 @@ Proprietário autorizou começar cardápio online com preços/pedido e avaliar p
 - Aviso visual/som configuráveis; agora somente aberto; agendado autorizado pode chegar fechado para horário futuro válido. Prazos de aceite, expiração e alcance de push ainda pendentes.
 - Consumer foi citado pelo proprietário como referência funcional de uso; não foi inspecionado/copiado. Reutilizar identidade/layout existentes.
 - Planejamento detalhado e checklists 17–20 adicionados; nenhuma funcionalidade, publicação ou APK concluído por este registro.
+
+
+## 22/10/2026 — Primeira implementação de testes dos pedidos online
+
+- Proprietário autorizou implementar portal público com carrinho/envio, módulo no app e configuração no administrador, para primeiros testes.
+- Implementados canais exclusivos, habilitações administrativas, horários/agendamento autorizado, QR de mesa no automático, caixa de entrada/aceite no portal e aba nativa com aviso/som em primeiro plano.
+- Ver [estado e roteiro de testes](PEDIDOS-ONLINE-TESTES.md) para limites: aceite não dispara cozinha/venda; sem gateway, sem push remoto, sem expiração automática inventada; extras estruturados e paginação histórica pendentes.
+- Migração aditiva e publicação em homologação preparadas. Novo APK ainda depende de autorização específica; não declarar instalado no tablet.

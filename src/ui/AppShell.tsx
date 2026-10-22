@@ -1,3 +1,4 @@
+import { useOnlineOrders } from '../state/OnlineOrdersContext';
 import { SettingsLanguageVisibility } from './SettingsLanguageVisibility';
 import { LanguageSettings } from './LanguageSettings';
 import { AppearanceSelector } from './AppearanceSelector';
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const storeName = useStoreName();
   const path = usePathname();
   const modules = useStoreModules();
+  const online = useOnlineOrders();
   const role = useAppRole();
   const { logout } = useAuth();
   const tabs = navigationTabs(modules, role);
@@ -37,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeTab = tabs.find((tab) => ROUTES[tab.screen] === path || (tab.screen === 'history' && path.startsWith('/history/')) || (tab.screen === 'cash' && path === '/cash-reports') || (tab.screen === 'printer' && path === '/backups'));
   const currentTab = activeTab || TABS[0];
   const kitchen = path === '/preparation';
-  const moduleTitle = path === '/backups' ? 'Recuperação de dados' : path === '/preparation' ? 'Painel de preparo' : path === '/customers' ? 'Cadastro de Clientes' : path === '/preorders' ? 'Encomendas' : path === '/cash' ? 'Caixa' : path === '/cash-reports' ? 'Relatórios do Caixa' : null;
+  const moduleTitle = path === '/online' ? 'Pedidos online' : path === '/backups' ? 'Recuperação de dados' : path === '/preparation' ? 'Painel de preparo' : path === '/customers' ? 'Cadastro de Clientes' : path === '/preorders' ? 'Encomendas' : path === '/cash' ? 'Caixa' : path === '/cash-reports' ? 'Relatórios do Caixa' : null;
   const screen = activeTab?.screen;
   const { isReady, sending, chooseLogo, logoUri, isWide, feedback, selectedProduct, setSelectedProduct, pizzaMode, setPizzaMode, secondFlavor, setSecondFlavor, extras, setExtras, extraPlacement, setExtraPlacement, pizzaMenu, productNote, setProductNote, addSelectedProduct } = useApp();
   const { width, fontScale } = useWindowDimensions();
@@ -69,6 +71,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </View>
 
           <CloudStatus compact={kitchen} />
+          {online?.visualAlert && online.pending > 0 && path !== '/online' && <Pressable accessibilityRole="button" accessibilityLiveRegion="polite" accessibilityLabel={t('Novos pedidos online: {count}').replace('{count}', String(online.pending))} onPress={() => router.navigate('/online')} style={{ position: 'absolute', bottom: 76, right: 16, zIndex: 25, maxWidth: '90%', backgroundColor: COLORS.primary, borderRadius: 12, padding: 12, minHeight: 44 }}><Text style={styles.sendButtonText}>{t('Novos pedidos online: {count}').replace('{count}', String(online.pending))}</Text></Pressable>}
+
           <View style={styles.flex}>{permitted ? children : <View style={styles.panel}><Text style={styles.panelTitle}>{t('Acesso restrito')}</Text><Text style={styles.helperText}>{t('Seu perfil não tem acesso a esta tela ou o módulo está desativado.')}</Text><Pressable style={styles.cancelButton} onPress={logout}><Text style={styles.cancelButtonText}>{t('Sair do sistema')}</Text></Pressable></View>}</View>
 
           {feedback && <View accessibilityLiveRegion="polite" style={[styles.feedbackToast, feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess]}><Text style={styles.feedbackTitle}>{t(feedback.title)}</Text><Text style={styles.feedbackMessage}>{t(feedback.message)}</Text></View>}
@@ -78,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <View testID="navigation-content" style={[styles.bottomNav, { width: navWidth, maxWidth: navWidth }]}>
                 {tabs.map((tab) => <Pressable testID={'nav-' + tab.screen} key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} aria-selected={screen === tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
                   <View style={{ marginBottom: 2 }}><NavigationIcon icon={tab.icon} size={18} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
-                  <Text numberOfLines={2} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}</Text>
+                  <Text numberOfLines={2} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}{tab.screen === 'online' && online?.visualAlert && online.pending > 0 ? ' (' + online.pending + ')' : ''}</Text>
                 </Pressable>)}
               </View>
             </ScrollView>

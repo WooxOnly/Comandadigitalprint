@@ -37,6 +37,10 @@ O foco da retomada é desenhar/revisar o fluxo de Caixa. O cardápio online é u
 - [ ] [19 — Funcionamento, agendamento e prazo de aceite](checklists/fim-de-semana/19-horarios-agendamento-e-aceite.md) — Agora/loja aberta e agendado futuro.
 - [ ] [20 — Habilitações e preset no nosso painel de administrador](checklists/fim-de-semana/20-configuracao-administrativa-online.md) — Módulo, agendamento, mesa, quantidade e modelo de QR.
 
+## Primeira implementação online para testes
+
+Estado, acessos, validação e limites da primeira etapa: [PEDIDOS-ONLINE-TESTES.md](PEDIDOS-ONLINE-TESTES.md). A entrega não conclui Caixa, cozinha, checkout pago ou validação no tablet físico.
+
 ## Referências preservadas
 
 - [Planejamento do fluxo de Caixa](PLANEJAMENTO-FLUXO-CAIXA.md).

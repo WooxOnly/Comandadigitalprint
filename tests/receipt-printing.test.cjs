@@ -18,9 +18,9 @@ function loadPrinter(os = 'android', sendReceipt) {
     require(name) {
       if (name.endsWith('/printerRouting')) return loadTs('src/services/printerRouting.ts');
       if (name.endsWith('/customerReceipt')) return loadTs('src/services/customerReceipt.ts');
-      if (name.endsWith('/escposReceipt')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/escposReceipt.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, require: key => { assert.ok(key.endsWith('/translations')); const translations = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: translations }); return translations; } }); return output; }
+      if (name.endsWith('/escposReceipt')) return loadTs('src/services/escposReceipt.ts');
       if (name.endsWith('/networkPrinter')) return { sendNetworkReceipt: sendReceipt || (async () => { throw Error('Unexpected network print'); }) };
-      if (name.endsWith('/translations')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/i18n/translations.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output }); return output; }
+      if (name.endsWith('/translations')) return loadTs('src/i18n/translations.ts');
       if (name.endsWith('/printJob')) { const output = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/services/printJob.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: output, setTimeout, clearTimeout }); return output; }
       if (name === 'react-native') return { Platform: { OS: os } };
       assert.equal(name, 'expo-print');

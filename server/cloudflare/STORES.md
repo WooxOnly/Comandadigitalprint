@@ -37,3 +37,8 @@ O proprietário também pode consultar/rotacionar a senha semanal global usando 
 ## Limites de acesso
 
 `POST /cloud/login` aceita `storeId`, verifica a credencial daquela loja e devolve um token assinado que inclui o ID. A ausência do ID serve apenas à migração dos clientes antigos para `seabra-1`. Todas as consultas e alterações em `/cloud/changes`, `/cloud/change` e `/cloud/diagnostics` filtram o ID da sessão; informar outro ID na requisição não concede acesso. A leitura pública `GET /menu?storeId=<id>` usa o registro de lojas ativas; sem o parâmetro, retorna `seabra-1` para compatibilidade.
+
+
+### Pedidos online (primeira etapa de testes, 22/10/2026)
+
+Aplicar a migração aditiva `migrations/20261022-online-orders.sql` antes de publicar o Worker que contém as rotas `/pedir`, `/admin/online`, `/gestor/online` e `/cloud/online`. O protocolo legado de módulos permanece inalterado; a aba nova usa o endpoint próprio autenticado. Configurações/histórico online ficam em tabelas separadas, sem materializar pedidos/cozinha/vendas nesta etapa. Regras e validação: [PEDIDOS-ONLINE-TESTES.md](../../PEDIDOS-ONLINE-TESTES.md). Bootstrap somente homologação: `scripts/bootstrap-online-homologacao.mjs`, chamado apenas com `enable_online_demo=true` no workflow e sem sobrescrever configurações existentes.

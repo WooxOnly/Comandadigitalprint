@@ -11,6 +11,11 @@ on:
         type: boolean
         default: true
 
+      enable_online_demo:
+        description: Disponibilizar primeira versão de pedidos online da Seabra para testes
+        type: boolean
+        default: false
+
 permissions:
   contents: read
 
@@ -61,7 +66,15 @@ jobs:
           npx --yes wrangler@4 d1 time-travel info seabra-cardapio-homologacao --config server/cloudflare/wrangler.homologacao.jsonc --json
           npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file server/cloudflare/migrations/20261019-manager-invitations.sql --yes
           npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file server/cloudflare/migrations/20261020-manager-recovery.sql --yes
+          npx --yes wrangler@4 d1 execute seabra-cardapio-homologacao --remote --config server/cloudflare/wrangler.homologacao.jsonc --file server/cloudflare/migrations/20261022-online-orders.sql --yes
           npx --yes wrangler@4 deploy --keep-vars --config server/cloudflare/wrangler.homologacao.jsonc
+      - name: Disponibilizar pedidos online da Seabra quando solicitado
+        if: inputs.enable_online_demo
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: node scripts/bootstrap-online-homologacao.mjs
       - name: Conferir saude do servidor
         run: |
           node --input-type=module - <<'NODE'

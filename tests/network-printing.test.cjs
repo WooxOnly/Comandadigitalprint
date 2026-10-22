@@ -11,7 +11,7 @@ function load(file, modules = {}) {
   new Function('exports', 'require', compiled)(output, name => modules[name] || require(name));
   return output;
 }
-const translations = load('src/i18n/translations.ts');
+const translations = require('./helpers/load-ts.cjs').loadTs('src/i18n/translations.ts');
 const receipt = load('src/services/escposReceipt.ts', { '../i18n/translations': translations });
 const { createNetworkPrinterSender, getNetworkPrinterEndpoint } = load('src/services/networkPrintTransport.ts');
 const endpoint = { address: '192.168.1.50', port: '9100' };

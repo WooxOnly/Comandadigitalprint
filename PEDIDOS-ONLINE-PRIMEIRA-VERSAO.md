@@ -1,6 +1,6 @@
 # Pedidos online — desenho da primeira versão
 
-Atualizado em 22/10/2026 com a definição mais recente do proprietário: **o cliente/vendedor escolhe o canal no próprio portal**. Este desenho substitui a proposta anterior de exigir portal + WhatsApp juntos e de usar somente o navegador do tablet. Registra requisitos; não declara funcionalidade implementada/publicada.
+Atualizado em 22/10/2026 com a definição mais recente do proprietário: **o cliente/vendedor escolhe o canal no próprio portal**. Este desenho substitui a proposta anterior de exigir portal + WhatsApp juntos e de usar somente o navegador do tablet. Registra os requisitos aprovados. O proprietário autorizou implementar a primeira etapa posteriormente; estado real, testes e limites em [PEDIDOS-ONLINE-TESTES.md](PEDIDOS-ONLINE-TESTES.md).
 
 ## Habilitação e preset no nosso painel de administrador
 

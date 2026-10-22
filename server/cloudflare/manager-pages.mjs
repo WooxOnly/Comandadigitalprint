@@ -67,7 +67,7 @@ void loadClient().catch(error=>{$('#client-result').textContent=error.message});
   return page(nonce, localizeMarkup(markup, language), script, extraCss, language, title);
 }
 export function managerPortalPage(nonce, session, language = 'pt') {
-  return page(nonce, localizeMarkup("<div class='language-corner'>" + languageSelector(language) + "</div>" + dashboardContent(escape, session), language), `${languageScript(language, session.user.id)}const ADMIN=false;${fetchHelper}${dashboardScript}`, dashboardCss, language);
+  return page(nonce, localizeMarkup("<div class='language-corner'>" + languageSelector(language) + "</div><nav class='online-entry'><a href='/gestor/online/lojas'>Pedidos online</a></nav>" + dashboardContent(escape, session), language), `${languageScript(language, session.user.id)}const ADMIN=false;${fetchHelper}${dashboardScript}`, dashboardCss, language);
 }
 
 export function managerRecoveryPage(nonce,csrf,language='pt',reset=false){

@@ -1,3 +1,4 @@
+import { OnlineOrdersProvider } from '../state/OnlineOrdersContext';
 import { LicenseGate } from '../ui/LicenseGate';
 import { AppearanceProvider, useAppearance } from '../ui/AppearanceContext';
 import { darkColor } from '../../shared/appearance.mjs';
@@ -25,7 +26,7 @@ function ReadyApp() {
 function Navigation() {
   const { theme } = useAppearance();
   const { t } = useLanguage();
-  return <AppShell>
+  return <OnlineOrdersProvider><AppShell>
     <Tabs initialRouteName="index" backBehavior="initialRoute" tabBar={() => null} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: theme === 'dark' ? darkColor(COLORS.background, 'backgroundColor') : COLORS.background } }}>
       <Tabs.Screen name="index" options={{ title: t('Início') }} />
       <Tabs.Screen name="order" options={{ title: t('Pedido') }} />
@@ -36,8 +37,9 @@ function Navigation() {
       <Tabs.Screen name="preparation" options={{ href: null, title: t('Painel de preparo') }} />
       <Tabs.Screen name="customers" options={{ href: null, title: t('Cadastro de Clientes') }} />
       <Tabs.Screen name="preorders" options={{ title: t('Encomendas'), href: null }} />
+      <Tabs.Screen name="online" options={{ title: t('Pedidos online'), href: null }} />
       <Tabs.Screen name="cash" options={{ title: t('Caixa'), href: null }} />
       <Tabs.Screen name="cash-reports" options={{ title: t('Relatórios do Caixa'), href: null }} />
     </Tabs>
-  </AppShell>;
+  </AppShell></OnlineOrdersProvider>;
 }

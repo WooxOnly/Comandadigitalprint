@@ -1,3 +1,4 @@
+import { onlinePublicResponse } from './online-api.mjs';
 import defaultMenu from '../menu.json' with { type: 'json' };
 import { adminResponse } from './admin-auth.mjs';
 import { cloudResponse } from './cloud-api.mjs';
@@ -32,6 +33,8 @@ async function readBody(request) {
 
 export default {
   async fetch(request, env, context) {
+    const online = await onlinePublicResponse(request, env);
+    if (online) return online;
     const manager = await managerResponse(request, env, Date.now(), context);
     if (manager) return manager;
     const cloud = await cloudResponse(request, env);
