@@ -40,3 +40,11 @@ Implementação iniciada em 22/10/2026 por solicitação do proprietário. Esta 
 - Chromium: página pública e configurações/aceite, 390×844, 844×390, 768×1024, 1024×768 e 1440×900, PT/EN/ES e claro/escuro. Componentes nativos da tela/nav conferidos nos mesmos tamanhos/temas/idiomas.
 - Navegador não comprova som, permissões, teclado ou notificação no Android físico. Esses itens aguardam APK autorizado e teste no tablet.
 - Publicar somente homologação; produção e assinatura/cobrança fora do escopo.
+
+## Publicação conferida — 22/10/2026
+
+- Código publicado: `f99cc4b`; [execução 39781806854](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39781806854), validação e portal concluídos. APK e release ignorados.
+- CI: 386 testes passaram, zero falhas; lint e TypeScript aprovados.
+- Navegador: 36 cenários do portal + 36 da tela nativa e 132 verificações de navegação existente. QR gerado foi decodificado e confirmou loja/mesa.
+- Link público HTTP 200. Conferência no servidor publicado: 49 produtos, inclusão no carrinho, sem transbordamento horizontal em 390×844 e sem erros JavaScript. Nenhum pedido real/de teste foi enviado nessa conferência remota.
+- Bootstrap de homologação concluído; nenhum pedido, preparo, venda, dado histórico ou APK criado pelo bootstrap.

@@ -905,3 +905,9 @@ Proprietário autorizou começar cardápio online com preços/pedido e avaliar p
 - Implementados canais exclusivos, habilitações administrativas, horários/agendamento autorizado, QR de mesa no automático, caixa de entrada/aceite no portal e aba nativa com aviso/som em primeiro plano.
 - Ver [estado e roteiro de testes](PEDIDOS-ONLINE-TESTES.md) para limites: aceite não dispara cozinha/venda; sem gateway, sem push remoto, sem expiração automática inventada; extras estruturados e paginação histórica pendentes.
 - Migração aditiva e publicação em homologação preparadas. Novo APK ainda depende de autorização específica; não declarar instalado no tablet.
+
+### Publicação da primeira etapa online confirmada
+
+- Workflow 39781806854 publicou `f99cc4b` em homologação: 386 testes, lint e TypeScript aprovados; APK/release ignorados.
+- Cardápio público `/pedir/seabra-1` retorna 200, com 49 produtos e carrinho funcionando no navegador, sem erros/overflow na conferência remota. Nenhuma solicitação foi enviada ao banco nessa conferência.
+- Configuração de teste inicializada sem sobrescrever configurações anteriores. Recebimento/aceite pode ser testado no portal; instalar nova aba no tablet continua dependente de autorização do APK.
