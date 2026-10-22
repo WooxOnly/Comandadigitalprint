@@ -1,5 +1,7 @@
 # Fluxo de Caixa — requisitos registrados em 22/10/2026
 
+Checklists detalhados por demanda, para acompanhar a execução: [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md). Os requisitos deste planejamento são preservados; decisões novas devem ser refletidas no checklist correspondente.
+
 Planejamento para retomarmos em um possível momento no fim de semana. Este documento registra os pedidos do proprietário; não significa implementação, publicação ou aprovação de detalhes ainda em aberto.
 
 ## Abertura e vínculo dos pedidos

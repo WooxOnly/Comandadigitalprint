@@ -1,5 +1,7 @@
 # Cardápio digital e pedidos online — requisitos registrados em 22/10/2026
 
+Checklists detalhados por demanda, para acompanhar a execução: [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md). Os requisitos deste planejamento são preservados; decisões novas devem ser refletidas no checklist correspondente.
+
 Frente separada do redesenho do Caixa, importante para a expansão do BistroHub a pequenos vendedores e pessoas que produzem alimentos em casa. Requisitos para estudar e desenhar; nenhuma implementação ou publicação foi solicitada nesta etapa.
 
 ## Objetivo e experiência do cliente

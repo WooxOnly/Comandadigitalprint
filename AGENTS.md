@@ -6,6 +6,10 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - Minimize token use and repetitive progress messages. Use targeted tests for the changed behavior and its affected dependencies, reuse valid prior results, and avoid repeating successful tests without a new change or unresolved concern. Use the full suite when cross-cutting changes or a release require it; do not repeatedly run overlapping full suites.
 - Publishing credentials are now repository Actions Secrets, independent of the temporary workspace login. Do not ask to recreate working credentials; investigate a concrete authentication failure before requesting setup. Never request credential values in chat.
 
+## Weekend planning checklist — owner request 2026-10-22
+
+- The owner asked for separate, detailed checklists of all newly recorded Cash/checkout/reporting/online-menu requirements. Use [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md) and its 15 linked files when resuming that work. Keep confirmed rules, open decisions and later phases distinct; review existing functions before changing them. Check items only when actually verified, not merely because documented. The current task records requirements only; follow the owner's subsequent instructions when work resumes. Preserve the existing reports/layout and separate APK authorization rules.
+
 ## APK authorization clarification — latest instruction 2026-10-19
 
 - The owner objected to automatic APK compilation. Prior “publish everything” authorization does not authorize future APK builds. Implement and test requested changes, but request an APK compilation only after explicit authorization for that build. Do not cancel already requested remote builds unless instructed.
