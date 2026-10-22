@@ -42,6 +42,28 @@ Planejamento para retomarmos em um possível momento no fim de semana. Este docu
 - Considerar o saldo inicial de troco na conferência do dinheiro; definir a apresentação do esperado, contado e eventuais diferenças.
 - Registrar responsável e data/hora do fechamento. Regras de pendências, ajustes, cancelamentos/estornos e reabertura devem ser definidas na revisão do fluxo; não presumir decisões ainda não tomadas.
 
+## Valores dos produtos e preservação do layout
+
+- Com o módulo de Caixa ativado, mostrar os preços dos produtos e os valores financeiros necessários no pedido (valores unitários, itens e totais, conforme a etapa), mantendo imposto e tip discriminados.
+- Distinguir habilitação do módulo de Caixa de existência de uma sessão aberta: a regra de mostrar preços depende do módulo; a permissão de iniciar pedidos depende também do caixa aberto.
+- Revisar o comportamento que já existe antes de implementar, complementando as lacunas sem duplicar telas ou regras.
+- Preservar o layout aprovado. Conferir nomes longos, preços, quantidades, moeda e totais em celular, tablet e PC, retrato/paisagem, claro/escuro e PT/EN/ES, sem sobreposição, truncamento de informações necessárias ou redução dos controles de toque.
+- Manter o comportamento dos clientes sem Caixa. Alterações no recibo financeiro devem respeitar a distinção entre recibo e comanda de cozinha, cujo padrão existente não foi autorizado a mudar neste planejamento.
+
+## Relatórios para clientes com Caixa
+
+- **Últimos fechamentos:** lista e detalhamento dos fechamentos recentes, permitindo localizar cada sessão por período, responsável e data/hora de abertura/fechamento. Discriminar fundo inicial, vendas, imposto, tip, recebimentos por forma/bandeira e os valores de conferência do fechamento (esperado, contado e diferença), conforme as regras que forem definidas.
+- **Vendas:** apresentar valores vendidos e quantidade de vendas no período, com detalhamento financeiro e formas de pagamento, mantendo vendas, imposto, gorjeta e fundo inicial separados. Fundo de troco não representa faturamento.
+- **Ticket médio:** apresentar o valor médio por venda. Antes da implementação, definir a base de vendas (bruta/líquida), quais vendas entram no divisor e o tratamento de impostos, gorjetas, descontos, cancelamentos e estornos; o indicador deve reconciliar com o relatório de vendas e não contar movimentos de caixa como vendas.
+- Revisar os relatórios financeiros já disponíveis e ampliar o que faltar. Os novos relatórios devem respeitar o módulo, as permissões e o escopo de loja/cliente, sem substituir ou alterar silenciosamente os relatórios de produção/cozinha.
+- Definir os filtros de período e os detalhes de navegação na revisão do fluxo do fim de semana.
+
+## Registro contínuo das demandas e operações
+
+- Manter neste planejamento cada novo requisito que o proprietário informar, inclusive os lembrados depois. Vincular o resumo no arquivo de pendências para que nada se perca na retomada.
+- No desenho do fluxo, detalhar cada operação de abertura, pedido, recebimento/pagamento, gorjeta, conferência e fechamento: responsável, informações registradas, valores envolvidos e relação com a sessão do caixa e seus relatórios. Operações como ajuste, cancelamento, estorno ou reabertura ainda precisam de definição das regras.
+- Distinguir requisitos registrados, pontos a confirmar, implementação e validação. Não marcar uma solicitação como implementada apenas por ter sido anotada.
+
 ## Etapas posteriores
 
 - Pedido programado/encomendas será revisto depois, conforme o proprietário solicitou. A integração completa com pedidos/cozinha/caixa continua pendente desse desenho.
