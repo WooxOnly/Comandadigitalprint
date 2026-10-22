@@ -2,7 +2,7 @@
 
 Checklists detalhados por demanda, para acompanhar a execução: [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md). Os requisitos deste planejamento são preservados; decisões novas devem ser refletidas no checklist correspondente.
 
-Frente separada do redesenho do Caixa, importante para a expansão do BistroHub a pequenos vendedores e pessoas que produzem alimentos em casa. Requisitos para estudar e desenhar; nenhuma implementação ou publicação foi solicitada nesta etapa.
+Frente separada do redesenho do Caixa, importante para a expansão do BistroHub a pequenos vendedores e pessoas que produzem alimentos em casa. O proprietário autorizou começar a frente online e pediu para pensar melhor na integração com o tablet. Decisões e custos conferidos estão em [PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md](PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md); não confundir essa autorização com implementação/publicação já concluída.
 
 ## Objetivo e experiência do cliente
 
@@ -48,3 +48,10 @@ Frente separada do redesenho do Caixa, importante para a expansão do BistroHub 
 - Compatibilizar com a regra de caixa aberto quando o módulo Caixa existir: decidir em qual momento a solicitação online vira um pedido operacional/venda e quando o caixa precisa estar aberto. Não impor nem dispensar esse bloqueio silenciosamente.
 - Pedidos programados/encomendas e sua integração serão desenhados na etapa posterior já solicitada pelo proprietário; não presumir que a disponibilidade online resolve o agendamento.
 - Separar requisitos anotados, desenho aprovado, implementação e validação. Não gerar APK, iniciar checkout real, alterar dados ou publicar uma página apenas por este registro de planejamento.
+
+## Decisões posteriores confirmadas — 22/10/2026
+
+- Solicitações devem ficar no portal e, após salvar, oferecer mensagem pronta para o consumidor confirmar o envio pelo próprio WhatsApp. Não há API de envio automático nesta primeira etapa.
+- Cada vendedor configura seu próprio WhatsApp comercial no portal dele; não adotar número global nem exigir o telefone da Seabra para desenvolver a opção.
+- Reutilizar o design, cores, logos e padrões existentes.
+- A forma de receber/operar pedidos no tablet continua em discussão; não incluir automaticamente solicitações na cozinha ou no Caixa. Se for dentro do app nativo, há alteração de aplicativo/APK a planejar.

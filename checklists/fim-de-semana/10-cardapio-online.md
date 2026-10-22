@@ -23,9 +23,17 @@ Registro: 22/10/2026. Checklist de trabalho; os itens ainda não foram conferido
 - [ ] Integrar as opções de entrega/retirada habilitadas no portal, conforme o checklist específico.
 - [ ] Garantir que cada loja mostre e receba apenas seus próprios produtos/pedidos.
 
+## Decisões confirmadas após o registro inicial
+
+- [x] Definir o recebimento inicial: solicitações no portal e opção de mensagem pronta para o consumidor enviar pelo WhatsApp, após salvar.
+- [x] Definir quem configura o número: cada cliente/vendedor no próprio portal; sem número global.
+- [x] Definir a referência visual: reaproveitar o design, cores, logos e padrões atuais.
+
+Estas caixas registram decisões de desenho explicitamente tomadas; não indicam telas ou integrações implementadas. A alternativa para o tablet ainda está em aberto em [PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md](../../PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md).
+
 ## Decisões pendentes
 
-- [ ] Definir dados de contato, exigência ou dispensa de cadastro e o canal de notificação/contato com o vendedor.
+- [ ] Definir dados de contato do consumidor e exigência ou dispensa de cadastro; portal e WhatsApp com envio confirmado pelo consumidor já foram escolhidos.
 - [ ] Definir aceite/recusa, indisponibilidade de produto, limites de produção e pedidos recebidos fora do atendimento.
 - [ ] Definir quando a solicitação vira pedido operacional e como entra em cozinha/caixa/histórico.
 - [ ] Definir como a regra de caixa aberto se aplica ao recebimento/aceite de pedidos online; não presumir bloqueio ou dispensa.
