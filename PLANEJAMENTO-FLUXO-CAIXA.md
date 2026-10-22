@@ -66,5 +66,6 @@ Planejamento para retomarmos em um possível momento no fim de semana. Este docu
 
 ## Etapas posteriores
 
+- Cardápio digital e pedidos online constituem uma frente separada, registrada em [PLANEJAMENTO-CARDAPIO-ONLINE.md](PLANEJAMENTO-CARDAPIO-ONLINE.md). A relação com abertura do Caixa, aceite do pedido e pagamento ainda precisa ser desenhada.
 - Pedido programado/encomendas será revisto depois, conforme o proprietário solicitou. A integração completa com pedidos/cozinha/caixa continua pendente desse desenho.
 - Não iniciar implementação, compilação de APK, migração de dados ou publicação apenas por este registro de planejamento.
