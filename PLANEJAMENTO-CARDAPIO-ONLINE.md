@@ -27,6 +27,14 @@ Frente separada do redesenho do Caixa, importante para a expansão do BistroHub 
 - Definir no desenho horários, prazos de produção/atendimento, disponibilidade dos produtos, eventual área/taxa de entrega e quais informações da operação doméstica serão publicadas.
 - Não presumir contratação de entregadores ou integração com plataformas externas de delivery.
 
+## Atendimento dentro do restaurante por QR Code — nova demanda
+
+- Permitir ao cliente na mesa acessar o cardápio pelo QR Code, montar o pedido e solicitar atendimento/entrega na mesa.
+- Avaliar QR Code específico por mesa, com identificação automática, ou QR Code genérico próprio do atendimento no local, no qual o cliente informa a mesa. A alternativa ainda será escolhida ou ambas poderão ser previstas no desenho.
+- Distinguir atendimento na mesa de delivery externo e retirada. Definir recebimento/aceite, vínculo com cozinha/caixa, confirmação ao cliente e pedidos separados/compartilhados na mesma mesa.
+- Manter a primeira etapa sem cobrança online integrada. Preservar o layout e as regras dos módulos já aprovados.
+- Checklist detalhado separado: [16 — Pedido por QR Code na mesa](checklists/fim-de-semana/16-pedido-por-qr-code-na-mesa.md).
+
 ## Etapa futura — checkout com pagamento
 
 - Avaliar um checkout integrado à experiência do cliente para pagar o próprio pedido.

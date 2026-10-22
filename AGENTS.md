@@ -8,7 +8,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## Weekend planning checklist — owner request 2026-10-22
 
-- The owner asked for separate, detailed checklists of all newly recorded Cash/checkout/reporting/online-menu requirements. Use [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md) and its 15 linked files when resuming that work. Keep confirmed rules, open decisions and later phases distinct; review existing functions before changing them. Check items only when actually verified, not merely because documented. The current task records requirements only; follow the owner's subsequent instructions when work resumes. Preserve the existing reports/layout and separate APK authorization rules.
+- The owner asked for separate, detailed checklists of all newly recorded Cash/checkout/reporting/online-menu requirements. Use [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md) and its linked files when resuming that work. Keep confirmed rules, open decisions and later phases distinct; review existing functions before changing them. Check items only when actually verified, not merely because documented. The current task records requirements only; follow the owner's subsequent instructions when work resumes. Preserve the existing reports/layout and separate APK authorization rules.
 
 ## APK authorization clarification — latest instruction 2026-10-19
 

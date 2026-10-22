@@ -30,6 +30,8 @@ O foco da retomada é desenhar/revisar o fluxo de Caixa. O cardápio online é u
 - [ ] [14 — Registrar cada operação e desenhar o fluxo completo entre módulos](checklists/fim-de-semana/14-operacoes-e-integracao.md) — Fluxo de Caixa.
 - [ ] [15 — Conferência final do conjunto antes de uma entrega](checklists/fim-de-semana/15-validacao-do-conjunto.md) — Conferência da entrega.
 
+- [ ] [16 — Pedido pelo QR Code dentro do restaurante, com entrega na mesa](checklists/fim-de-semana/16-pedido-por-qr-code-na-mesa.md) — Frente online: atendimento no local.
+
 ## Referências preservadas
 
 - [Planejamento do fluxo de Caixa](PLANEJAMENTO-FLUXO-CAIXA.md).

@@ -19,6 +19,8 @@ Critérios de verificação para quando as funcionalidades forem implementadas. 
 - [ ] Relatórios de fechamentos, vendas e ticket médio conciliam entre si conforme suas bases definidas.
 - [ ] Cardápio online sem pagamento permite pedido completo e contato do vendedor, com modalidades configuradas.
 
+- [ ] QR Code específico identifica a mesa; QR Code genérico interno solicita a mesa, conforme as alternativas aprovadas, e o pedido mantém a modalidade de atendimento local.
+
 ## Preservação e compatibilidade
 
 - [ ] Dados antigos, inclusive meios de pagamento anteriores, permanecem consultáveis e com seus valores originais.

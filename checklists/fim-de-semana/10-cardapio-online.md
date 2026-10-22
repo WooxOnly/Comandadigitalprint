@@ -37,4 +37,6 @@ Registro: 22/10/2026. Checklist de trabalho; os itens ainda não foram conferido
 - [ ] O fluxo explica que o vendedor entrará em contato e não sugere uma cobrança já efetuada.
 - [ ] A experiência é própria do BistroHub/vendedor, sem copiar a identidade visual de terceiros.
 
+A modalidade de atendimento dentro do restaurante está detalhada separadamente no [checklist 16 — Pedido por QR Code na mesa](16-pedido-por-qr-code-na-mesa.md).
+
 [Voltar ao índice](../../CHECKLIST-FIM-DE-SEMANA.md)
