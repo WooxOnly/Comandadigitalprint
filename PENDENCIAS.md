@@ -886,3 +886,14 @@ Acrescentado [checklist 16 detalhado](checklists/fim-de-semana/16-pedido-por-qr-
 ## Início da frente online e desenho do tablet — 22/10/2026
 
 Proprietário autorizou começar cardápio online com preços/pedido e avaliar publicação, restrições e custos, preservando o fluxo atual. Confirmou: solicitação salva no portal; depois o consumidor pode enviar mensagem pronta pelo próprio WhatsApp, sem API automática. Cada vendedor configura seu número no próprio portal; não há telefone global. Reutilizar design/cores/logos existentes. Em seguida pediu para pensar melhor no uso pelo tablet: portal web sem alterar o APK ou nova caixa de entrada nativa com atualização posterior, decisão ainda em aberto. Desenho concreto, alternativas, isolamento do fluxo atual e custos oficiais conferidos documentados em [PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md](PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md). A infraestrutura atual pode ser reaproveitada; US$ 5 é mínimo da conta, não teto, e o novo tráfego/D1 entra no uso. Sem funcionalidade publicada, APK ou alteração de registros de operação nesta rodada de definição.
+
+
+## 22/10/2026 — Requisitos online atualizados: administrador, canal exclusivo e QR de mesa
+
+- Substitui as propostas anteriores de receber obrigatoriamente no portal + WhatsApp e de deixar a integração no tablet indefinida.
+- Nosso painel de administrador habilita por cliente: módulo Pedidos online, permissão de agendamento e pedidos na mesa. Também define quantidade de mesas e preset/modelo de QR (por mesa ou genérico interno, conforme alternativas anteriores; última fala repetiu “por mesa”).
+- A loja, dentro das habilitações concedidas, escolhe no próprio portal exatamente um canal: WhatsApp manual com número próprio e mensagem confirmada pelo consumidor OU chegada automática na nova aba Pedidos online do tablet com aceite humano. Nunca os dois simultâneos.
+- QR de mesa só existe no automático, com módulo e permissão de mesa ativos. API deve bloquear links antigos/cache após mudança; preservar solicitações já recebidas.
+- Aviso visual/som configuráveis; agora somente aberto; agendado autorizado pode chegar fechado para horário futuro válido. Prazos de aceite, expiração e alcance de push ainda pendentes.
+- Consumer foi citado pelo proprietário como referência funcional de uso; não foi inspecionado/copiado. Reutilizar identidade/layout existentes.
+- Planejamento detalhado e checklists 17–20 adicionados; nenhuma funcionalidade, publicação ou APK concluído por este registro.

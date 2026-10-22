@@ -37,4 +37,14 @@ Critérios de verificação para quando as funcionalidades forem implementadas. 
 - [ ] Seguir a autorização de publicação que estiver vigente no momento da entrega.
 - [ ] Nova compilação de APK depende de autorização específica; não presumir autorização por este planejamento.
 
+## Configuração online e cenários dependentes
+
+- [ ] Portal da loja não consegue habilitar módulo/agendamento/mesa reservados ao nosso administrador.
+- [ ] Cliente sem habilitação não recebe a funcionalidade por chamada direta à API.
+- [ ] Exatamente um canal ativo; WhatsApp não cria chegada automática e tablet exige aceite humano.
+- [ ] Quantidade de mesas e modelo de QR respeitam o preset do administrador e isolamento entre clientes.
+- [ ] QR de mesa funciona somente no automático, inclusive após troca de modo com link antigo/cache.
+- [ ] Loja fechada impede pedido para agora, mas permite agendado autorizado para atendimento futuro válido.
+- [ ] Avisos configurados não duplicam solicitação; troca/desativação preserva histórico e pendências.
+
 [Voltar ao índice](../../CHECKLIST-FIM-DE-SEMANA.md)

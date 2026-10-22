@@ -1,71 +1,99 @@
 # Pedidos online — desenho da primeira versão
 
-Atualizado em 22/10/2026 após o proprietário autorizar começar a frente online. Este documento fecha as decisões já tomadas e identifica a decisão pendente sobre o tablet. Não declara funcionalidades implementadas ou publicadas.
+Atualizado em 22/10/2026 com a definição mais recente do proprietário: **o cliente/vendedor escolhe o canal no próprio portal**. Este desenho substitui a proposta anterior de exigir portal + WhatsApp juntos e de usar somente o navegador do tablet. Registra requisitos; não declara funcionalidade implementada/publicada.
 
-## Decisões confirmadas nesta conversa
+## Habilitação e preset no nosso painel de administrador
 
-- Começar o cardápio digital com preços, seleção de produtos, carrinho e envio de pedidos, aproveitando a estrutura já existente.
-- Receber as solicitações no portal do próprio cliente/vendedor.
-- Depois de salvar o pedido, oferecer ao consumidor uma mensagem pronta para ele enviar pelo próprio WhatsApp.
-- Não usar envio automático pela API do WhatsApp na primeira versão. Abrir a mensagem não comprova que o consumidor efetivamente a enviou.
-- Cada cliente configura seu WhatsApp comercial no próprio portal. Não existe um número fixo global do BistroHub; o número da Seabra não é pré-requisito para desenvolver a opção configurável.
-- Reutilizar o design existente: cores, identidade, logos, componentes e padrões responsivos/idiomas/temas.
-- Primeira etapa sem cobrança online. Checkout de envio de pedido não representa processamento de pagamento.
-- O proprietário pediu para pensar melhor na operação pelo tablet antes de fechar esse ponto.
+- Nosso administrador habilita por cliente o módulo Pedidos online, a permissão para agendamento e a permissão para pedidos na mesa.
+- Nosso administrador configura a quantidade de mesas e o modelo de QR Code de atendimento no local: específico por mesa ou genérico interno com identificação da mesa pelo consumidor. São as alternativas anteriores; a última fala repetiu “por mesa”, sem definir um terceiro modelo.
+- Essas habilitações e o preset ficam no nosso painel de administrador. O portal da loja permite apenas as configurações operacionais autorizadas; não permite que a loja habilite módulos ou permissões por conta própria.
+- Dentro do módulo habilitado, a loja escolhe exatamente um canal: WhatsApp manual OU recebimento automático na aba Pedidos online do tablet. Nunca os dois simultaneamente.
+- Pedido/QR de mesa exige módulo online habilitado, permissão de mesa habilitada e canal automático ativo. O modo WhatsApp não oferece pedido na mesa, nem por QR específico nem por QR genérico interno.
+- Validar as permissões atuais também no servidor no envio, inclusive para links/QR antigos ou páginas em cache; ocultar o botão não basta.
+- Se trocar para WhatsApp ou desabilitar uma permissão, impedir novos pedidos por aquela modalidade e preservar solicitações/histórico existentes. O tratamento operacional das pendências anteriores deve ser definido sem cancelamento silencioso.
+- Agendamento só é oferecido quando habilitado pelo nosso administrador; configurar horários operacionais não concede a permissão de agendar.
 
-## Fluxo de recebimento proposto
+## Configurações operacionais pelo próprio cliente no portal
 
-1. Consumidor acessa o link da loja no navegador.
-2. Consulta os produtos disponíveis e seus preços, escolhe itens/quantidades/opções e revisa o carrinho.
-3. Escolhe a modalidade habilitada de entrega/retirada e informa os dados necessários para contato/atendimento.
-4. O servidor valida os produtos e valores atuais e salva uma solicitação online própria daquela loja.
-5. O consumidor recebe a confirmação de que a solicitação foi salva no portal.
-6. Se o vendedor configurou WhatsApp e a opção está disponível, o consumidor pode abrir a mensagem pronta e confirmar o envio no WhatsApp.
-7. O vendedor consulta a solicitação no portal e entra em contato/define o atendimento, conforme o fluxo que for aprovado.
+- Escolher exatamente um recebimento por **WhatsApp com lançamento manual** ou **diretamente na aplicação/tablet**, somente com o módulo habilitado.
+- No modo WhatsApp, informar o número comercial completo do próprio negócio, com código do país e DDD. Não existe número global do BistroHub.
+- Configurar os avisos de novos pedidos/pendências no tablet, incluindo aviso visual e possibilidade de som/toque.
+- Configurar o horário de funcionamento usado para distinguir pedido para agora e pedido agendado. Usar o fuso da loja, não o relógio arbitrário do consumidor.
+- Configurar as modalidades de atendimento disponíveis e os dados pertinentes da loja.
+- Manter o design já existente: cores, identidade, logos, componentes e padrões responsivos/idiomas/temas.
+- Confirmar a herança ou configuração por unidade quando o cliente tiver várias lojas. Não presumir canal/número único para um grupo inteiro.
 
-O pedido deve permanecer salvo mesmo se o cliente não tiver WhatsApp, fechar o aplicativo ou desistir de enviar a mensagem. Não mostrar “mensagem entregue” sem confirmação real desse serviço.
+## Canal 1 — WhatsApp com lançamento manual
 
-## Configuração pelo portal do vendedor
+1. Consumidor acessa o cardápio, escolhe produtos/quantidades/opções e revisa o pedido.
+2. Informa nome, contato e os demais dados necessários, incluindo modalidade e horário/data quando aplicáveis.
+3. O sistema prepara uma mensagem para o WhatsApp configurado pela loja, contendo os dados informados, itens, quantidades, opções/observações e os valores efetivamente apresentados.
+4. O consumidor abre o próprio WhatsApp e confirma o envio. Não há envio automático pela API nesta primeira versão; abrir a mensagem não comprova envio/entrega.
+5. O vendedor recebe e confere a mensagem, entra em contato quando necessário e **lança o pedido manualmente** no sistema.
 
-- Identificar o cliente/loja autorizado e seu link público.
-- Configurar o número comercial completo do WhatsApp, com código de país e DDD.
-- Definir os produtos disponibilizados e aproveitar preços/descrições/disponibilidade do catálogo existente.
-- Configurar entrega e retirada e as instruções necessárias.
-- Configurar a identidade pública da própria loja e sua logo, com publicação explícita.
-- Manter configurações e solicitações isoladas por cliente/loja. Confirmar a herança ou configuração por unidade no caso de grupos com várias lojas.
-- Oferecer publicação/pausa da opção online conforme a habilitação autorizada do módulo; não tornar todas as lojas públicas automaticamente.
+Não criar automaticamente um pedido operacional na aba do tablet por causa de um envio no canal WhatsApp. O registro automático paralelo no portal não é obrigatório nesta escolha; eventual histórico de solicitações WhatsApp continua a definir. Esse ponto substitui a proposta anterior de sempre salvar no portal antes do WhatsApp.
 
-## Tablet — alternativas ainda para decidir
+A mensagem deve identificar claramente loja, nome/contato do consumidor, produtos, quantidades, opções/adicionais/observações informados, entrega/retirada quando aplicável, endereço necessário e data/horário para agendados. Não inventar dados ausentes nem afirmar pagamento online realizado. A regra fiscal/total final permanece dependente das definições financeiras já registradas.
 
-### A. Portal no navegador do tablet na primeira etapa
+## Canal 2 — Recebimento direto na aplicação/tablet
 
-- A equipe abre a caixa de entrada do portal no navegador do tablet com suas credenciais.
-- O app nativo atual permanece como está; esta alternativa não precisa de novo APK para mostrar a lista web.
-- Pode ser o primeiro passo para testar o recebimento online antes de integrar a rotina nativa.
-- Ainda é preciso definir o procedimento do funcionário ao receber, contatar e atender a solicitação.
+1. Consumidor preenche e envia o pedido no cardápio online.
+2. O sistema salva a solicitação da loja e a disponibiliza automaticamente numa **nova aba Pedidos online do tablet**.
+3. A equipe vê os pedidos pendentes e recebe o aviso visual e/ou som conforme a configuração.
+4. Uma pessoa confere e **aceita/confirma o pedido** dentro da janela de aceite aplicável.
+5. A passagem do pedido aceito para cozinha/Caixa e demais etapas precisa seguir o desenho operacional e os módulos habilitados, preservando as regras existentes.
 
-### B. Caixa de entrada separada dentro do app
+“Automático” significa entrada automática na caixa de pedidos online; **não significa aceite automático, venda paga ou início automático do preparo**. Repetição de envio, sincronização ou aceite não pode duplicar a solicitação nem o pedido resultante.
 
-- Nova área de solicitações online no tablet, habilitada conforme a loja/módulo e permissões.
-- Solicitações recebidas permanecem separadas de pedidos de cozinha, vendas e Caixa até o momento explicitamente definido.
-- É necessário desenhar recebimento, notificação, aceite, edição, impressão e eventual passagem para o fluxo atual.
-- A inclusão no app exige alteração e atualização de APK; não compilar sem a autorização específica vigente.
-- Definir a interação com caixa aberto e evitar pedidos/recebimentos duplicados.
+A lista nativa exige alteração do app e atualização de APK; a autorização para começar a frente online não substitui a autorização específica para compilar um APK. O portal é o local de configuração; uma caixa de entrada web adicional pode ser avaliada, mas não substitui silenciosamente a aba nativa definida pelo proprietário.
 
-### C. Fechar o desenho operacional do tablet antes de escolher
+## Avisos e som no tablet
 
-- Manter a escolha em aberto enquanto o proprietário detalha a rotina desejada.
-- Não assumir entrada automática na cozinha ou no financeiro, nem prometer ausência total de alterações no app se a alternativa B for escolhida.
+- Identificar visualmente pedidos pendentes na nova aba.
+- Exibir um aviso curto na tela quando houver novo pedido/pendência, conforme a configuração do cliente.
+- Oferecer um toque/som de novo pedido, configurável pelo cliente.
+- Definir se o lembrete se repete, quando para e como evitar repetir o som indevidamente após reiniciar/sincronizar.
+- Distinguir aviso dentro do app de push/notificação do sistema com o app em segundo plano/fechado; alcance, permissões e infraestrutura dessa segunda modalidade ainda precisam ser definidos.
+- Conferir o reaproveitamento da base existente de áudio do app (`src/ui/useKitchenAlerts.ts`, `expo-audio`), sem afirmar que ela já implementa notificações de pedidos online ou push remoto.
+
+## Pedido para agora
+
+- Só permitir quando a loja estiver aberta no horário de funcionamento configurado.
+- Validar essa condição na finalização/envio, não apenas na apresentação do botão.
+- Na modalidade direta, o pedido pendente tem uma janela para a equipe aceitar.
+- Definir a duração dessa janela e o resultado quando ela terminar; não inventar um valor padrão nem cancelar automaticamente por suposição.
+- Quando a loja estiver fechada, não apresentar um pedido para agora como recebido/aceito para atendimento imediato.
+
+## Pedido agendado
+
+- Quando o administrador habilitar agendamento, permitir que o consumidor solicite com antecedência, inclusive de madrugada com a loja fechada, para um horário futuro de atendimento válido.
+- A data/hora de atendimento agendado deve respeitar o funcionamento e as condições de agendamento que forem aprovadas.
+- A solicitação pode ficar pendente por mais tempo para ser aceita quando a loja voltar a funcionar.
+- Não aplicar cegamente ao pedido agendado a mesma contagem imediata do pedido para agora.
+- Definir quando começa a janela de aceite do agendado e qual é o limite; ainda não foi escolhido início na abertura, antecedência do atendimento ou outro critério.
+- Separar criação da solicitação, aceite e horário prometido de atendimento. Pedido feito à meia-noite para atendimento futuro não é uma venda/preparo ocorrido à meia-noite automaticamente.
+
+## Decisões que ainda precisam ser fechadas
+
+- Prazo de aceite para pedido para agora e se será ajustável por cliente/loja.
+- Início/duração/limite da janela de aceite dos agendados e sua relação com reabertura da loja.
+- Comportamento quando o prazo acabar, recusa/cancelamento e informações apresentadas ao consumidor.
+- Dias da semana, intervalos/pausas, exceções/feriados, fuso e antecedência mínima de agendamento.
+- Comportamento se a loja estiver no horário de funcionamento, mas o Caixa exigido estiver fechado.
+- Momento em que o aceite gera o pedido operacional, envio à cozinha, impressão e vínculo financeiro.
+- Escopo do aviso: app aberto, segundo plano ou fechado; repetição do toque e confirmação do alerta.
+- Histórico adicional no portal para solicitações WhatsApp; isso não habilita um segundo canal de recebimento.
+- Número/canal por loja ou por cliente com várias unidades.
 
 ## Preservação do sistema atual
 
-- Tratar solicitações online em registros próprios até que o aceite e a integração operacional estejam definidos.
-- Não criar automaticamente registros de pedido/preparo/venda/recebimento no fluxo existente só porque houve uma solicitação pública.
-- Não contaminar relatórios atuais de pedidos, TMA ou Caixa com solicitações ainda não incorporadas pela operação aprovada.
-- Não criar nova tip, imposto, pagamento ou regra de caixa sem as definições que continuam nos checklists correspondentes.
-- Manter o cardápio/catálogo existente como referência, evitando manter dois preços divergentes para o mesmo produto.
-- Validar no servidor preço, produto e disponibilidade; o preço enviado pelo navegador não é autoridade.
-- Preservar revisões, dados e layouts já aprovados; futuras migrações devem ser aditivas e acompanhadas de cópia/restauração e testes.
+- Tratar solicitações online diretas em registros próprios enquanto aguardam aceite.
+- Não alterar pedidos, preparo, vendas, recebimentos, relatórios ou TMA existentes apenas porque chegou uma solicitação pública.
+- Criar/encaminhar pedido operacional somente pela transição definida, conferindo módulos, permissões e caixa aberto quando exigido.
+- Não criar nova regra de tip, imposto ou pagamento sem as definições financeiras já registradas. A primeira etapa continua sem cobrança online integrada.
+- Reutilizar o catálogo e conferir no servidor preço, produto, opções e disponibilidade; não confiar no preço informado pelo navegador.
+- Preservar revisões, dados, controles e layouts já aprovados. Migrações futuras devem ser aditivas, com restauração e validação.
+- Usar Consumer, citado pelo proprietário como sistema que já utiliza no Brasil, como referência funcional a analisar; não presumir que sua interface/regras foram inspecionadas nem copiar identidade/código de terceiros.
 
 ## Custos e restrições já conferidos
 
@@ -84,15 +112,20 @@ Fontes consultadas em 22/10/2026:
 - [Cloudflare D1 — preços](https://developers.cloudflare.com/d1/platform/pricing/), com fonte oficial em [cloudflare-docs](https://github.com/cloudflare/cloudflare-docs/blob/production/src/content/docs/d1/platform/pricing.mdx).
 - Restrição de catálogo: `shared/menu-validation.mjs`, nesta versão do repositório.
 
-## Entregáveis para começar a implementação
+## Entregáveis e estado real
 
-- [ ] Fechar a escolha inicial de como o tablet receberá as solicitações.
-- [ ] Definir as páginas públicas de catálogo, carrinho, dados do pedido e confirmação usando o design existente.
-- [ ] Definir a configuração do WhatsApp e das modalidades no portal próprio do vendedor.
-- [ ] Definir a caixa de entrada autenticada, o acompanhamento e a rotina de atendimento.
-- [ ] Implementar persistência, validação e repetição segura do envio sem gerar solicitações duplicadas.
-- [ ] Verificar isolamento entre lojas e preservação dos registros/relatórios atuais.
-- [ ] Conferir celular/tablet/PC, orientação, temas, idiomas, preços e mensagens de erro.
-- [ ] Preparar a publicação isolada em homologação com as migrações necessárias; não iniciar APK por autorização apenas da frente web.
+- [x] Decisão de desenho: canal escolhido pelo cliente no próprio portal.
+- [x] Decisão de desenho: WhatsApp com mensagem detalhada e lançamento manual pelo vendedor.
+- [x] Decisão de desenho: canal direto com aba Pedidos online no tablet e aceite por uma pessoa.
+- [x] Decisão de desenho: avisos visuais/som configuráveis e regras distintas para agora/agendado.
+- [ ] Fechar os prazos e comportamentos pendentes sem assumir decisões.
+- [ ] Desenhar páginas públicas e configuração dos canais usando o design existente.
+- [ ] Implementar e testar persistência, envio/recebimento e não duplicação.
+- [ ] Implementar/testar a aba nativa e os avisos com o escopo de notificação aprovado.
+- [ ] Verificar loja aberta/fuso, recebimento de agendados fora do expediente e transições de aceite.
+- [ ] Verificar isolamento de lojas, permissões e preservação dos registros/relatórios atuais.
+- [ ] Preparar publicação em homologação conforme o escopo autorizado; APK apenas com autorização específica de compilação.
 
-Referências: [checklist 10](checklists/fim-de-semana/10-cardapio-online.md), [checklist 11](checklists/fim-de-semana/11-delivery-e-retirada.md), [checklist 14](checklists/fim-de-semana/14-operacoes-e-integracao.md) e [checklist 16](checklists/fim-de-semana/16-pedido-por-qr-code-na-mesa.md).
+As caixas de decisões confirmam requisitos explicitamente definidos; não marcam implementação ou publicação como concluída.
+
+Referências: [índice completo](CHECKLIST-FIM-DE-SEMANA.md), [canal e tablet](checklists/fim-de-semana/17-canais-e-recebimento-no-tablet.md), [avisos e som](checklists/fim-de-semana/18-avisos-e-som-online.md) , [horários, agendamento e aceite](checklists/fim-de-semana/19-horarios-agendamento-e-aceite.md) e [preset do administrador](checklists/fim-de-semana/20-configuracao-administrativa-online.md).

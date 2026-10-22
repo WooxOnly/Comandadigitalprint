@@ -33,4 +33,11 @@ Manter cada demanda e operação do fluxo registrada, sem perder os novos pontos
 - [ ] Não existem transições implícitas entre cozinha, pedido e pagamento.
 - [ ] Os dados de uma mesma venda não são contados mais de uma vez em etapas diferentes.
 
+## Canais online e habilitações
+
+- [ ] Distinguir habilitações/preset pelo nosso administrador das opções operacionais no portal da loja.
+- [ ] Manter recebimentos exclusivos: WhatsApp manual OU tablet com solicitação pendente e aceite humano.
+- [ ] Separar horário de solicitação, aceite e venda/preparo; solicitação agendada à meia-noite não é venda à meia-noite.
+- [ ] Respeitar módulo, agendamento e mesa habilitados; QR de mesa somente no canal automático.
+
 [Voltar ao índice](../../CHECKLIST-FIM-DE-SEMANA.md)

@@ -2,7 +2,7 @@
 
 Checklists detalhados por demanda, para acompanhar a execução: [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md). Os requisitos deste planejamento são preservados; decisões novas devem ser refletidas no checklist correspondente.
 
-Frente separada do redesenho do Caixa, importante para a expansão do BistroHub a pequenos vendedores e pessoas que produzem alimentos em casa. O proprietário autorizou começar a frente online e pediu para pensar melhor na integração com o tablet. Decisões e custos conferidos estão em [PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md](PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md); não confundir essa autorização com implementação/publicação já concluída.
+Frente separada do redesenho do Caixa, importante para a expansão do BistroHub a pequenos vendedores e pessoas que produzem alimentos em casa. O proprietário autorizou começar a frente online e definiu recebimento configurável pela loja: WhatsApp manual ou aba nativa Pedidos online, exclusivamente. Decisões e custos conferidos estão em [PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md](PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md); não confundir essa autorização com implementação/publicação já concluída.
 
 ## Objetivo e experiência do cliente
 
@@ -18,7 +18,7 @@ Frente separada do redesenho do Caixa, importante para a expansão do BistroHub 
 - Ao finalizar, o pedido/solicitação chega ao vendedor, que entra em contato para combinar ou confirmar o atendimento e o pagamento fora da plataforma.
 - Pode haver um checkout próprio para revisar e enviar o pedido mesmo sem cobrança online. Separar esse checkout de envio de pedido de uma integração de pagamento.
 - Não exigir integração de pagamento, pinpad ou gateway nesta primeira versão. Não considerar um pedido pago simplesmente porque foi enviado.
-- Definir no desenho os dados mínimos de contato, canal de contato/notificação, confirmação de recebimento ao cliente, aceite pelo vendedor e tratamento de indisponibilidade. Não presumir WhatsApp, SMS ou e-mail como canal já escolhido.
+- Definir no desenho os dados mínimos de contato, canal de contato/notificação, confirmação de recebimento ao cliente, aceite pelo vendedor e tratamento de indisponibilidade. Respeitar a escolha exclusiva da loja entre WhatsApp manual e recebimento direto no tablet.
 
 ## Entrega e retirada configuradas no portal
 
@@ -46,12 +46,25 @@ Frente separada do redesenho do Caixa, importante para a expansão do BistroHub 
 
 - Definir como o pedido online recebido é aceito pelo vendedor e entra na operação de pedidos, cozinha, histórico e relatórios, respeitando os módulos habilitados.
 - Compatibilizar com a regra de caixa aberto quando o módulo Caixa existir: decidir em qual momento a solicitação online vira um pedido operacional/venda e quando o caixa precisa estar aberto. Não impor nem dispensar esse bloqueio silenciosamente.
-- Pedidos programados/encomendas e sua integração serão desenhados na etapa posterior já solicitada pelo proprietário; não presumir que a disponibilidade online resolve o agendamento.
+- O agendamento online tem as regras básicas abaixo confirmadas; a integração ampla de encomendas com cozinha/Caixa permanece para desenho posterior.
 - Separar requisitos anotados, desenho aprovado, implementação e validação. Não gerar APK, iniciar checkout real, alterar dados ou publicar uma página apenas por este registro de planejamento.
 
 ## Decisões posteriores confirmadas — 22/10/2026
 
-- Solicitações devem ficar no portal e, após salvar, oferecer mensagem pronta para o consumidor confirmar o envio pelo próprio WhatsApp. Não há API de envio automático nesta primeira etapa.
-- Cada vendedor configura seu próprio WhatsApp comercial no portal dele; não adotar número global nem exigir o telefone da Seabra para desenvolver a opção.
-- Reutilizar o design, cores, logos e padrões existentes.
-- A forma de receber/operar pedidos no tablet continua em discussão; não incluir automaticamente solicitações na cozinha ou no Caixa. Se for dentro do app nativo, há alteração de aplicativo/APK a planejar.
+## Habilitação e preset no nosso painel de administrador
+
+- Nosso administrador habilita por cliente o módulo Pedidos online, a permissão para agendamento e a permissão para pedidos na mesa.
+- Nosso administrador configura a quantidade de mesas e o modelo de QR Code de atendimento no local: específico por mesa ou genérico interno com identificação da mesa pelo consumidor. São as alternativas anteriores; a última fala repetiu “por mesa”, sem definir um terceiro modelo.
+- Essas habilitações e o preset ficam no nosso painel de administrador. O portal da loja permite apenas as configurações operacionais autorizadas; não permite que a loja habilite módulos ou permissões por conta própria.
+- Dentro do módulo habilitado, a loja escolhe exatamente um canal: WhatsApp manual OU recebimento automático na aba Pedidos online do tablet. Nunca os dois simultaneamente.
+- Pedido/QR de mesa exige módulo online habilitado, permissão de mesa habilitada e canal automático ativo. O modo WhatsApp não oferece pedido na mesa, nem por QR específico nem por QR genérico interno.
+- Validar as permissões atuais também no servidor no envio, inclusive para links/QR antigos ou páginas em cache; ocultar o botão não basta.
+- Se trocar para WhatsApp ou desabilitar uma permissão, impedir novos pedidos por aquela modalidade e preservar solicitações/histórico existentes. O tratamento operacional das pendências anteriores deve ser definido sem cancelamento silencioso.
+- Agendamento só é oferecido quando habilitado pelo nosso administrador; configurar horários operacionais não concede a permissão de agendar.
+
+- Reutilizar design, cores, logos e padrões existentes.
+- No modo WhatsApp, a loja cadastra seu próprio número e o consumidor confirma o envio da mensagem detalhada; lançamento operacional manual.
+- No modo automático, salvar a solicitação na nova aba Pedidos online e exigir aceite humano; não significa envio automático à cozinha, venda paga ou preparo iniciado.
+- Avisos visuais e som configuráveis no tablet; push com app fechado ainda precisa de definição.
+- Pedido para agora só com loja aberta; agendado autorizado pode ser solicitado com loja fechada para atendimento futuro válido, com prazo de aceite a definir.
+- A integração ampla das encomendas permanece pendente. A aba nativa exige atualização do app, sem autorização automática para compilar APK.

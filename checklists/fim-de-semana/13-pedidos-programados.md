@@ -30,4 +30,11 @@ O proprietário pediu para rever esta parte depois. O fluxo completo ainda preci
 - [ ] Momento de envio à cozinha, vínculo com Caixa e recebimento foram definidos explicitamente.
 - [ ] Os pontos ainda não decididos continuam identificados antes de iniciar sua implementação.
 
+## Regras básicas online confirmadas posteriormente
+
+- Nosso administrador habilita a permissão de agendamento por cliente.
+- Solicitação agendada pode ser criada fora do funcionamento, inclusive de madrugada, para atendimento futuro dentro do horário válido.
+- Pode aguardar aceite por mais tempo até a abertura; início, duração e expiração ainda precisam ser definidos.
+- Ver [19 — Horários, agendamento e aceite](19-horarios-agendamento-e-aceite.md); isso não conclui a integração ampla de encomendas.
+
 [Voltar ao índice](../../CHECKLIST-FIM-DE-SEMANA.md)

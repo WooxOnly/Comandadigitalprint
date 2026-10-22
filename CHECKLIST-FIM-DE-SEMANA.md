@@ -2,7 +2,7 @@
 
 Registro consolidado em 22/10/2026. Cada demanda está em um arquivo separado, com requisitos, tarefas de conferência/execução, decisões pendentes e critérios de verificação. Nada foi marcado como concluído apenas por ter sido registrado.
 
-O foco da retomada é desenhar/revisar o fluxo de Caixa. O cardápio online é uma frente separada; checkout com pagamento e pedidos programados permanecem identificados como etapas posteriores. Não há promessa de realizar todas as frentes no mesmo fim de semana.
+O foco da retomada é desenhar/revisar o fluxo de Caixa. O cardápio online é uma frente separada; checkout com pagamento e integração ampla das encomendas permanecem como etapas posteriores; as regras básicas do agendamento online já estão registradas. Não há promessa de realizar todas as frentes no mesmo fim de semana.
 
 ## Como acompanhar
 
@@ -31,6 +31,11 @@ O foco da retomada é desenhar/revisar o fluxo de Caixa. O cardápio online é u
 - [ ] [15 — Conferência final do conjunto antes de uma entrega](checklists/fim-de-semana/15-validacao-do-conjunto.md) — Conferência da entrega.
 
 - [ ] [16 — Pedido pelo QR Code dentro do restaurante, com entrega na mesa](checklists/fim-de-semana/16-pedido-por-qr-code-na-mesa.md) — Frente online: atendimento no local.
+
+- [ ] [17 — Canal exclusivo por loja e recebimento no tablet](checklists/fim-de-semana/17-canais-e-recebimento-no-tablet.md) — WhatsApp manual ou automático com aceite humano.
+- [ ] [18 — Avisos visuais e som de pedidos online](checklists/fim-de-semana/18-avisos-e-som-online.md) — Preferências da loja e alcance a definir.
+- [ ] [19 — Funcionamento, agendamento e prazo de aceite](checklists/fim-de-semana/19-horarios-agendamento-e-aceite.md) — Agora/loja aberta e agendado futuro.
+- [ ] [20 — Habilitações e preset no nosso painel de administrador](checklists/fim-de-semana/20-configuracao-administrativa-online.md) — Módulo, agendamento, mesa, quantidade e modelo de QR.
 
 ## Referências preservadas
 

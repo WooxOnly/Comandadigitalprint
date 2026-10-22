@@ -10,6 +10,13 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 - The owner asked for separate, detailed checklists of all newly recorded Cash/checkout/reporting/online-menu requirements. Use [CHECKLIST-FIM-DE-SEMANA.md](CHECKLIST-FIM-DE-SEMANA.md) and its linked files when resuming that work. Keep confirmed rules, open decisions and later phases distinct; review existing functions before changing them. Check items only when actually verified, not merely because documented. The current task records requirements only; follow the owner's subsequent instructions when work resumes. Preserve the existing reports/layout and separate APK authorization rules.
 
+## Online ordering requirements — latest owner clarification 2026-10-22
+
+- Requirements are recorded in PEDIDOS-ONLINE-PRIMEIRA-VERSAO.md and checklists 16–20; documentation does not establish implementation. Our administrator enables the optional online module, scheduling and table service per customer, and configures table count/QR preset in our administrator panel. The customer portal cannot grant these entitlements.
+- Within enabled capabilities the store chooses EXACTLY ONE receiving channel: manual WhatsApp with its own configured number and customer-confirmed prefilled message, OR automatic arrival in a new native Online orders tab with human acceptance and configurable visual/sound alerts. No simultaneous channels. Automatic arrival is not acceptance, kitchen dispatch or payment.
+- Table-service QR (specific table or generic internal table-entry QR) requires the online module, table-service entitlement AND automatic tablet channel. Never permit table orders through WhatsApp. Enforce current entitlements/mode server-side, including stale/cached/printed QR. Preserve existing requests/history on mode/preset changes; pending-request handling still needs definition.
+- Immediate requests only while open; enabled scheduled requests may be submitted while closed for valid future service hours. Acceptance windows, expiry actions and background/closed-app push scope remain undecided. Existing broader scheduled-order integration and financial transitions remain to design. Reuse existing identity/design without changing current reports/TMA. No APK compilation authorized by this requirements discussion.
+
 ## APK authorization clarification — latest instruction 2026-10-19
 
 - The owner objected to automatic APK compilation. Prior “publish everything” authorization does not authorize future APK builds. Implement and test requested changes, but request an APK compilation only after explicit authorization for that build. Do not cancel already requested remote builds unless instructed.

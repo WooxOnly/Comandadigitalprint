@@ -49,7 +49,7 @@ Registro: 22/10/2026. Nova demanda importante da frente de cardápio online. Che
 ## Decisões pendentes
 
 - [ ] Escolher QR por mesa, genérico interno ou suporte às duas alternativas.
-- [ ] Definir onde ficam as configurações de atendimento na mesa e gerenciamento dos QR Codes no portal.
+- [ ] Implementar configuração de mesas e preset de QR no nosso painel de administrador, com autorização por cliente.
 - [ ] Definir se é necessário nome/contato/cadastro do cliente neste atendimento local; não herdar obrigatoriedades do delivery sem avaliar a facilidade do uso.
 - [ ] Definir se pedidos de várias pessoas na mesma mesa ficam separados ou vinculados a uma comanda compartilhada.
 - [ ] Definir como acrescentar itens, repetir pedidos e tratar mudança de mesa, cancelamento ou indisponibilidade.
@@ -72,5 +72,15 @@ Registro: 22/10/2026. Nova demanda importante da frente de cardápio online. Che
 - [Delivery/retirada externos configurados no portal](11-delivery-e-retirada.md).
 - [Fluxo completo entre módulos](14-operacoes-e-integracao.md).
 - [Pagamento online futuro](12-checkout-pago-futuro.md).
+
+## Dependências e preset — decisão mais recente
+
+- [ ] No nosso painel de administrador, habilitar o módulo online e a permissão de pedidos na mesa por cliente.
+- [ ] Configurar ali a quantidade de mesas e o modelo de QR: por mesa ou genérico interno com mesa informada; a última fala repetiu “por mesa”, sem escolher um terceiro formato.
+- [ ] Permitir QR/pedido de mesa apenas no recebimento automático na aba Pedidos online; nunca no modo WhatsApp.
+- [ ] Ocultar/bloquear geração e uso de QR de mesa quando essas condições não forem atendidas.
+- [ ] No servidor, bloquear também envios por QR já impresso, link antigo ou página em cache após troca para WhatsApp/desabilitação.
+- [ ] Preservar pedidos já recebidos ao alterar o preset; definir o tratamento das pendências sem cancelamento automático.
+- [ ] Diferenciar QR de mesa de um eventual QR público de compartilhamento do cardápio.
 
 [Voltar ao índice](../../CHECKLIST-FIM-DE-SEMANA.md)
