@@ -6,6 +6,8 @@ const {chromium}=require('playwright-core'),{buildTabletPreview}=require('./tabl
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});const errors=[];let cases=0;
  try{for(const language of ['pt','en','es'])for(const theme of ['light','dark'])for(const viewport of [{width:390,height:844},{width:800,height:1280},{width:1280,height:800}]){
   const p=await browser.newPage({viewport,colorScheme:theme});p.on('pageerror',e=>errors.push(e.message));const t=text=>translate(text,language);
+  // Keep the synthetic orders inside the default Today filter on any run date.
+  await p.clock.install({time:new Date('2026-10-19T15:00:00Z')});
   await p.goto('http://127.0.0.1:'+server.address().port+'/tablet-preview.html?language='+language+'#/history');await p.waitForFunction(()=>!!window.qa);
   const badge=p.getByTestId('history-preparation-status').first();await badge.getByText(t('Aguardando'),{exact:true}).waitFor();
   await p.evaluate(()=>window.qa.setHistory(previous=>previous.map(order=>({...order,createdAt:'2026-10-19T09:00:00Z'}))));

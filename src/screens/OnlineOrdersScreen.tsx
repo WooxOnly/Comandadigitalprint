@@ -26,7 +26,7 @@ export default function OnlineOrdersScreen() {
   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
    {online?.requests.map(request => <View key={request.id} testID={'online-request-' + request.id} style={[styles.panel, { flexBasis: 320, flexGrow: 1, minWidth: 0, maxWidth: '100%', marginBottom: 0 }]}>
     <Text style={styles.panelTitle}>{request.customer} · {request.id.slice(0, 8)}</Text><Text style={styles.helperText}>{t({ pending: 'Aguardando aceite', accepted: 'Aceito', declined: 'Recusado' }[request.status])}</Text>
-    <Text style={styles.helperText}>{date(request.createdAt)}</Text><Text style={styles.helperText}>{request.contact}</Text>
+    <Text style={styles.helperText}>{date(request.createdAt)}</Text><Text style={styles.helperText}>{request.contact}</Text>{request.paymentMethod && <Text style={styles.helperText}>{t('Forma de pagamento')}: {t({ cash: 'Dinheiro', credit: 'Cartão de crédito', debit: 'Cartão de débito' }[request.paymentMethod])}</Text>}
     <Text style={styles.fieldLabel}>{t({ table: 'Na mesa', pickup: 'Retirada', delivery: 'Entrega' }[request.fulfillment])}{request.table ? ' · ' + t('Mesa') + ' ' + request.table : ''}</Text>
     {!!request.address && <Text style={styles.helperText}>{request.address}</Text>}
     <Text style={styles.helperText}>{request.scheduledFor ? t('Agendado para') + ' ' + date(request.scheduledFor, request.timeZone) + ' · ' + request.timeZone : t('Para agora')}</Text>

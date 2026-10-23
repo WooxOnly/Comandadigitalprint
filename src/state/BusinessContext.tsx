@@ -7,6 +7,7 @@ import { useApp } from './AppContext';
 import { isProductAvailable } from '../services/catalogOptions';
 import { nextPreparation, completeWhenReady } from '../../shared/preparation-times.mjs';
 import { logError } from '../services/diagnostics';
+import { sameRecordValues } from '../services/recordSelection';
 import { useAuth } from './AuthContext';
 
 function useBusinessState() {
@@ -22,9 +23,10 @@ function useBusinessState() {
   const lock = useRef(false);
   useEffect(() => {
     let mounted = true;
-    const load = () => { void cloud.list('preorder:').then(values => { if (mounted) setPreorders((values as Preorder[]).sort((a, b) => a.dueAt.localeCompare(b.dueAt))); }).catch(error => logError('preorder.load_failed', error)); };
-    const loadCustomers = () => { void cloud.list('customer:').then(values => { if (mounted) setCustomers((values as Customer[]).sort((a, b) => a.name.localeCompare(b.name))); }).catch(error => logError('customer.load_failed', error)); };
-    const loadPreparation = () => { void cloud.list('preparation:').then(values => { if (mounted) setPreparation(values as Preparation[]); }).catch(error => logError('preparation.load_failed', error)); };
+    let previousPreorders: unknown[] | undefined, previousCustomers: unknown[] | undefined, previousPreparation: unknown[] | undefined;
+    const load = () => { void cloud.list('preorder:').then(values => { if (mounted && !sameRecordValues(previousPreorders, values)) { previousPreorders = values; setPreorders((values as Preorder[]).slice().sort((a, b) => a.dueAt.localeCompare(b.dueAt))); } }).catch(error => logError('preorder.load_failed', error)); };
+    const loadCustomers = () => { void cloud.list('customer:').then(values => { if (mounted && !sameRecordValues(previousCustomers, values)) { previousCustomers = values; setCustomers((values as Customer[]).slice().sort((a, b) => a.name.localeCompare(b.name))); } }).catch(error => logError('customer.load_failed', error)); };
+    const loadPreparation = () => { void cloud.list('preparation:').then(values => { if (mounted && !sameRecordValues(previousPreparation, values)) { previousPreparation = values; setPreparation(values as Preparation[]); } }).catch(error => logError('preparation.load_failed', error)); };
     loadPreparation();
     loadCustomers();
     load(); const unsubscribe = cloud.subscribe(() => { load(); loadCustomers(); loadPreparation(); });

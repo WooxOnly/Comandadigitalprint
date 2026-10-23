@@ -108,6 +108,9 @@ async function printHtml(html: string, settings: PrinterSettings, language: Lang
     if (Platform.OS === 'android') {
       const { uri } = await Print.printToFileAsync({ html, ...pageSize });
       await Print.printAsync({ uri, ...pageSize });
+    } else if (Platform.OS === 'web') {
+      const { printBrowserHtml } = await import('./src/services/browserPrint');
+      await printBrowserHtml(html);
     } else {
       await Print.printAsync({ html, ...pageSize });
     }

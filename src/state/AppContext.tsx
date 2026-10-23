@@ -3,13 +3,14 @@ import { getNetworkPrinterEndpoint } from '../services/networkPrintTransport';
 import { useAuth } from './AuthContext';
 import { searchCatalog, isProductAvailable, type CatalogOptions, type ProductOption } from '../services/catalogOptions';
 import { logError } from '../services/diagnostics';
+import { sameRecordValues } from '../services/recordSelection';
 import { printFailureMessage } from '../services/printJob';
 import { useLanguage } from '../i18n/LanguageContext';
 import { appStorage as AsyncStorage, cloud } from '../services/cloudStorage';
 import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, useWindowDimensions } from 'react-native';
+import { Alert, Platform, useWindowDimensions } from 'react-native';
 import { printOrder, printPrinterTest, type PrinterSettings, type ServiceMode } from '../../printerService';
 import { DEFAULT_MENU, standardizeMenu, filterProducts, isDemoMenu, type Product } from '../../menuData';
 import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../../orderItems';
@@ -22,7 +23,6 @@ import { localOrderDay, nextDailyOrderNumber, tabletLabelForDay } from '../servi
 import { persistSettings, PRINTER_SETTINGS_KEY } from '../services/settings';
 
 type SavedOrder = { id: string; plate: string; customer: string; serviceMode?: ServiceMode; items: OrderItem[]; createdAt: string; tabletId?: string; tabletLabel?: string; numberDay?: string; dailyNumber?: number };
-const STORAGE_KEY = '@comandadigitalprint/orders';
 const MENU_KEY = '@comandadigitalprint/menu';
 const LOGO_KEY = '@comandadigitalprint/restaurant-logo';
 
@@ -75,14 +75,17 @@ function useAppState() {
   const menuUpdateLock = useRef(false);
   const menuDirty = useRef(false);
   const printerDirty = useRef(false);
+  const orderRecords = useRef<unknown[] | undefined>(undefined);
+  const refreshedSettings = useRef<{ menu?: string | null; printer?: string | null; settings?: string | null }>({});
   useEffect(() => { menuRef.current = menu; }, [menu]);
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(LOGO_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY)]).then(([storedOrders, storedPrinter, storedMenu, storedLogo, storedOrderSettings]) => {
+    Promise.all([cloud.list('order:'), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(LOGO_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY)]).then(([storedOrders, storedPrinter, storedMenu, storedLogo, storedOrderSettings]) => {
+      refreshedSettings.current = { menu: storedMenu, printer: storedPrinter, settings: storedOrderSettings };
       setOrderSettings(parseOrderSettings(storedOrderSettings));
       if (storedOrders) {
-        const saved = JSON.parse(storedOrders) as SavedOrder[];
-        if (!Array.isArray(saved)) throw new Error('Histórico inválido');
+        orderRecords.current = storedOrders;
+        const saved = (storedOrders as SavedOrder[]).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         historyRef.current = saved;
         setHistory(saved);
       }
@@ -103,16 +106,24 @@ function useAppState() {
 
   useEffect(() => cloud.subscribe(() => {
     if (!isReady) return;
-    void Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(([orders, storedMenu, printer, settings, logo]) => {
-      if (orders) { const saved = JSON.parse(orders) as SavedOrder[]; historyRef.current = saved; setHistory(saved); }
-      if (storedMenu && !menuDirty.current) { menuRef.current = standardizeMenu(JSON.parse(storedMenu)); setMenu(menuRef.current); }
-      if (printer && !printerDirty.current) setPrinterSettings(JSON.parse(printer));
-      if (settings) setOrderSettings(parseOrderSettings(settings));
+    void Promise.all([cloud.list('order:'), AsyncStorage.getItem(MENU_KEY), AsyncStorage.getItem(PRINTER_SETTINGS_KEY), AsyncStorage.getItem(ORDER_SETTINGS_KEY), AsyncStorage.getItem(LOGO_KEY)]).then(([orders, storedMenu, printer, settings, logo]) => {
+      if (!sameRecordValues(orderRecords.current, orders)) { orderRecords.current = orders; const saved = (orders as SavedOrder[]).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)); historyRef.current = saved; setHistory(saved); }
+      const previous = refreshedSettings.current;
+      if (storedMenu && !menuDirty.current && storedMenu !== previous.menu) { menuRef.current = standardizeMenu(JSON.parse(storedMenu)); setMenu(menuRef.current); previous.menu = storedMenu; }
+      if (printer && !printerDirty.current && printer !== previous.printer) { setPrinterSettings(JSON.parse(printer)); previous.printer = printer; }
+      if (settings && settings !== previous.settings) { setOrderSettings(parseOrderSettings(settings)); previous.settings = settings; }
       if (logo) setLogoUri(logo);
     }).catch(error => logError('storage.refresh_failed', error));
   }), [isReady]);
 
-  useEffect(() => { const load = () => { void cloud.list('product-option:').then(values => setProductOptions(Object.fromEntries((values as ProductOption[]).map(value => [value.productId, value])))).catch(error => logError('catalog.load_failed', error)); }; load(); return cloud.subscribe(load); }, []);
+  useEffect(() => {
+    let previous: unknown[] | undefined;
+    const load = () => { void cloud.list('product-option:').then(values => {
+      if (sameRecordValues(previous, values)) return;
+      previous = values; setProductOptions(Object.fromEntries((values as ProductOption[]).map(value => [value.productId, value])));
+    }).catch(error => logError('catalog.load_failed', error)); };
+    load(); return cloud.subscribe(load);
+  }, []);
   async function updateProductOption(productId: string, change: Partial<ProductOption>) {
     try { checkAccess('menu'); const previous = await cloud.get('product-option:' + productId) as ProductOption | undefined; await cloud.write({ ['product-option:' + productId]: { productId, available: true, favorite: false, ...previous, ...change } }); }
     catch (error) { Alert.alert(t('Falha ao salvar'), t((error as { code?: string }).code === 'ACCESS_DENIED' ? 'Usuário sem permissão para esta ação.' : (error as Error).message)); }
@@ -306,7 +317,7 @@ function useAppState() {
     if (source === 'preparation') { try { await cloud.authorizePreparationReprint(order.id); } catch (error) { Alert.alert(t('Acesso restrito'), t(error instanceof Error ? error.message : 'Reimpressão no preparo não habilitada para esta loja.')); return; } }
     previewSource.current = source;
     printCompleted.current = new Set(); setPrintedDestinations([]); previewNew.current = isNew;
-    if (isNew && printerSettings.automatic === true) await executePrint(order, true, true);
+    if (isNew && printerSettings.automatic === true && Platform.OS !== 'web') await executePrint(order, true, true);
     else setPreviewOrder(order);
   }
 
@@ -379,7 +390,7 @@ function useAppState() {
     const order: SavedOrder = { id: tabletId + '-' + randomUUID(), tabletId, tabletLabel, numberDay, dailyNumber, plate: customPlate.trim() || plate, customer: customer.trim(), serviceMode, items, createdAt: now.toISOString() };
     try {
       await submitter.submit(order, historyRef.current, {
-        persist: (next) => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
+        persist: () => cloud.write({ ['order:' + order.id]: order }),
         onSaved: (next) => { historyRef.current = next; setHistory(next); setItems([]); setCustomer(''); setCustomPlate(''); setPlate(''); setServiceMode(null); onOrderSaved?.(); showFeedback('Pedido salvo', 'Pedido salvo. Você pode reimprimir pelo histórico.', 'success'); },
         print: order => printSavedOrder(order, true),
         onBusy: setSending,

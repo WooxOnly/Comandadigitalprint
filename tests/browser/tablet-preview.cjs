@@ -3,7 +3,7 @@
 // This verifies layout; Android keyboard, socket, audio and battery need a device.
 const path = require('node:path'), fs = require('node:fs');
 const root = path.resolve(__dirname, '../..');
-async function buildTabletPreview(directory) {
+async function buildTabletPreview(directory, { sourceOverrides = {} } = {}) {
   const esbuild = require('esbuild');
   const stubs = `
 import React,{createContext,useContext,useEffect,useRef,useState,useSyncExternalStore} from 'react';
@@ -81,6 +81,7 @@ createRoot(document.getElementById('root')).render(<AppearanceProvider><Fixture>
 `;
   const intercept = /(?:^expo-router$|^expo-status-bar$|^expo-crypto$|^expo-print$|\/state\/(?:AppContext|AuthContext|BusinessContext|OnlineOrdersContext)$|\/i18n\/LanguageContext$|\/services\/(?:cloudStorage|diagnostics|licenseRuntime)$|\/config\/store$|\/ui\/useKitchenAlerts$|\.\/useKitchenAlerts$)/;
   await esbuild.build({stdin:{contents:entry,resolveDir:root,loader:'tsx'},bundle:true,write:true,outfile:path.join(directory,'tablet-preview.js'),platform:'browser',mainFields:['browser','module','main'],resolveExtensions:['.web.tsx','.web.ts','.web.js','.tsx','.ts','.jsx','.js','.json'],format:'iife',jsx:'automatic',define:{'process.env':'{}','process.env.NODE_ENV':'"test"','__DEV__':'false'},nodePaths:[path.join(root,'node_modules')],loader:{'.png':'dataurl'},plugins:[{name:'fixture-services',setup(build){
+    build.onLoad({filter:/\.[cm]?[jt]sx?$/},args=>sourceOverrides[args.path] === undefined ? undefined : {contents:sourceOverrides[args.path],loader:args.path.endsWith('tsx')?'tsx':'ts',resolveDir:path.dirname(args.path)});
     build.onResolve({filter:/^qa:stubs$/},()=>({path:'stubs',namespace:'qa'}));
     build.onResolve({filter:intercept},()=>({path:'stubs',namespace:'qa'}));
     build.onResolve({filter:/^react-native$/},()=>({path:require.resolve('react-native-web',{paths:[root]})}));

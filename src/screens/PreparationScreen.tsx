@@ -2,7 +2,8 @@ import { FilterIcon } from '../ui/FilterIcon';
 import { ActionIcon } from '../ui/ActionIcon';
 import { canUndoPreparation } from '../services/preparationUndo';
 import { PasswordField } from '../ui/AccessGate';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Alert, Modal, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { cloud } from '../services/cloudStorage';
 import { useApp } from '../state/AppContext';
@@ -34,11 +35,14 @@ export default function PreparationScreen() {
   const [authorizers, setAuthorizers] = useState<{ username: string; role: string }[]>([]), [authorizer, setAuthorizer] = useState(''), [password, setPassword] = useState(''), [correctionError, setCorrectionError] = useState('');
   const [area, setArea] = useState({ width: 0, height: 0 });
   const today = agendaWindow(localDayText(new Date(now)), 'day');
-  const alerts = useKitchenAlerts(modules.preparation, history.filter(order => Date.parse(order.createdAt) >= today.start && Date.parse(order.createdAt) < today.end));
-  useEffect(() => { const interval = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(interval); }, []);
+  const todayOrders = useMemo(() => history.filter(order => Date.parse(order.createdAt) >= today.start && Date.parse(order.createdAt) < today.end), [history, today.start, today.end]);
+  const alerts = useKitchenAlerts(modules.preparation, todayOrders);
+  useFocusEffect(useCallback(() => { setNow(Date.now()); const interval = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(interval); }, []));
   let period: ReturnType<typeof agendaWindow> | null = null; try { if (filterDay) period = agendaWindow(date, 'day'); } catch {}
-  const state = (id: string): Preparation['status'] => preparation.find(record => record.orderId === id)?.status ?? 'received';
-  const orders = filterDay && !period ? [] : preparationQueue(history, preparation, showCompleted, period);
+  const preparationById = useMemo(() => new Map(preparation.map(record => [record.orderId, record])), [preparation]);
+  const state = (id: string): Preparation['status'] => preparationById.get(id)?.status ?? 'received';
+  const periodStart = period?.start, periodEnd = period?.end;
+  const orders = useMemo(() => filterDay && periodStart === undefined ? [] : preparationQueue(history, preparation, showCompleted, periodStart === undefined || periodEnd === undefined ? null : { start: periodStart, end: periodEnd }), [history, preparation, showCompleted, filterDay, periodStart, periodEnd]);
   const pageSize = preparationPageSize(width, height);
   const pages = Math.max(1, Math.ceil(orders.length / pageSize)), currentPage = Math.min(Math.floor(pageStart / pageSize), pages - 1);
   const visible = orders.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
@@ -90,7 +94,7 @@ export default function PreparationScreen() {
     <View testID='preparation-pages' {...gestures.panHandlers} style={[board.viewport, { maxHeight: rows * maxCardHeight + (rows - 1) * 8 }]} onLayout={event => { const { width, height } = event.nativeEvent.layout; setArea(current => current.width === width && current.height === height ? current : { width, height }); }}>
       <ScrollView style={styles.flex} contentContainerStyle={board.grid} showsVerticalScrollIndicator={true}>
         {visible.map(order => {
-          const current = state(order.id), record = preparation.find(value => value.orderId === order.id);
+          const current = state(order.id), record = preparationById.get(order.id);
           const minutes = preparationStageMinutes(order, record, now);
           const totalMinutes = Math.max(0, Math.floor((now - Date.parse(order.createdAt)) / 60000));
           const late = ['received', 'preparing'].includes(current) && /^\d{1,3}$/.test(delay) && Number(delay) > 0 && totalMinutes >= Number(delay);

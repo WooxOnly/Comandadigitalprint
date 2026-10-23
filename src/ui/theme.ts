@@ -206,3 +206,6 @@ export const styles = StyleSheet.create({
   cancelButton: { alignItems: 'center', justifyContent: 'center', minHeight: 48, marginTop: 8 },
   cancelButtonText: { color: COLORS.muted, fontSize: 14, fontWeight: '700' },
 });
+// These shared definitions are static in release builds as well as development.
+// This lets the themed controls reuse their computed palette/density safely.
+for (const style of Object.values(styles)) if (style && typeof style === 'object') Object.freeze(style);

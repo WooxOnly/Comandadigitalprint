@@ -1,6 +1,6 @@
 import { ActionIcon } from '../ui/ActionIcon';
 import { useLanguage } from '../i18n/LanguageContext';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { historyDateRange, historyInRange, type HistoryPeriod } from '../services/historyDates';
 import { HistoryDateFilter } from '../ui/HistoryDateFilter';
 import { router, useFocusEffect } from 'expo-router';
@@ -19,10 +19,10 @@ export default function HistoryScreen() {
   const { t, locale } = useLanguage();
   const { history, printSavedOrder } = useApp();
   const { preparation, modules } = useBusiness();
-  const records = new Map(preparation.map(record => [record.orderId, record]));
+  const records = useMemo(() => new Map(preparation.map(record => [record.orderId, record])), [preparation]);
   const [range, setRange] = useState(() => ({ period: 'today' as HistoryPeriod, ...historyDateRange('today') }));
   useFocusEffect(useCallback(() => { setRange({ period: 'today', ...historyDateRange('today') }); }, []));
-  const filteredHistory = history.filter(order => historyInRange(order.createdAt, range));
+  const filteredHistory = useMemo(() => history.filter(order => historyInRange(order.createdAt, range)), [history, range]);
   const canReprint = useAccess('reprint');
   const { width, fontScale } = useWindowDimensions();
   const compact = width / fontScale < 680;

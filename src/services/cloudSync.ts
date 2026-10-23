@@ -31,6 +31,10 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   let session: Session | null = null;
   let status = 'LOGIN_REQUIRED';
   const listeners = new Set<() => void>();
+  // Metadata/status updates retain values. Build each prefix selection once per
+  // values snapshot; return copies so existing callers can safely sort them.
+  let listedValues: State['values'] | undefined;
+  const listed = new Map<string, unknown[]>();
   const emit = () => listeners.forEach((listener) => { try { listener(); } catch { /* Rendering must not fail a committed save. */ } });
   const serial = <T,>(action: () => Promise<T>) => {
     const next = lock.then(action); lock = next.catch(() => {}); return next;
@@ -126,22 +130,28 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       if (!Array.isArray(result.changes) || !Number.isSafeInteger(result.cursor) || result.cursor < state.cursor || typeof result.more !== 'boolean') throw new CloudError('INVALID_DATA');
       await serial(async () => {
         if (session?.token !== token) return;
-        const values = { ...state.values };
+        let values = state.values;
         for (const record of result.changes as CloudRecord[]) {
           if (!validCloudValue(record.key, record.value) || !Number.isSafeInteger(record.revision) || record.revision < 1) throw new CloudError('INVALID_DATA');
-          if (!state.pending[record.key] && !state.preparationOperations?.some(item=>item.key===record.key) && record.revision > (values[record.key]?.revision ?? 0)) values[record.key] = record;
+          if (!state.pending[record.key] && !state.preparationOperations?.some(item=>item.key===record.key) && record.revision > (values[record.key]?.revision ?? 0)) {
+            if (values === state.values) values = { ...values };
+            values[record.key] = record;
+          }
         }
         for(const profile of result.userProfiles||[]) {
           const cached=values[profile.key];if(!cached||state.pending[profile.key]||!Number.isSafeInteger(profile.revision)||profile.revision<=cached.revision)continue;
           const value={...(cached.value as object),...profile.value};
           if(!profile.key.startsWith('user:')||!validCloudValue(profile.key,value))throw new CloudError('INVALID_DATA');
+          if (values === state.values) values = { ...values };
           values[profile.key]={key:profile.key,value,revision:profile.revision};
         }
         const attempt = state.cancellationAttempt;
         const terminal = attempt && ['cancelled', 'completed'].includes((values['preorder:' + attempt.orderId]?.value as { status?: string })?.status || '');
         const correctionAttempt = state.preparationCorrectionAttempt;
         const corrected = correctionAttempt && (values['preparation:' + correctionAttempt.orderId]?.value as { correction?: { id?: string } })?.correction?.id === correctionAttempt.id;
-        await persist({ ...state, values, cursor: result.cursor, ...(terminal ? { cancellationAttempt: undefined } : {}), ...(corrected ? { preparationCorrectionAttempt: undefined } : {}) });
+        if (values !== state.values || result.cursor !== state.cursor || terminal || corrected) {
+          await persist({ ...state, values, cursor: result.cursor, ...(terminal ? { cancellationAttempt: undefined } : {}), ...(corrected ? { preparationCorrectionAttempt: undefined } : {}) });
+        }
       });
       more = result.more;
     }
@@ -180,15 +190,18 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       try {
         const store = await request('/store?storeId=' + encodeURIComponent(storeId()) + '&moduleVersion=3', undefined, token);
         if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80 || (store.modules !== undefined && !validStoreModules(store.modules))) throw new CloudError('INVALID_DATA');
-        await serial(() => persist({ ...state, storeName: store.name, modules: { ...DEFAULT_STORE_MODULES, ...store.modules } }));
-        try { const access = await request('/access', undefined, token); if (!validAccess(access)) throw new CloudError('INVALID_DATA'); await serial(() => persist({ ...state, access })); } catch (error) { if (!(error instanceof CloudError) || error.status !== 404) throw error; }
+        await serial(async () => {
+          const modules = { ...DEFAULT_STORE_MODULES, ...store.modules };
+          if (state.storeName !== store.name || JSON.stringify(state.modules) !== JSON.stringify(modules)) await persist({ ...state, storeName: store.name, modules });
+        });
+        try { const access = await request('/access', undefined, token); if (!validAccess(access)) throw new CloudError('INVALID_DATA'); await serial(async () => { if (JSON.stringify(state.access) !== JSON.stringify(access)) await persist({ ...state, access }); }); } catch (error) { if (!(error instanceof CloudError) || error.status !== 404) throw error; }
         let kitchen = DEFAULT_PREPARATION_SETTINGS;
         if (state.modules?.preparation) {
           const value = await request('/preparation-settings', undefined, token);
           if (!value || typeof value.allowReprint !== 'boolean' || (value.useFinishButton !== undefined && typeof value.useFinishButton !== 'boolean')) throw new CloudError('INVALID_DATA');
           kitchen = { allowReprint: value.allowReprint, useFinishButton: value.useFinishButton !== false };
         }
-        await serial(() => persist({ ...state, preparationSettings: kitchen }));
+        await serial(async () => { if (JSON.stringify(state.preparationSettings) !== JSON.stringify(kitchen)) await persist({ ...state, preparationSettings: kitchen }); });
         // Upload individual immutable orders: retries cannot duplicate an order.
         const preparationFollowups = new Set((state.preparationOperations || []).map(item => item.key));
         for (let preparationPass=0;preparationPass<2;preparationPass++) {
@@ -241,7 +254,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
           await serial(async () => {
             const overview = await request('/cash?deviceId=' + encodeURIComponent(state.deviceId), undefined, token);
             if (!Array.isArray(overview.sessions) || !Array.isArray(overview.entries)) throw new CloudError('INVALID_DATA');
-            if (session?.token === token) await persist({ ...state, cashOverview: overview });
+            if (session?.token === token && JSON.stringify(state.cashOverview) !== JSON.stringify(overview)) await persist({ ...state, cashOverview: overview });
           });
         }
         await serial(() => persist({ ...state, lastSync: new Date().toISOString() }));
@@ -423,7 +436,13 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     status() { return { status, pending: Object.keys(state?.pending || {}).length+(state?.preparationOperations?.length||0), lastSync: state?.lastSync, conflicts: [...Object.values(state?.pending || {}),...(state?.preparationOperations||[])].filter((p) => p.conflict) }; },
     async get(key: string) { await load(); await lock; return state.values[key]?.value; },
-    async list(prefix: string) { await load(); await lock; return Object.values(state.values).filter((r) => r.key.startsWith(prefix)).map((r) => r.value); },
+    async list(prefix: string) {
+      await load(); await lock;
+      if (listedValues !== state.values) { listed.clear(); listedValues = state.values; }
+      let values = listed.get(prefix);
+      if (!values) { values = Object.values(state.values).filter(record => record.key.startsWith(prefix)).map(record => record.value); listed.set(prefix, values); }
+      return values.slice();
+    },
     pending(key: string) { return !!state?.pending[key] || !!state?.preparationOperations?.some(item=>item.key===key); },
     async authenticate(username: string, password: string) {
       await load();

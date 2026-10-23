@@ -5,7 +5,7 @@ import { appStorage, cloud } from '../services/cloudStorage';
 import { getStoreId } from '../config/store';
 import { useAppRole } from '../ui/useAppRole';
 import { logError } from '../services/diagnostics';
-export type OnlineRequest = { id: string; customer: string; contact: string; address: string; notes: string; fulfillment: 'pickup' | 'delivery' | 'table'; table: string | null; scheduledFor: string | null; timeZone: string; createdAt: string; updatedAt: string; status: 'pending' | 'accepted' | 'declined'; actor: string | null; subtotalCents: number; items: { productId: string; name: string; quantity: number; note: string; unitPriceCents: number; flavors?: string[] }[] };
+export type OnlineRequest = { id: string; customer: string; contact: string; address: string; notes: string; fulfillment: 'pickup' | 'delivery' | 'table'; table: string | null; scheduledFor: string | null; timeZone: string; createdAt: string; updatedAt: string; paymentMethod?: 'cash' | 'credit' | 'debit'; status: 'pending' | 'accepted' | 'declined'; actor: string | null; subtotalCents: number; items: { productId: string; name: string; quantity: number; note: string; unitPriceCents: number; flavors?: string[] }[] };
 type Inbox = { enabled: boolean; receiving: boolean; visualAlert: boolean; soundAlert: boolean; requests: OnlineRequest[] };
 const initial: Inbox = { enabled: false, receiving: false, visualAlert: true, soundAlert: false, requests: [] };
 function useOnlineState() {
@@ -43,7 +43,7 @@ function useOnlineState() {
  }, [allowed, refresh]);
  const decide = useCallback(async (id: string, status: 'accepted' | 'declined') => { await cloud.onlineDecision(id, status); await refresh(); }, [refresh]);
  if (!allowed) return { ...initial, pending: 0, error: '', loading: false, refresh, decide };
- return { ...inbox, enabled: allowed && (inbox.enabled || inbox.requests.length > 0), pending: inbox.requests.filter(r => r.status === 'pending').length, error, loading, refresh, decide };
+ return { ...inbox, enabled: allowed && inbox.enabled, pending: inbox.requests.filter(r => r.status === 'pending').length, error, loading, refresh, decide };
 }
 const OnlineContext = createContext<ReturnType<typeof useOnlineState> | null>(null);
 export function OnlineOrdersProvider({ children }: { children: ReactNode }) { const state = useOnlineState(); return <OnlineContext.Provider value={state}>{children}</OnlineContext.Provider>; }

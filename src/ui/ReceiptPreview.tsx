@@ -1,5 +1,5 @@
 import { buildPrintPlan } from '../services/printerRouting';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, ScrollView, Text, useWindowDimensions, View, SafeAreaView } from './ThemedNative';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
 import WebView from 'react-native-webview';
@@ -28,10 +28,11 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
     webView.current?.injectJavaScript(`document.documentElement.style.zoom = '${zoom}%'; true;`);
   }, [zoom]);
 
-  let destinations: ReturnType<typeof buildPrintPlan> = []; try { destinations = buildPrintPlan(order, printerSettings); } catch {}
+  const destinations = useMemo(() => { try { return buildPrintPlan(order, printerSettings); } catch { return []; } }, [order, printerSettings]);
   const activeDestination = destinations.find(destination => destination.id === destinationId) ?? destinations[0];
   const shownOrder = activeDestination?.order ?? order, shownWidth = activeDestination?.settings.paperWidth ?? printerSettings.paperWidth;
-  const html = buildOrderHtml(shownOrder, shownWidth, language).replace('</head>', `<style>@media screen { html { zoom: ${DEFAULT_PREVIEW_ZOOM}%; } body { max-width: none; } }</style></head>`);
+  const html = useMemo(() => buildOrderHtml(shownOrder, shownWidth, language).replace('</head>', `<style>@media screen { html { zoom: ${DEFAULT_PREVIEW_ZOOM}%; } body { max-width: none; } }</style></head>`), [shownOrder, shownWidth, language]);
+  const source = useMemo(() => ({ html }), [html]);
   const paperWidth = Math.min(Math.round(Number(shownWidth) * 96 / 25.4), width - 32);
   const close = () => { if (!printing) setPreviewOrder(null); };
 
@@ -42,7 +43,7 @@ function ReceiptPreviewContent({ order }: { order: PrintableOrder & { id: string
         <Pressable accessibilityRole="button" accessibilityLabel={t('Fechar prévia')} onPress={close} style={styles.previewControl}><Text style={styles.previewControlText}>×</Text></Pressable>
       </View>
       <View style={{ flex: 1, alignItems: 'center', paddingBottom: 8 }}>
-        <WebView ref={webView} originWhitelist={['*']} source={{ html }} onLoadEnd={() => webView.current?.injectJavaScript(`document.documentElement.style.zoom = '${zoom}%'; true;`)} style={{ width: paperWidth, flex: 1, backgroundColor: '#fff' }} />
+        <WebView ref={webView} originWhitelist={['*']} source={source} onLoadEnd={() => webView.current?.injectJavaScript(`document.documentElement.style.zoom = '${zoom}%'; true;`)} style={{ width: paperWidth, flex: 1, backgroundColor: '#fff' }} />
       </View>
       <View style={{ padding: shortScreen ? 8 : 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: shortScreen ? 8 : 12 }}>
         <ScrollView style={{ maxHeight: Math.min(160, height * 0.2) }} contentContainerStyle={{ gap: 6 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">

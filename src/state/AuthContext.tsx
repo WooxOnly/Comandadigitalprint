@@ -1,5 +1,5 @@
 import { logError } from '../services/diagnostics';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../services/platformSecureStore';
 import { getRandomBytesAsync } from 'expo-crypto';
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -35,7 +35,7 @@ function useAuthState() {
   useEffect(() => cloud.subscribe(() => { if (signedIn && cloud.sessionRejected()) logout(); }), [signedIn, logout]);
   const load = useCallback(async () => {
     try {
-      if (Platform.OS === 'web') throw new Error('Acesso local indisponível no navegador. Use o aplicativo Android ou iPad.');
+      if (Platform.OS === 'web' && process.env.EXPO_PUBLIC_WEB_APP !== '1') throw new Error('Acesso local indisponível no navegador. Use o aplicativo Android ou iPad.');
       setExists(await service.load()); setError(''); setReady(true); void sync();
     } catch (e) { logError('auth.load_failed', e); setError((e as Error).message); }
   }, [service, sync]);

@@ -19,6 +19,12 @@ const sizes=[{width:600,height:960},{width:960,height:600},{width:800,height:128
    cases++;
   }
   for(const size of sizes){await page.setViewportSize(size);await page.evaluate(()=>location.hash='/');
+   await page.waitForFunction(()=>{
+    const cards=[...document.querySelectorAll('[data-testid^="home-module-"]')].map(el=>el.getBoundingClientRect());
+    return cards.length>4&&Math.max(...cards.map(r=>r.height))-Math.min(...cards.map(r=>r.height))<1&&Math.max(...cards.map(r=>r.width))-Math.min(...cards.map(r=>r.width))<1;
+   });
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('[data-testid^="home-module-"]')].some(card=>card.scrollHeight>card.clientHeight+1)),false,'Uniform home cards must not clip their content');
+   await page.screenshot({path:path.join(directory,language+'-home-'+size.width+'x'+size.height+'.png')});cases++;
    for(const flag of flags){await page.getByTestId('nav-'+flag).click();await page.waitForFunction(flag=>location.hash==='#/'+flag,flag);await page.waitForFunction(flag=>document.querySelector('[data-testid="nav-'+flag+'"]')?.getAttribute('aria-selected')==='true',flag);
     await page.waitForFunction(flag=>{const el=document.querySelector('[data-testid="nav-'+flag+'"]'),bar=document.querySelector('[data-testid="bottom-navigation"]');const r=el.getBoundingClientRect(),b=bar.getBoundingClientRect();return r.left>=b.left-1&&r.right<=b.right+1;},flag);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);const rect=await page.getByTestId('nav-'+flag).boundingBox();assert.ok(rect.height>=44);cases++;

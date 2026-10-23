@@ -2,17 +2,11 @@ import * as Native from 'react-native';
 import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
 import { createElement, forwardRef, useMemo, type ComponentProps, type ComponentRef, type ComponentType } from 'react';
 import { darkColor } from '../../shared/appearance.mjs';
-import { compactLandscapeStyle } from './layoutDensity';
+import { createThemedStyleResolver } from './themedStyleResolver';
 import { useAppearance } from './AppearanceContext';
 export * from 'react-native';
 
-function themedStyle(style: unknown, dark: boolean, compact: boolean) {
-  if ((!dark && !compact) || !style) return style;
-  const flat = Native.StyleSheet.flatten(style as Native.StyleProp<Native.ViewStyle>) as Record<string, unknown> | undefined;
-  if (!flat) return style;
-  const sized = compact ? compactLandscapeStyle(flat) : flat;
-  return dark ? Object.fromEntries(Object.entries(sized).map(([key, value]) => [key, typeof value === 'string' && /color$/i.test(key) ? darkColor(value, key) : value])) : sized;
-}
+const themedStyle = createThemedStyleResolver(Native.StyleSheet.flatten);
 // These wrappers retain native refs, gestures and accessibility props. Existing
 // shared, inline and screen-specific styles all receive the same native palette.
 function themed<C extends ComponentType<any>>(Component: C, textInput = false, text = false) {

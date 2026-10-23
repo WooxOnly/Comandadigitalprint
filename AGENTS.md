@@ -1,5 +1,11 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Operational web adaptation — owner 2026-10-23
+
+- Owner authorized adapting the existing system for touch presentation on iPad Pro, preserving the current layout and business rules. Implement platform adapters, not a separate mock interface. The new web build uses the actual providers, store binding, users, roles, signed licenses and cloud API. HTTPS/IndexedDB/WebCrypto are required; browser protection is origin-scoped, not an OS keychain. Do not promise durable offline assets or native TCP printing.
+- `node scripts/build-web-homologacao.mjs` prepares only static web assets under `/app/`. The dedicated `bistrohub-app-homologacao` Worker forwards allowed API requests through a service binding to the existing homologação backend, preserving the request origin for licenses. It must not deploy backend/portal changes or trigger APK/OTA. The owner subsequently requested the online version fully configured and functioning, responsive to the current customer viewport; this authorizes the isolated web publication. The older online-menu/backend batch stays paused.
+- Native `.ts` modules remain native; `.web.ts` adapters use the same data/permissions protocol. No role, license, acceptance or financial shortcuts for a demo. Synthetic signing keys belong only in isolated tests; the delivery script rejects them.
+
 ## Efficiency preferences explicitly confirmed by the owner — 2026-10-17
 
 - After starting an APK build, return its tracking link without monitoring or waiting for completion. Check again only when the owner asks. Stop local monitoring processes without cancelling the remote build.
@@ -16,6 +22,21 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - Within enabled capabilities the store chooses EXACTLY ONE receiving channel: manual WhatsApp with its own configured number and customer-confirmed prefilled message, OR automatic arrival in a new native Online orders tab with human acceptance and configurable visual/sound alerts. No simultaneous channels. Automatic arrival is not acceptance, kitchen dispatch or payment.
 - Table-service QR (specific table or generic internal table-entry QR) requires the online module, table-service entitlement AND automatic tablet channel. Never permit table orders through WhatsApp. Enforce current entitlements/mode server-side, including stale/cached/printed QR. Preserve existing requests/history on mode/preset changes; pending-request handling still needs definition.
 - Immediate requests only while open; enabled scheduled requests may be submitted while closed for valid future service hours. Acceptance windows, expiry actions and background/closed-app push scope remain undecided. Existing broader scheduled-order integration and financial transitions remain to design. Reuse existing identity/design without changing current reports/TMA. No APK compilation authorized by this requirements discussion.
+
+## Public storefront branding — owner 2026-10-22
+
+- On the public online menu, place the merchant name and its explicitly published saved logo in the top toolbar; keep appearance/language controls there. Move BistroHub product logo/name into a small in-flow footer with localized “Desenvolvido por BistroHub” / “Developed by BistroHub” / “Desarrollado por BistroHub”. Do not duplicate the merchant heading or show BistroHub as the storefront owner. Authenticated portals retain their existing BistroHub branding. Preserve logo-publication consent and store isolation. This change remains LOCAL under the publication hold.
+
+## Online layout publication hold — latest owner 2026-10-22
+
+- Match the existing app Order screen, without floating controls overlapping content: independent catalog/current-order scroll areas, current order fixed above products in portrait and 66%/34% catalog/order in landscape, group chips and inline magnifier search. The owner explicitly paused ALL publication/compilation/availability of this new batch. Keep changes LOCAL, no git push, deployment, APK or OTA. Menu cleanup is prepared only during this hold.
+- Later request separately authorizes a QR for the already published/tested homologação APK and adding today's presentation demo data through the existing data-only workflow. This does not authorize publishing local online-menu work or generating a new APK.
+
+## Latest online correction — owner 2026-10-22
+
+- Online receiving/acceptance is TABLET ONLY via the module-gated native tab. The customer portal only configures the menu/settings/photos, never receives or accepts online requests. WhatsApp remains the exclusive manual alternative. Disabled online/automatic mode hides the native tab and blocks decisions while preserving history. No APK, tablet version or OTA update is authorized now; do not ask again or start one for this batch.
+- Public ordering reuses compact app patterns: group chips, collapsible magnifier search, cart first on phones/right on desktop and checkout in its own dialog. Require name, valid phone and cash/credit/debit preference server-side; it is not payment collection. Product photo upload/configuration belongs in the menu portal and stays separate from legacy module/catalog payloads.
+- Remove only the ten specifically identified accidental zero-price “Novo produto” IDs in Seabra homologação, with backup and revision/data-guarded menu event. Preserve real products, histories and production.
 
 ## APK authorization clarification — latest instruction 2026-10-19
 
