@@ -1,5 +1,7 @@
 # Sistema web e APK — consulta do proprietário em 23/10/2026
 
+**Situação atual: versão web publicada em homologação em 23/10/2026.** Endereço: https://bistrohub-app-homologacao.wooxonly-comandas.workers.dev/app/ . Android e portais existentes mantidos. Detalhes da entrega no último registro deste documento.
+
 Objetivo: oferecer o mesmo sistema e visual no APK e no navegador, inclusive iPad, para apresentação e posteriormente uso diário. Não houve autorização para publicar, compilar ou disponibilizar uma versão web nesta consulta.
 
 - As telas React Native já possuem testes via React Native Web. Isso demonstra reaproveitamento visual, não uma versão operacional completa para Safari.
@@ -36,3 +38,12 @@ O proprietário autorizou iniciar a adaptação para apresentar todo o sistema n
 - Workflow existente ganhou a opção manual `web_only`; com ela, as etapas de portais, APK e release nativa são ignoradas. A etapa web valida e publica somente o novo Worker. Nenhum workflow de entrega foi disparado nesta implementação.
 - Endereço planejado após autorização/publicação: `https://bistrohub-app-homologacao.wooxonly-comandas.workers.dev/app/`. Ainda não tratar como link disponível.
 - A pausa anterior de publicação permanece: nenhum push, implantação, APK ou OTA foi iniciado. Só falta autorizar e executar a publicação web isolada para abrir o endereço no iPad real.
+
+## Publicação web autorizada e verificada — 23/10/2026
+
+- O proprietário pediu a versão online configurada e funcionando e confirmou que a adaptação das dimensões é exclusivamente web. Autorizações anteriores de pausa continuam aplicáveis ao outro lote de cardápio/backend; esta entrega web foi autorizada separadamente.
+- Entrega nos commits `9420d69` e `27f8c67`, workflow https://github.com/WooxOnly/Comandadigitalprint/actions/runs/39970392963 . Validação e web concluíram com sucesso; portais, APK e release nativa foram ignorados. A primeira tentativa foi bloqueada por falta da tradução de um rótulo; a tradução foi corrigida, sem desativar o teste.
+- `HomeScreen.web.tsx` contém os cartões de altura igual. O arquivo nativo `HomeScreen.tsx` ficou idêntico ao anterior à adaptação web (`d40457b`). Não houve mudança nas dimensões de Order, Menu ou AppShell nativos. Nenhum novo APK ou OTA foi gerado.
+- Teste do aplicativo real no WebKit percorreu as abas em 390×844, 768×1024, 1024×1366, 1366×1024, 1920×1080 e 2560×1440, com toque e mouse conforme o espaço. O layout usa o viewport e os limites atuais, sem cadastro manual de resolução.
+- Conferência do endereço público em Chromium: assets carregaram sem erro JavaScript/HTTP; formulário inicial visível sem largura excedente em 390, 1032, 1376 e 1920 pixels. Inclui as dimensões CSS do iPad Pro de 13 polegadas. `/health` confirmou a ligação à API existente. Não foram enviados pedidos, credenciais ou alterações ao banco remoto nessa conferência.
+- Primeiro acesso: abrir o link no Safari, vincular à loja com a conta administrativa e entrar com um usuário do aplicativo. O aplicativo Android pode continuar usando a mesma base simultaneamente, com dispositivos e rascunhos separados. O teste físico no iPad do proprietário e sua autenticação real continuam sendo a confirmação final de uso.
