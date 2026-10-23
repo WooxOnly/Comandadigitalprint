@@ -36,3 +36,11 @@ Escopo autorizado: investigar e melhorar o desempenho mantendo layout, funções
 - A segunda suíte completa passou em 394 testes; lint e TypeScript passaram. O teste de opções de idioma tinha um seletor genérico que contava também os radios do tipo de atendimento; foi restrito aos nomes dos idiomas, sem alterar o produto.
 - O fechamento do menu por Escape na fixture apresentou uma corrida ao pressionar a tecla imediatamente após a montagem do Modal. A comparação isolada com fontes anteriores também reproduziu o menu aberto após Escape; a versão atual fechou no mesmo teste. A verificação visual aguarda dois frames antes da tecla para permitir a instalação dos efeitos do Modal. Não foi alterado o comportamento de teclado do produto.
 - Após ajustar apenas a fixture, a matriz de aparência passou em 90 casos, com três idiomas, temas claro/escuro e rotação. Os 40 testes de transição com CPU limitada também concluíram sem erro JavaScript ou largura excedente. Nenhuma publicação ou build foi iniciada.
+
+## Sincronização inicial no iPad — 2026-10-23
+
+- Investigação do indicador persistente: a leitura inicial percorre eventos históricos em páginas de 50, com regravação/criptografia/backup do cache inteiro por página. Isso é um custo comprovado no código; não há captura do tablet para afirmar que foi a única causa do relato.
+- O cliente reúne até dez páginas por gravação durável, preservando o cursor junto com os registros. Erro antes de salvar repete somente o lote não confirmado; nenhuma confirmação remota ou pedido local é descartado.
+- Requisições têm limite de oito segundos para cabeçalhos e corpo JSON, mesmo se o navegador não rejeitar após AbortController. Paginação que indica mais dados sem avançar o cursor encerra com falha recuperável.
+- O indicador informa registros recebidos durante a sincronização e oferece nova tentativa em falhas de comunicação. Não apresenta conclusão enquanto houver páginas por receber.
+- Verificados 17 testes direcionados de sincronização, incluindo 25 páginas/3 gravações de registros, retomada após falha, cursor sem avanço e fetch que ignora abort. TypeScript e lint passaram. Entrega destinada somente ao app web; não gerar APK/OTA.

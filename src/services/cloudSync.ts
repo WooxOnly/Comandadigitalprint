@@ -30,6 +30,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   let running: Promise<void> | undefined;
   let session: Session | null = null;
   let status = 'LOGIN_REQUIRED';
+  let received = 0;
   const listeners = new Set<() => void>();
   // Metadata/status updates retain values. Build each prefix selection once per
   // values snapshot; return copies so existing callers can safely sort them.
@@ -78,15 +79,23 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
     if (authorization && session?.token === authorization && session.storeId !== id) throw new CloudError('STORE_MISMATCH');
     if (!endpoint.startsWith('https://')) throw new CloudError('UNAVAILABLE');
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Some browser/network stacks do not promptly reject after abort. Bound
+    // both the response headers and JSON body, without leaving sync locked.
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new CloudError('UNAVAILABLE')); }, 8000);
+    });
     try {
-      const response = await fetcher(endpoint + path, { method: data === undefined ? 'GET' : 'POST', signal: controller.signal, headers: { Accept: 'application/json', ...(authorization ? { Authorization: 'Bearer ' + authorization } : {}), ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
-      const result = await response.json();
-      if (!response.ok) throw new CloudError(result.error || 'UNAVAILABLE', response.status, result.current);
-      return result;
+      return await Promise.race([timeout, (async () => {
+        const response = await fetcher(endpoint + path, { method: data === undefined ? 'GET' : 'POST', signal: controller.signal, headers: { Accept: 'application/json', ...(authorization ? { Authorization: 'Bearer ' + authorization } : {}), ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
+        const result = await response.json();
+        if (!response.ok) throw new CloudError(result.error || 'UNAVAILABLE', response.status, result.current);
+        return result;
+      })()]);
     } catch (error) { if (error instanceof CloudError) throw error; throw new CloudError('UNAVAILABLE'); }
     finally { clearTimeout(timer); }
   }
+
   async function write(entries: Record<string, unknown>) {
     await load();
     const changed = await serial(async () => {
@@ -126,8 +135,19 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
   async function pull(token: string) {
     let more = true;
     while (more && session?.token === token) {
-      const result = await request('/changes?after=' + state.cursor + '&features=operations-v1&offlineProfiles=1', undefined, token);
-      if (!Array.isArray(result.changes) || !Number.isSafeInteger(result.cursor) || result.cursor < state.cursor || typeof result.more !== 'boolean') throw new CloudError('INVALID_DATA');
+      // Coalesce up to ten API pages before encrypting, saving and backing up
+      // the whole cache. The durable cursor advances with the saved records.
+      let cursor = state.cursor;
+      const result: { changes: CloudRecord[]; userProfiles: any[]; cursor: number; more: boolean } = { changes: [], userProfiles: [], cursor, more: true };
+      for (let page = 0; page < 10 && result.more; page++) {
+        const batch = await request('/changes?after=' + cursor + '&features=operations-v1&offlineProfiles=1', undefined, token);
+        if (session?.token !== token) return;
+        if (!Array.isArray(batch.changes) || !Number.isSafeInteger(batch.cursor) || batch.cursor < cursor || typeof batch.more !== 'boolean' || (batch.more && batch.cursor === cursor)) throw new CloudError('INVALID_DATA');
+        result.changes.push(...batch.changes);
+        result.userProfiles.push(...(batch.userProfiles || []));
+        cursor = result.cursor = batch.cursor;
+        result.more = batch.more;
+      }
       await serial(async () => {
         if (session?.token !== token) return;
         let values = state.values;
@@ -153,6 +173,8 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
           await persist({ ...state, values, cursor: result.cursor, ...(terminal ? { cancellationAttempt: undefined } : {}), ...(corrected ? { preparationCorrectionAttempt: undefined } : {}) });
         }
       });
+      received += result.changes.length;
+      emit();
       more = result.more;
     }
   }
@@ -186,7 +208,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       if (!session) { status = 'LOGIN_REQUIRED'; emit(); return; }
       if (session.storeId !== storeId()) throw new CloudError('STORE_MISMATCH');
       const token = session.token, username = session.username;
-      status = 'SYNCING'; emit();
+      received = 0; status = 'SYNCING'; emit();
       try {
         const store = await request('/store?storeId=' + encodeURIComponent(storeId()) + '&moduleVersion=3', undefined, token);
         if (store.storeId !== storeId() || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 80 || (store.modules !== undefined && !validStoreModules(store.modules))) throw new CloudError('INVALID_DATA');
@@ -434,7 +456,7 @@ export function createCloudSync(storage: Store, endpoint: string, uuid: () => st
       });
     },
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    status() { return { status, pending: Object.keys(state?.pending || {}).length+(state?.preparationOperations?.length||0), lastSync: state?.lastSync, conflicts: [...Object.values(state?.pending || {}),...(state?.preparationOperations||[])].filter((p) => p.conflict) }; },
+    status() { return { status, received, pending: Object.keys(state?.pending || {}).length+(state?.preparationOperations?.length||0), lastSync: state?.lastSync, conflicts: [...Object.values(state?.pending || {}),...(state?.preparationOperations||[])].filter((p) => p.conflict) }; },
     async get(key: string) { await load(); await lock; return state.values[key]?.value; },
     async list(prefix: string) {
       await load(); await lock;

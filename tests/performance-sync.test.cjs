@@ -61,3 +61,77 @@ test('record selection detects edits, additions, removals and ordering without J
   assert.equal(sameRecordValues([a, b], [a, b]), true);
   for (const next of [[a], [a, b, {}], [b, a], [a, { ...b }]]) assert.equal(sameRecordValues([a, b], next), false);
 });
+
+async function pullFixture(handler, save = () => {}) {
+  const { DEFAULT_ACCESS } = await import('../shared/operations-validation.mjs');
+  const modules = { preparation: false, preorders: false, customers: false, cash: false };
+  let snapshot = JSON.stringify({ version: 1, operationsVersion: 1, deviceId: 'test-device', tabletNumber: 1, reader: 'admin', storeId: 'seabra-1', storeName: 'Synthetic', modules, access: DEFAULT_ACCESS, preparationSettings: { allowReprint: false, useFinishButton: true }, values: {}, pending: {}, cursor: 0, lastSync: null });
+  const cloud = createCloudSync({ getItem: async () => snapshot, setItem: async (_, value) => { save(JSON.parse(value)); snapshot = value; } }, 'https://example.com/cloud', randomUUID, async () => ({}), async url => {
+    const path = new URL(url).pathname;
+    if (path.endsWith('/store')) return Response.json({ storeId: 'seabra-1', name: 'Synthetic', modules });
+    if (path.endsWith('/access')) return Response.json(DEFAULT_ACCESS);
+    return handler(new URL(url));
+  });
+  await cloud.setSession({ storeId: 'seabra-1', username: 'admin', token: 'synthetic-only' });
+  return { cloud, saved: () => JSON.parse(snapshot) };
+}
+
+function syntheticRecord(index) {
+  return { key: 'order:batch-' + index, revision: index + 1, value: { id: 'batch-' + index, createdAt: '2026-10-22T14:00:00.000Z', plate: '1', customer: 'Synthetic', items: [{ id: 'item', name: 'Item', category: 'Group', quantity: 1, note: '' }] } };
+}
+
+test('initial history batches ten pages per durable write and reports real progress', async () => {
+  let pages = 0;
+  const writes = [], progress = [];
+  const f = await pullFixture(url => {
+    const cursor = Number(url.searchParams.get('after')); pages++;
+    return Response.json({ changes: [syntheticRecord(cursor)], cursor: cursor + 1, more: cursor < 24 });
+  }, value => writes.push(value.cursor));
+  f.cloud.subscribe(() => progress.push(f.cloud.status().received));
+  await f.cloud.sync();
+  assert.equal(pages, 25);
+  assert.deepEqual(writes, [10, 20, 25, 25]);
+  assert.equal((await f.cloud.list('order:')).length, 25);
+  assert.equal(f.cloud.status().status, 'SYNCED');
+  assert.equal(f.cloud.status().received, 25);
+  assert.ok(progress.includes(10) && progress.includes(20));
+});
+
+test('a stalled pagination cursor fails and permits a later retry instead of looping forever', async () => {
+  let stalled = true, requests = 0;
+  const f = await pullFixture(() => { requests++; return Response.json({ changes: [], cursor: 0, more: stalled }); });
+  await f.cloud.sync();
+  assert.equal(requests, 1);
+  assert.equal(f.cloud.status().status, 'UNAVAILABLE');
+  assert.equal(f.saved().lastSync, null);
+  stalled = false;
+  await f.cloud.sync();
+  assert.equal(f.cloud.status().status, 'SYNCED');
+});
+
+test('failed history batch keeps the durable cursor and retries without losing earlier pages', async () => {
+  let fail = true;
+  const f = await pullFixture(url => {
+    const cursor = Number(url.searchParams.get('after'));
+    if (fail && cursor === 12) throw Error('connection lost');
+    return Response.json({ changes: [syntheticRecord(cursor)], cursor: cursor + 1, more: cursor < 14 });
+  });
+  await f.cloud.sync();
+  assert.equal(f.cloud.status().status, 'UNAVAILABLE');
+  assert.equal(f.saved().cursor, 10);
+  assert.equal(f.saved().lastSync, null);
+  assert.equal((await f.cloud.list('order:')).length, 10);
+  fail = false; await f.cloud.sync();
+  assert.equal(f.cloud.status().status, 'SYNCED');
+  assert.equal((await f.cloud.list('order:')).length, 15);
+  assert.equal(f.saved().cursor, 15);
+});
+
+test('a fetch ignoring abort cannot keep synchronization locked indefinitely', async () => {
+  let hang = true;
+  const f = await pullFixture(() => hang ? new Promise(() => {}) : Response.json({ changes: [], cursor: 0, more: false }));
+  await f.cloud.sync();
+  assert.equal(f.cloud.status().status, 'UNAVAILABLE');
+  hang = false; await f.cloud.sync();
+  assert.equal(f.cloud.status().status, 'SYNCED');
+});
