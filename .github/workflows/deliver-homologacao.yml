@@ -10,6 +10,10 @@ on:
         description: Publicar somente o aplicativo web de homologação, sem APK nem portais
         type: boolean
         default: false
+      sync_api:
+        description: Atualizar também API compatível de sincronização, apenas com web_only, sem migrações nem APK
+        type: boolean
+        default: false
       build_apk:
         description: Gerar APK (desative para alterações somente dos portais)
         type: boolean
@@ -166,6 +170,13 @@ jobs:
       - run: npm ci
       - name: Exportar somente o aplicativo web
         run: node scripts/build-web-homologacao.mjs
+      - name: Atualizar API de sincronização compatível sem migrações ou alterações de dados
+        if: inputs.sync_api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx --yes wrangler@4 deploy --keep-vars --config server/cloudflare/wrangler.homologacao.jsonc
       - name: Publicar Worker web separado com binding para a API existente
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -173,6 +184,8 @@ jobs:
           WRANGLER_SEND_METRICS: 'false'
         run: npx --yes wrangler@4 deploy --keep-vars --config server/cloudflare/wrangler.web.homologacao.jsonc
       - name: Conferir aplicativo web e binding da API
+        env:
+          EXPECT_SYNC_API: ${{ inputs.sync_api }}
         run: |
           node --input-type=module - <<'NODE'
           const origin = 'https://bistrohub-app-homologacao.wooxonly-comandas.workers.dev';
@@ -181,7 +194,8 @@ jobs:
               const html = await fetch(origin + '/app/', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
               if (!html.ok || !(await html.text()).includes('/app/_expo/')) throw Error('Assets indisponíveis');
               const health = await fetch(origin + '/health', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-              if (!health.ok || (await health.json()).ok !== true) throw Error('API indisponível');
+              const api = await health.json();
+              if (!health.ok || api.ok !== true || (process.env.EXPECT_SYNC_API === 'true' && api.syncProtocol !== 2)) throw Error('API indisponível ou protocolo incorreto');
               console.log('Aplicativo web e API existentes disponíveis.'); process.exit(0);
             } catch (error) { console.error('Tentativa', attempt, error.message); }
             if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));

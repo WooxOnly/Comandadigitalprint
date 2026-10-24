@@ -9,6 +9,15 @@ const { fixture } = require('../helpers/business-fixture.cjs');
  const f = await fixture({ after: fn => cleanup.push(fn) }), pair = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
  f.env.LICENSE_SIGNING_PRIVATE_JWK = JSON.stringify(pair.privateKey.export({ format: 'jwk' }));
  f.modules('seabra-1', true, true, true, true);
+ const pastDate = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15, 12).toISOString();
+ const insert = f.db.prepare('INSERT INTO store_events(store_id,mutation,key,data,actor,created_at) VALUES(?,?,?,?,?,?)');
+ for(let i=0;i<205;i++) {
+  const id='history-fixture-'+String(i).padStart(3,'0');
+  insert.run('seabra-1','order-'+id,'order:'+id,JSON.stringify({id,plate:'1',customer:'Historical fixture '+i,createdAt:pastDate,items:[{id:'item',name:'Item',category:'Group',quantity:1,note:''}]}),'admin',pastDate);
+  insert.run('seabra-1','prep-'+id,'preparation:'+id,JSON.stringify({orderId:id,status:'completed',updatedAt:pastDate}),'admin',pastDate);
+ }
+ const bootstrapRecords = [], queryRequests = [];
+
  const worker = (await import('../../server/cloudflare/worker.mjs')).default;
  const { weeklyAdmin } = await import('../../server/cloudflare/admin-auth.mjs');
  const weekly = (await weeklyAdmin(f.env.ADMIN_PASSWORD_SECRET)).password;
@@ -19,6 +28,7 @@ const { fixture } = require('../helpers/business-fixture.cjs');
    const web = (await import('../../server/cloudflare/web-worker.mjs')).default;
    const chunks = []; for await (const chunk of req) chunks.push(chunk); const body = Buffer.concat(chunks);
    const request = new Request('https://' + req.headers.host + req.url, { method: req.method, headers: req.headers, ...(body.length ? { body } : {}) });
+   if(new URL(request.url).pathname==='/cloud/orders') queryRequests.push(new URL(request.url));
    const response = await web.fetch(request, {
     BACKEND: { fetch: incoming => worker.fetch(incoming, f.env) },
     WEB_ASSETS: { fetch: async incoming => {
@@ -29,6 +39,7 @@ const { fixture } = require('../helpers/business-fixture.cjs');
      return new Response(fs.readFileSync(file), {headers:{'Content-Type':types[path.extname(file)] || 'application/octet-stream'}});
     } },
    });
+   if(new URL(request.url).pathname==='/cloud/bootstrap' && response.ok) bootstrapRecords.push(...(await response.clone().json()).records);
    res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) { errors.push(error.message); res.writeHead(500); res.end('Fixture error'); }
  });
@@ -43,6 +54,8 @@ const { fixture } = require('../helpers/business-fixture.cjs');
   await page.getByRole('button', { name: 'Entrar', exact: true }).waitFor({ timeout: 30000 });
   await page.getByLabel('Senha', { exact: true }).fill(weekly); await page.getByRole('button', { name: 'Entrar', exact: true }).tap();
   await page.getByTestId('nav-home').waitFor({ timeout: 30000 });
+  await page.getByText('Dados sincronizados',{exact:true}).waitFor({timeout:30000});
+  assert.equal(bootstrapRecords.some(row=>row.key.startsWith('order:history-fixture-')),false,'Initial web data must not download old completed history');
   for (const size of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1024, height: 1366 }, { width: 1366, height: 1024 }, { width: 1920, height: 1080 }, { width: 2560, height: 1440 }]) {
    await page.setViewportSize(size);
    for (const tab of ['order', 'menu', 'history', 'preparation', 'preorders', 'customers', 'cash', 'home']) {
@@ -70,6 +83,17 @@ const { fixture } = require('../helpers/business-fixture.cjs');
   await page.getByRole('button', { name: 'Fechar prévia', exact: true }).tap();
   await page.getByTestId('nav-history').tap();
   await page.getByTestId('history-order').first().waitFor();
+  await page.getByTestId('history-date-filter').tap();
+  await page.getByRole('radio',{name:'Mês anterior',exact:true}).tap();
+  await page.getByRole('button',{name:'Aplicar',exact:true}).tap();
+  await page.waitForFunction(()=>document.querySelectorAll('[data-testid="history-order"]').length===100);
+  await page.getByRole('button',{name:'Carregar mais pedidos',exact:true}).tap();
+  await page.waitForFunction(()=>document.querySelectorAll('[data-testid="history-order"]').length===200);
+  await page.getByRole('button',{name:'Carregar mais pedidos',exact:true}).tap();
+  await page.waitForFunction(()=>document.querySelectorAll('[data-testid="history-order"]').length===205);
+  assert.ok(queryRequests.some(url=>url.searchParams.has('after')),'History must request subsequent pages explicitly');
+  await page.getByRole('button',{name:'Ver detalhes',exact:true}).first().tap();
+  await page.getByText(/^Cliente: Historical fixture/).waitFor();
   // A persisted store/cache must survive reload, while login is still required.
   await page.reload(); await page.getByRole('button', { name: 'Entrar', exact: true }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Vincular tablet', exact: true }).count(), 0);

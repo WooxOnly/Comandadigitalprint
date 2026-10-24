@@ -8,6 +8,11 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - Latest owner clarification: new dimension/responsiveness changes are WEB ONLY; preserve the existing APK geometry. The measured equal-height Home tiles live in `HomeScreen.web.tsx`; native Home remains at its pre-web layout. Never create an APK/OTA as part of this delivery.
 - Web-only delivery completed on 2026-10-23: workflow 39970392963, commits 9420d69/27f8c67, https://bistrohub-app-homologacao.wooxonly-comandas.workers.dev/app/ . Public UI/assets and API health verified. Native APK/release and portal jobs skipped; pending online-menu/backend changes were not deployed. Do not repeat publication or initiate a native build merely to check the link.
 
+## Performance follow-up — owner 2026-10-24
+
+- Owner authorized reducing web bootstrap downloads and improving APK performance while preserving layout and functions; physical viability remains unconfirmed. Web uses current configuration/master data, today's orders and all pending kitchen work; completed historical orders load by the selected period in 100-order pages. Native retains complete offline history and may initialize from latest record versions instead of replaying every old event. Preserve pending operations, corrections, financial idempotency, role/store/license checks and old-client compatibility.
+- This batch requires additive read endpoints on the existing homologação backend plus web assets. `web_only=true` with explicit `sync_api=true` updates compatible API code without migrations/data changes or portal layout changes, and keeps APK/release jobs skipped. The older held online-menu/backend changes remain uncommitted and unpublished. No APK/OTA authorization was given by this performance request.
+
 ## Efficiency preferences explicitly confirmed by the owner — 2026-10-17
 
 - After starting an APK build, return its tracking link without monitoring or waiting for completion. Check again only when the owner asks. Stop local monitoring processes without cancelling the remote build.

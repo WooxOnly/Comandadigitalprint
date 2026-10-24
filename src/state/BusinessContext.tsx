@@ -29,7 +29,7 @@ function useBusinessState() {
     const loadPreparation = () => { void cloud.list('preparation:').then(values => { if (mounted && !sameRecordValues(previousPreparation, values)) { previousPreparation = values; setPreparation(values as Preparation[]); } }).catch(error => logError('preparation.load_failed', error)); };
     loadPreparation();
     loadCustomers();
-    load(); const unsubscribe = cloud.subscribe(() => { load(); loadCustomers(); loadPreparation(); });
+    load(); const unsubscribe = cloud.subscribe(() => { load(); loadCustomers(); loadPreparation(); }, { dataOnly: true });
     return () => { mounted = false; unsubscribe(); };
   }, []);
   async function run<T,>(operation: () => Promise<T>) {

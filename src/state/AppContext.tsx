@@ -114,7 +114,7 @@ function useAppState() {
       if (settings && settings !== previous.settings) { setOrderSettings(parseOrderSettings(settings)); previous.settings = settings; }
       if (logo) setLogoUri(logo);
     }).catch(error => logError('storage.refresh_failed', error));
-  }), [isReady]);
+  }, { dataOnly: true }), [isReady]);
 
   useEffect(() => {
     let previous: unknown[] | undefined;
@@ -122,7 +122,7 @@ function useAppState() {
       if (sameRecordValues(previous, values)) return;
       previous = values; setProductOptions(Object.fromEntries((values as ProductOption[]).map(value => [value.productId, value])));
     }).catch(error => logError('catalog.load_failed', error)); };
-    load(); return cloud.subscribe(load);
+    load(); return cloud.subscribe(load, { dataOnly: true });
   }, []);
   async function updateProductOption(productId: string, change: Partial<ProductOption>) {
     try { checkAccess('menu'); const previous = await cloud.get('product-option:' + productId) as ProductOption | undefined; await cloud.write({ ['product-option:' + productId]: { productId, available: true, favorite: false, ...previous, ...change } }); }

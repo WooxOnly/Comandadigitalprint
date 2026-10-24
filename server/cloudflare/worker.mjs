@@ -46,7 +46,7 @@ export default {
     try {
       if (request.method === 'GET' && pathname === '/health') {
         await activeStore(env, DEFAULT_STORE_ID);
-        return json({ ok: true });
+        return json({ ok: true, syncProtocol: 2 });
       }
       if (request.method === 'GET' && pathname === '/menu') {
         const selectedStore = await activeStore(env, new URL(request.url).searchParams.get('storeId') ?? DEFAULT_STORE_ID);

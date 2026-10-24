@@ -11,8 +11,11 @@ const scope = (name: string) => `store:${getStoreId()}:${name}`;
 const backupPrefix = () => scope('backup:');
 const recoveryPrefix = () => scope('recovery:');
 let backupError: (error: unknown) => void = () => {};
+function backupDay(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 async function backup(value: string) {
-  const date = new Date(), day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const date = new Date(), day = backupDay(date);
   await browserVault.setItem(backupPrefix() + day, JSON.stringify({ createdAt: date.toISOString(), value }));
   const entries = await browserVault.keys(backupPrefix());
   for (const name of entries.sort().reverse().slice(14)) await browserVault.removeItem(name);
@@ -24,7 +27,7 @@ const snapshots = {
     try { await backup(value); } catch (error) { backupError(error); }
   },
 };
-export const cloud = createCloudSync(snapshots, ADMIN_CREDENTIAL_ENDPOINT.replace('/auth/admin', '/cloud'), randomUUID, async () => ({}), fetch, getStoreId);
+export const cloud = createCloudSync(snapshots, ADMIN_CREDENTIAL_ENDPOINT.replace('/auth/admin', '/cloud'), randomUUID, async () => ({}), fetch, getStoreId, { web: true });
 export const appStorage = {
   async getItem(name: string): Promise<string | null> {
     if (name === ORDERS) return JSON.stringify((await cloud.list('order:') as { createdAt: string }[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -59,6 +62,7 @@ export const authStorage = {
   },
 };
 export async function ensureLocalBackup() {
+  if ((await browserVault.keys(backupPrefix())).includes(backupPrefix() + backupDay())) return;
   const key = getStoreId() === LEGACY_STORE_ID ? '@comandadigitalprint/cloud-v1' : '@comandadigitalprint/cloud-v1:' + getStoreId();
   const saved = await snapshots.getItem(key); if (saved) await backup(saved);
 }

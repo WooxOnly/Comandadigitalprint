@@ -1,3 +1,4 @@
+import { useOrderQuery } from '../services/useOrderQuery';
 import { FilterIcon } from '../ui/FilterIcon';
 import { ActionIcon } from '../ui/ActionIcon';
 import { canUndoPreparation } from '../services/preparationUndo';
@@ -42,6 +43,8 @@ export default function PreparationScreen() {
   const preparationById = useMemo(() => new Map(preparation.map(record => [record.orderId, record])), [preparation]);
   const state = (id: string): Preparation['status'] => preparationById.get(id)?.status ?? 'received';
   const periodStart = period?.start, periodEnd = period?.end;
+  const remoteRange = period || (showCompleted ? { start: 0, end: new Date(9999, 0, 1).getTime() } : null);
+  const remoteOrders = useOrderQuery(remoteRange, undefined, true);
   const orders = useMemo(() => filterDay && periodStart === undefined ? [] : preparationQueue(history, preparation, showCompleted, periodStart === undefined || periodEnd === undefined ? null : { start: periodStart, end: periodEnd }), [history, preparation, showCompleted, filterDay, periodStart, periodEnd]);
   const pageSize = preparationPageSize(width, height);
   const pages = Math.max(1, Math.ceil(orders.length / pageSize)), currentPage = Math.min(Math.floor(pageStart / pageSize), pages - 1);
@@ -91,6 +94,8 @@ export default function PreparationScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('Filtros e avisos')} accessibilityState={{ expanded: filters }} aria-expanded={filters} style={board.smallButton} onPress={() => setFilters(true)}><FilterIcon /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('Atualizar pedidos')} style={board.smallButton} onPress={() => void cloud.sync()}><Text style={board.actionText}>↻</Text></Pressable>
     </View>
+    {remoteOrders.loading && <Text style={board.caption}>{t('Carregando pedidos…')}</Text>}
+    {remoteOrders.error && <Pressable accessibilityRole="button" onPress={remoteOrders.reload}><Text style={board.caption}>{t('Não foi possível consultar os pedidos. Toque para tentar novamente.')}</Text></Pressable>}
     <View testID='preparation-pages' {...gestures.panHandlers} style={[board.viewport, { maxHeight: rows * maxCardHeight + (rows - 1) * 8 }]} onLayout={event => { const { width, height } = event.nativeEvent.layout; setArea(current => current.width === width && current.height === height ? current : { width, height }); }}>
       <ScrollView style={styles.flex} contentContainerStyle={board.grid} showsVerticalScrollIndicator={true}>
         {visible.map(order => {

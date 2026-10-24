@@ -33,6 +33,13 @@ test('idle sync with 8,000 orders persists once and keeps unchanged record ident
   assert.equal(sameRecordValues(before, await cloud.list('order:')), true);
   assert.equal(JSON.parse(snapshot).cursor, 8000);
   assert.ok(JSON.parse(snapshot).lastSync);
+  let dataEvents = 0;
+  const stopData = cloud.subscribe(() => { dataEvents++; }, { dataOnly: true });
+  const idleWrites = writes;
+  await cloud.sync();
+  assert.equal(writes, idleWrites, 'Repeated idle polls must not rewrite the full encrypted cache');
+  assert.equal(dataEvents, 0, 'Status and lastSync notifications must not reload record consumers');
+  stopData();
   // Consumers may sort/remove their array without corrupting later selections.
   const local = await cloud.list('order:'); local.reverse(); local.pop();
   assert.equal(sameRecordValues(before, await cloud.list('order:')), true);
@@ -134,4 +141,32 @@ test('a fetch ignoring abort cannot keep synchronization locked indefinitely', a
   assert.equal(f.cloud.status().status, 'UNAVAILABLE');
   hang = false; await f.cloud.sync();
   assert.equal(f.cloud.status().status, 'SYNCED');
+});
+
+test('waiting for a cash overview does not lock local reads or offline order commits', async () => {
+  const { DEFAULT_ACCESS } = await import('../shared/operations-validation.mjs');
+  const modules={preparation:false,preorders:false,customers:false,cash:true};
+  let saved=JSON.stringify({version:1,operationsVersion:1,deviceId:'device',tabletNumber:1,reader:'admin',storeId:'seabra-1',storeName:'Synthetic',modules,access:DEFAULT_ACCESS,preparationSettings:{allowReprint:false,useFinishButton:true},values:{},pending:{},cursor:0,lastSync:null});
+  let release, reached;
+  const waiting=new Promise(resolve=>{reached=resolve});
+  const response=new Promise(resolve=>{release=resolve});
+  const cloud=createCloudSync({getItem:async()=>saved,setItem:async(_,value)=>{saved=value}},'https://example.com/cloud',randomUUID,async()=>({}),async (url,requestOptions)=>{
+    const path=new URL(url).pathname;
+    if(path.endsWith('/store'))return Response.json({storeId:'seabra-1',name:'Synthetic',modules});
+    if(path.endsWith('/access'))return Response.json(DEFAULT_ACCESS);
+    if(path.endsWith('/changes'))return Response.json({changes:[],cursor:0,more:false});
+    if(path.endsWith('/cash')){if(requestOptions.method==='POST')return Response.json({sessions:[{id:'new-session'}],entries:[]});reached();return response;}
+    throw Error('Unexpected request');
+  });
+  await cloud.setSession({storeId:'seabra-1',username:'admin',token:'test'});
+  const sync=cloud.sync();await waiting;
+  try {
+    const local=async()=>{assert.deepEqual(await cloud.list('order:'),[]);await cloud.write({'order:local':{...syntheticRecord(1).value,id:'local'}});};
+    let timer;
+    try {await Promise.race([local(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Local operation blocked by network')),1000)})]);}
+    finally{clearTimeout(timer);}
+    assert.equal(cloud.pending('order:local'),true);assert.ok(JSON.parse(saved).values['order:local']);
+    await cloud.cashCommand({operation:'open',id:randomUUID(),openingCents:0});
+  } finally { release(Response.json({sessions:[],entries:[]}));await sync; }
+  assert.equal(cloud.cashOverview().sessions[0].id,'new-session','An older background response must not overwrite a completed cash command');
 });

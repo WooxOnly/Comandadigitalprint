@@ -83,6 +83,9 @@ createRoot(document.getElementById('root')).render(<AppearanceProvider><Fixture>
   await esbuild.build({stdin:{contents:entry,resolveDir:root,loader:'tsx'},bundle:true,write:true,outfile:path.join(directory,'tablet-preview.js'),platform:'browser',mainFields:['browser','module','main'],resolveExtensions:['.web.tsx','.web.ts','.web.js','.tsx','.ts','.jsx','.js','.json'],format:'iife',jsx:'automatic',define:{'process.env':'{}','process.env.NODE_ENV':'"test"','__DEV__':'false'},nodePaths:[path.join(root,'node_modules')],loader:{'.png':'dataurl'},plugins:[{name:'fixture-services',setup(build){
     build.onLoad({filter:/\.[cm]?[jt]sx?$/},args=>sourceOverrides[args.path] === undefined ? undefined : {contents:sourceOverrides[args.path],loader:args.path.endsWith('tsx')?'tsx':'ts',resolveDir:path.dirname(args.path)});
     build.onResolve({filter:/^qa:stubs$/},()=>({path:'stubs',namespace:'qa'}));
+    // This fixture represents the complete native offline cache. Remote web
+    // queries are exercised separately with the real Expo export and backend.
+    build.onResolve({filter:/\/services\/useOrderQuery$/},()=>({path:path.join(root,'src/services/useOrderQuery.ts')}));
     build.onResolve({filter:intercept},()=>({path:'stubs',namespace:'qa'}));
     build.onResolve({filter:/^react-native$/},()=>({path:require.resolve('react-native-web',{paths:[root]})}));
     build.onResolve({filter:/^react-native-webview$/},()=>({path:'webview',namespace:'qa'}));

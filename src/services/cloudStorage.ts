@@ -172,7 +172,7 @@ async function seed(storeId: string) {
   }
   return data;
 }
-export const cloud = createCloudSync(encryptedStorage, ADMIN_CREDENTIAL_ENDPOINT.replace('/auth/admin', '/cloud'), randomUUID, seed, fetch, getStoreId);
+export const cloud = createCloudSync(encryptedStorage, ADMIN_CREDENTIAL_ENDPOINT.replace('/auth/admin', '/cloud'), randomUUID, seed, fetch, getStoreId, { snapshot: true });
 export const appStorage = {
   async getItem(key: string): Promise<string | null> {
     if (key === ORDERS) return JSON.stringify((await cloud.list('order:') as { createdAt: string }[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));

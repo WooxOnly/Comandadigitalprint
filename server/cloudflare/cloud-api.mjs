@@ -1,3 +1,4 @@
+import { webData } from './web-data.mjs';
 import { onlineInbox, onlineDecision } from './online-orders.mjs';
 import { correctPreparation, preparationCorrectionUsers } from './preparation-correction.mjs';
 import { cancellationUsers, cancelPreorder } from './preorder-cancellation.mjs';
@@ -167,14 +168,25 @@ export async function cloudResponse(request, env) {
       ? (await env.DB.prepare('SELECT data FROM menu WHERE id = 1').first())?.data ?? JSON.stringify(defaultMenu)
       : '[]';
     await env.DB.prepare("INSERT INTO store_events(store_id, mutation, key, data, actor, created_at) SELECT ?, 'initial-menu', 'menu', ?, 'server', ? WHERE NOT EXISTS(SELECT 1 FROM store_records WHERE store_id = ? AND key = 'menu') ON CONFLICT(store_id, mutation) DO NOTHING").bind(actor.storeId, initialMenu, new Date().toISOString(), actor.storeId).run();
+    const webResult = await webData(request, env, actor);
+    if (webResult) return reply(webResult);
     if (request.method === 'GET' && url.pathname === '/cloud/changes') {
       if (url.searchParams.has('storeId') && url.searchParams.get('storeId') !== actor.storeId) fail(403, 'STORE_FORBIDDEN');
       const cursor = Number(url.searchParams.get('after') || 0);
       if (!Number.isSafeInteger(cursor) || cursor < 0) fail(400, 'INVALID_DATA');
-      const { results } = await env.DB.prepare('SELECT seq, key, data FROM store_events WHERE store_id = ? AND seq > ? ORDER BY seq LIMIT 50').bind(actor.storeId, cursor).all();
+      const limit = url.searchParams.get('pageSize') === '200' ? 200 : 50;
+      const { results } = await env.DB.prepare('SELECT seq, key, data FROM store_events WHERE store_id = ? AND seq > ? ORDER BY seq LIMIT ?').bind(actor.storeId, cursor, limit).all();
       const changes = results.filter(row => roleRead(actor.role, row.key) && (url.searchParams.get('features') === 'operations-v1' || !/^(product-option:|preparation:|activity:)/.test(row.key)) && (!row.key.startsWith('user:') || actor.role === 'admin' || row.key === 'user:' + actor.username)).map((row) => ({ key: row.key, value: JSON.parse(row.data), revision: row.seq }));
+      if (url.searchParams.get('orderParents') === '1') {
+        const ids = [...new Set(changes.filter(row=>row.key.startsWith('preparation:')).map(row=>'order:' + row.key.slice(12)))];
+        for (let offset=0;offset<ids.length;offset+=50) {
+          const page = ids.slice(offset,offset+50);
+          const parents = await env.DB.prepare(`SELECT key,data,revision FROM store_records WHERE store_id=? AND key IN (${page.map(()=>'?').join(',')})`).bind(actor.storeId,...page).all();
+          changes.push(...parents.results.filter(row=>roleRead(actor.role,row.key)).map(row=>({key:row.key,value:JSON.parse(row.data),revision:row.revision})));
+        }
+      }
       const userProfiles = url.searchParams.get('offlineProfiles') === '1' ? results.filter(row=>row.key.startsWith('user:')).map(row=>{const user=JSON.parse(row.data);return{key:row.key,revision:row.seq,value:{username:user.username,active:user.active,role:appRole(user.username,user.role),correctPreparation:user.correctPreparation===true,cancelPreorders:user.cancelPreorders===true}}}) : undefined;
-      return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === 50, ...(userProfiles?{userProfiles}:{}) });
+      return reply({ changes, cursor: results.at(-1)?.seq ?? cursor, more: results.length === limit, ...(userProfiles?{userProfiles}:{}) });
     }
     if (request.method === 'POST' && url.pathname === '/cloud/change') {
       const input = await body(request);

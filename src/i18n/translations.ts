@@ -1050,6 +1050,9 @@ Object.assign(translations, {
   'Confira a etapa e a data/hora do tablet antes de avançar o preparo.': ['Check the stage and tablet date/time before advancing preparation.', 'Revise la etapa y la fecha/hora de la tableta antes de avanzar la preparación.'],
   'Mostrando os dez primeiros clientes. Refine a busca.': ['Showing the first ten customers. Refine your search.', 'Se muestran los primeros diez clientes. Refine la búsqueda.'],
   'Mostrando os 100 primeiros clientes. Refine a busca para encontrar outros.': ['Showing the first 100 customers. Refine your search to find others.', 'Se muestran los primeros 100 clientes. Refine la búsqueda para encontrar otros.'],
+  'Carregando pedidos…': ['Loading orders…', 'Cargando pedidos…'],
+  'Carregar mais pedidos': ['Load more orders', 'Cargar más pedidos'],
+  'Não foi possível consultar os pedidos. Toque para tentar novamente.': ['Could not load orders. Tap to try again.', 'No se pudieron consultar los pedidos. Toca para reintentar.'],
   'Registros recebidos': ['Records received', 'Registros recibidos'],
   'Não foi possível sincronizar. Toque para tentar novamente.': ['Could not synchronize. Tap to try again.', 'No se pudo sincronizar. Toca para reintentar.'],
   "Sincronizando…": [
