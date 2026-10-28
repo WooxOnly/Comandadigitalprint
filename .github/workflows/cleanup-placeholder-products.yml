@@ -1,5 +1,8 @@
 name: Limpar produtos acidentais em homologacao
 on:
+  push:
+    branches: [homologacao]
+    paths: ['.github/workflows/cleanup-placeholder-products.yml']
   workflow_dispatch:
     inputs:
       apply:
@@ -29,5 +32,5 @@ jobs:
         if: ${{ !inputs.apply }}
         run: node scripts/cleanup-placeholder-products.mjs
       - name: Remover somente os produtos autorizados com backup e revisão protegida
-        if: inputs.apply
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
         run: node scripts/cleanup-placeholder-products.mjs --apply
