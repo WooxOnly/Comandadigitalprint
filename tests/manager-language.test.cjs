@@ -171,3 +171,18 @@ test('legacy manager login bookmark redirects to the clean sign-in page without 
   const page=await f.request('/gestor');assert.equal(page.status,200);assert.match(await page.text(),/name="csrf"/);
   assert.equal(f.db.prepare('SELECT COUNT(*) n FROM manager_login_limits').get().n,0);
 });
+
+test('online page bookmarks request login with a safe return path while APIs retain 401',async t=>{
+ const f=await setup(t),target='/gestor/online?storeId=seabra-1&view=photos';
+ const response=await f.request(target);assert.equal(response.status,303);const location=response.headers.get('Location');assert.equal(new URL(location,origin).searchParams.get('returnTo'),target);
+ const login=await f.request(location);const markup=await login.text();assert.equal(login.status,200);assert.match(markup,/name="returnTo" value="\/gestor\/online\?storeId=seabra-1&amp;view=photos"/);
+ assert.equal((await f.request('/gestor/api/online?storeId=seabra-1')).status,401);
+ const result=await f.request('/gestor/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'alice@example.com',password,csrf:f.jar.get(f.auth.CSRF_COOKIE),returnTo:target})});assert.equal(result.status,303);assert.equal(result.headers.get('Location'),target);
+ assert.equal((await f.request('/gestor?'+new URLSearchParams({returnTo:target}))).headers.get('Location'),target);
+ assert.equal((await f.request('/gestor/online?storeId=seabra-2&view=photos')).status,403,'Login never grants access to another store');
+});
+test('manager login return targets reject external, API and malformed paths',async()=>{
+ const {managerReturnTo}=await import('../server/cloudflare/manager-api.mjs');
+ for(const value of ['https://evil.test','//evil.test','/gestor/../admin','/gestor/api/online','/gestor/online?storeId=../admin','/gestor/online?storeId=seabra-1#token','/gestor/online?storeId=x\\evil'])assert.equal(managerReturnTo(value),'/gestor');
+ assert.equal(managerReturnTo('/gestor/online?storeId=seabra-1&view=photos&extra=ignored'),'/gestor/online?storeId=seabra-1&view=photos');
+});

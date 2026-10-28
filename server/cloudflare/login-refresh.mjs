@@ -1,12 +1,12 @@
 import { LOGIN_ERRORS, loginStatusMessage } from './login-errors.mjs';
 // Credentials stay in the existing form. Only an explicit, server-declared
 // stale CSRF rejection may repeat the POST once; wrong passwords never retry.
-export function loginRefreshScript(entry, stale = false) {
+export function loginRefreshScript(entry, stale = false, destination = entry) {
   const selector = `form[action="${entry}/login"]`;
   return `(()=>{
 const loginForm=document.querySelector(${JSON.stringify(selector)});
 if(!loginForm)return;
-const entry=${JSON.stringify(entry)},selector=${JSON.stringify(selector)},submitButton=loginForm.querySelector('button[type="submit"]');let submitting=false,blockedUntil=0,retryTimer;
+const destination=${JSON.stringify(destination)},entry=${JSON.stringify(entry)},selector=${JSON.stringify(selector)},submitButton=loginForm.querySelector('button[type="submit"]');let submitting=false,blockedUntil=0,retryTimer;
 const LOGIN_ERRORS=${JSON.stringify(LOGIN_ERRORS)},loginStatusMessage=${loginStatusMessage.toString()};
 let notice=loginForm.parentElement.querySelector('[role="alert"],#login-message');
 if(${JSON.stringify(stale)}&&notice)notice.textContent='';
@@ -27,14 +27,14 @@ for(let attempt=0;attempt<2;attempt++){
 const challengeResult=await readLogin(entry),challenge=challengeResult.response;
 if(!challenge.ok){showFailure(challenge);release();return}
 const fresh=new DOMParser().parseFromString(challengeResult.text,'text/html'),token=fresh.querySelector(selector+' input[name="csrf"]')?.value;
-if(!token&&fresh.querySelector('#logout')){location.replace(entry);return}
+if(!token&&fresh.querySelector('#logout')){location.replace(destination);return}
 if(!token||!/^[a-f0-9-]{36}$/.test(token))throw loginFailure(LOGIN_ERRORS.unexpected);
 loginForm.elements.namedItem('csrf').value=token;
 const resultResponse=await readLogin(entry+'/login',{method:'POST',body:new URLSearchParams(new FormData(loginForm))}),response=resultResponse.response;
 if(response.status===403&&response.headers.get('X-Bistro-Login-Retry')==='csrf')continue;
 if(!response.ok){showFailure(response);release();return}
 const result=new DOMParser().parseFromString(resultResponse.text,'text/html');
-if(response.ok&&result.querySelector('#logout')){location.replace(entry);return}
+if(response.ok&&(result.querySelector('#logout')||(destination!==entry&&response.url===new URL(destination,location.origin).href))){location.replace(destination);return}
 throw loginFailure(result.querySelector(selector)?LOGIN_ERRORS.session:LOGIN_ERRORS.unexpected);
 }
 throw loginFailure(LOGIN_ERRORS.session);

@@ -106,3 +106,9 @@ Confirmado pelo proprietário: aumentar tanto os atalhos de Início quanto os í
 
 - Revisão da prévia: cartões usam altura pelo conteúdo para não cortar nomes/descrições longos. Teste de navegador verifica que todo o bloco de informação cabe em cada cartão. Previews representativas adicionais usam o catálogo real do repositório, Pizzas → Promocionais/Regulares/Especiais, sem alterar dados remotos.
 - Esclarecimento final do proprietário: Lanches NÃO tem subgrupos; a prévia sintética anterior gerou essa confusão. Somente Pizzas tem Promocionais/Regulares/Especiais no cadastro atual. Não inventar subgrupos nem reclassificar produtos.
+
+## Acesso direto às fotos/descrições — 2026-10-28
+
+- Corrigido GET anônimo das páginas `/gestor/online` e `/gestor/online/lojas`: redireciona ao login do gestor, em vez de retornar JSON Unauthorized. Preserva destino interno validado e volta à página após login; conta administrativa e conta do gestor continuam independentes.
+- Retorno aceita somente páginas online conhecidas, loja e visualização permitidas. APIs continuam retornando HTTP 401 sem sessão e continuam verificando a autorização da loja após login. Sem redirecionamentos externos, API como destino ou liberação de sessão por link.
+- Sessão expirada ao salvar foto/descrição/configuração encaminha novamente ao login com o mesmo destino. Preserva tradução PT/EN/ES e os fluxos existentes de CSRF, senha inválida e recuperação. Sem alteração no APK.
