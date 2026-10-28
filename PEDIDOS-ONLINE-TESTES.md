@@ -79,3 +79,9 @@ O proprietário apontou “Dados sincronizados” e a última atualização fora
 ### Ícones em tablets grandes
 
 Confirmado pelo proprietário: aumentar tanto os atalhos de Início quanto os ícones da barra inferior na web. Depois aprovou o modo retrato existente: tamanhos de ícones/badges em retrato permanecem iguais; ampliação aplicada somente em paisagem. Com janela disponível a partir de 1000×700px (incluindo iPad em paisagem com as barras do Safari), atalhos usam 32px e navegação 28px, com tamanhos intermediários para tablets menores e sem aumento nos celulares. Os cartões continuam com alturas iguais. Renderização nativa e dimensões dos APKs preservadas; não compilar APK/OTA nesta entrega, conforme nova confirmação explícita do proprietário.
+
+## Publicação e limpeza conferidas — 27/10 local / 28/10 UTC
+
+- Entrega `928fe09`, workflow [40606432790](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/40606432790): validação, portais e aplicativo web concluídos; APK/release ignorados.
+- Limpeza [40606744338](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/40606744338): dez produtos acidentais removidos, 39 produtos preservados, backup em `menu_cleanup_backup`, nenhum pedido alterado.
+- Logo sincronizada já existia, mas a exibição pública estava desabilitada. A solicitação anterior do proprietário permite habilitar apenas essa identidade pública, com backup e guarda da configuração/logo, preservando canal, horários e demais preferências. Confirmação de execução pendente neste registro.

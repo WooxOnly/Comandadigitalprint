@@ -9,6 +9,10 @@ on:
         description: Remover somente os dez IDs autorizados após inspeção e criar backup
         type: boolean
         default: false
+      publish_logo:
+        description: Publicar a logo sincronizada do Seabra no cardápio, conforme solicitação do proprietário
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -34,3 +38,6 @@ jobs:
       - name: Remover somente os produtos autorizados com backup e revisão protegida
         if: github.event_name == 'workflow_dispatch' && inputs.apply
         run: node scripts/cleanup-placeholder-products.mjs --apply
+      - name: Exibir logo salva do Seabra no cardápio público com backup e revisão protegida
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_logo
+        run: node scripts/publish-storefront-logo.mjs
