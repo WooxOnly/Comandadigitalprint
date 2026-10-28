@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { createRequire } from 'node:module';
+const { parse: parseYaml } = createRequire(import.meta.url)('yaml');
 import { publish, redactPrivateLinks, validateTargets } from '../scripts/publish-homologacao.mjs';
 
 const json = path => JSON.parse(readFileSync(path, 'utf8'));
@@ -48,4 +50,15 @@ test('authentication or backup failure prevents migration; deployment or health 
     assert.ok(!events.some(args => args[0] === 'build'));
     if (['auth', 'export', 'verify'].includes(failure)) assert.ok(!events.some(args => args[1] === 'execute'));
   }
+});
+
+test('push validation cannot publish or request APK; manual delivery defaults to web/portals only',()=>{
+ const validation=parseYaml(readFileSync('.github/workflows/validate.yml','utf8'));
+ assert.deepEqual(Object.keys(validation.jobs),['checks']);
+ for(const step of validation.jobs.checks.steps)assert.ok(!/eas.*build|wrangler.*deploy|publicar:homologacao/.test(step.run||''));
+ const delivery=parseYaml(readFileSync('.github/workflows/deliver-homologacao.yml','utf8'));
+ assert.equal(delivery.on.workflow_dispatch.inputs.build_apk.default,false);
+ assert.match(delivery.jobs.apk.if,/github.event_name == 'workflow_dispatch'/);
+ assert.match(delivery.jobs.apk.if,/inputs.build_apk/);
+ assert.match(delivery.jobs.apk.if,/!inputs.web_only/);
 });

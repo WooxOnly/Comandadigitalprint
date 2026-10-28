@@ -19,9 +19,9 @@ on:
         type: boolean
         default: false
       build_apk:
-        description: Gerar APK (desative para alterações somente dos portais)
+        description: Gerar APK somente quando explicitamente solicitado pelo proprietário
         type: boolean
-        default: true
+        default: false
 
       enable_online_demo:
         description: Disponibilizar primeira versão de pedidos online da Seabra para testes

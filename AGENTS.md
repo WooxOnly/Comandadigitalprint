@@ -1,5 +1,9 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Automatic build correction — 2026-10-28
+
+- The owner reported failed GitHub notifications. Investigation found legacy Validate push automation deploying and requesting EAS cloud APK despite the web-only instruction; the attempt failed at Expo Free monthly quota and produced no APK. Remove that obsolete deployment/build job: pushes and PRs validate only. Manual deliver-homologacao build_apk defaults false and only an explicit, owner-authorized request may set true. Never upgrade Expo or change billing to resolve a notification. Current web corrections were delivered successfully via the separate manual portal workflow.
+
 ## Online publication resumed — owner 2026-10-27
 
 - Owner asked to publish the pending changes and mentioned additional web corrections. This lifts the earlier hold for the online-menu layout, photos, required contact/payment preference, tablet-only receiving and the ten specifically identified accidental products in homologação. Preserve production, historical orders, current operational web performance changes and native geometry. APK/OTA remain separately authorized; do not compile them in this delivery.
