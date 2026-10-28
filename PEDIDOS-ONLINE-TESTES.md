@@ -85,3 +85,12 @@ Confirmado pelo proprietário: aumentar tanto os atalhos de Início quanto os í
 - Entrega `928fe09`, workflow [40606432790](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/40606432790): validação, portais e aplicativo web concluídos; APK/release ignorados.
 - Limpeza [40606744338](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/40606744338): dez produtos acidentais removidos, 39 produtos preservados, backup em `menu_cleanup_backup`, nenhum pedido alterado.
 - Logo sincronizada já existia, mas a exibição pública estava desabilitada. A solicitação anterior do proprietário permite habilitar apenas essa identidade pública, com backup e guarda da configuração/logo, preservando canal, horários e demais preferências. Confirmação de execução pendente neste registro.
+
+
+### Confirmação final da entrega
+
+- Web e portais publicados pelo workflow 40606432790, com validação concluída e jobs de APK/release ignorados.
+- Limpeza 40606744338 confirmou dez removidos, 39 produtos preservados e nenhum pedido alterado.
+- Workflow 40607017461 habilitou a logo salva do Seabra, com backup/guarda de revisão e sem alterar canal, horários ou outros dados.
+- Conferência pública concluída em 390, 1032, 1376 e 1920px: cardápio com 39 produtos reais, logo carregada, sem transbordamento horizontal ou erro JavaScript; bundle do app contém as correções de sincronização e ícones. Nenhum pedido foi enviado na conferência remota.
+- Retrato preservado conforme aprovação do proprietário; ícones maiores em paisagem, adaptados à janela. Ajustes e Início usam o mesmo alinhamento de sincronização. Nenhum APK/OTA gerado.
