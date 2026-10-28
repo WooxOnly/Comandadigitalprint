@@ -39,7 +39,7 @@ function closePreviousDemo(queue,storeId,today,now){
   return {sql,keys};
 }
 export function demoDataset(inventory,storeId,now=new Date(),options={}){
-  const dayCount=options.days??120,prefix=options.prefix??DEMO_PREFIX,throughDay=options.throughDay===true;
+  const dayCount=options.days??120,prefix=options.prefix??DEMO_PREFIX,throughDay=options.throughDay===true,activeQueue=options.activeQueue!==false;
   if(!Number.isInteger(dayCount)||dayCount<1||dayCount>120||!/^demo[a-zA-Z0-9-]+-$/.test(prefix))throw Error('Invalid demo batch options');
   if(throughDay&&(dayCount!==1||prefix===DEMO_PREFIX))throw Error('Whole-day presentation requires a separate one-day batch');
   const id=(...parts)=>prefix+parts.join('-');
@@ -66,14 +66,14 @@ export function demoDataset(inventory,storeId,now=new Date(),options={}){
   for(let d=dayCount-1;d>=0;d--){
     const day=iso(todayUtc-d*dayMs).slice(0,10),count=demoDayVolume(day),sessionId=id('session',day),cashier='demo.caixa.'+(d%3+1);let cashBalance=20000;
     const start=atLocal(day,7),end=d===0&&!throughDay?Math.min(atLocal(day,21,15),now.getTime()-45*minute):atLocal(day,21,15);
-    if(end<start||now.getTime()<atLocal(today,7,2))throw Error('Generate demo queue after opening at 07:00');
+    if(end<start||(!(throughDay&&!activeQueue)&&now.getTime()<atLocal(today,7,2)))throw Error('Generate demo queue after opening at 07:00');
     const latestMinute=(end-atLocal(day,0))/minute;
     const sessionOpen=start,sessionClose=d===0&&!throughDay?now.getTime():atLocal(day,22);
     if(store.cash)sql.push(`INSERT OR IGNORE INTO cash_sessions(store_id,id,device_id,opened_by,opened_at,opening_cents,closed_at,closed_by,counted_cents) VALUES(${q(storeId)},${q(sessionId)},'d364beef-0000-4000-8000-000000000120',${q(cashier)},${q(iso(sessionOpen))},20000,${q(iso(sessionClose))},${q(cashier)},0);`);
     for(let n=0;n<count;n++){
-      const orderId=id('order',day,n+1),seed=hash(orderId),active=d===0&&n>=count-9,activeIndex=n-(count-9);
+      const orderId=id('order',day,n+1),seed=hash(orderId),active=d===0&&activeQueue&&n>=count-9,activeIndex=n-(count-9);
       // Morning coffee and Friday evening peaks; future samples require explicit whole-day demo mode.
-      const emitted=active?Math.max(start,Math.min(atLocal(day,21,57),now.getTime()-(30-activeIndex*3)*minute)):demoEmission(day,n,count-9*(d===0),orderId,latestMinute);
+      const emitted=active?Math.max(start,Math.min(atLocal(day,21,57),now.getTime()-(30-activeIndex*3)*minute)):demoEmission(day,n,count-9*(d===0&&activeQueue),orderId,latestMinute);
       const serviceMode=seed%10<6?'dine_in':'takeout',customer=customers[seed%customers.length];
       const items=Array.from({length:1+seed%4},(_,j)=>{const p=menu[(hash(orderId+'item'+j)%100<55?(seed+j*3)%Math.min(menu.length,12):hash(orderId+j)%menu.length)];return {id:id('item',day,n,j),productId:p.id,name:p.name,category:p.category,quantity:1+hash(orderId+'qty'+j)%3,note:j===0&&seed%7===0?'Sem cebola — demonstração':'',unitPriceCents:Math.round(p.price*100)}});
       const order={id:orderId,createdAt:iso(emitted),numberDay:day,dailyNumber:n+1,tabletLabel:'DEMO',serviceMode,plate:serviceMode==='dine_in'?String(1+seed%10):seed%4===0?String(1+seed%10):'',customer:customer.name,items};
@@ -99,15 +99,16 @@ export function demoDataset(inventory,storeId,now=new Date(),options={}){
     }
     if(store.cash)sql.push(`UPDATE cash_sessions SET counted_cents=${cashBalance} WHERE store_id=${q(storeId)} AND id=${q(sessionId)} AND device_id='d364beef-0000-4000-8000-000000000120';`);
     if(store.preorders)for(let n=0;n<2;n++){
+      const current=d===0&&!options.historical;
       const customer=customers[(d+n)%customers.length],order=orders[orders.length-1-n];
-      const preorder={id:id('preorder',day,n),customer:customer.name,...(store.customers?{customerId:customer.id}:{}),contact:customer.email,address:n===1?customer.addresses[0]:'',fulfillment:n===1?'delivery':'pickup',dueAt:iso(d===0?now.getTime()+(n+1)*dayMs:atLocal(day,17+n)),createdAt:iso(atLocal(day,8)),status:d===0?'scheduled':'completed',items:order.items};
+      const preorder={id:id('preorder',day,n),customer:customer.name,...(store.customers?{customerId:customer.id}:{}),contact:customer.email,address:n===1?customer.addresses[0]:'',fulfillment:n===1?'delivery':'pickup',dueAt:iso(current?now.getTime()+(n+1)*dayMs:atLocal(day,17+n)),createdAt:iso(atLocal(day,8)),status:current?'scheduled':'completed',items:order.items};
       if(Date.parse(preorder.createdAt)>now.getTime())preorder.createdAt=iso(now);
-      if(n===1)preorder.delivery={feeCents:500,driver:d===0?'':'demo.entrega',status:d===0?'pending':'delivered',...(d===0?{}:{dispatchedAt:preorder.dueAt,deliveredAt:iso(Date.parse(preorder.dueAt)+20*minute)})};
+      if(n===1)preorder.delivery={feeCents:500,driver:current?'':'demo.entrega',status:current?'pending':'delivered',...(current?{}:{dispatchedAt:preorder.dueAt,deliveredAt:iso(Date.parse(preorder.dueAt)+20*minute)})};
       event('preorder:'+preorder.id,preorder);
     }
     days.push({day,orders:count});
   }
-  return {store,events,sql,orders,preparations,sales,days,retiredKeys:retired.keys,summary:{storeId,storeName:store.name,from:days[0].day,to:today,days:dayCount,wholeDayPresentation:throughDay,retiredPreparations:retired.keys.length,orders:orders.length,sales:sales.length,customers:store.customers?40:0,preorders:store.preorders?dayCount*2:0,activePreparations:9,operators:4,minDaily:Math.min(...days.map(d=>d.orders)),maxDaily:Math.max(...days.map(d=>d.orders)),prefix}};
+  return {store,events,sql,orders,preparations,sales,days,retiredKeys:retired.keys,summary:{storeId,storeName:store.name,from:days[0].day,to:today,days:dayCount,wholeDayPresentation:throughDay,retiredPreparations:retired.keys.length,orders:orders.length,sales:sales.length,customers:store.customers?40:0,preorders:store.preorders?dayCount*2:0,activePreparations:preparations.filter(p=>p.status!=='completed').length,operators:4,minDaily:Math.min(...days.map(d=>d.orders)),maxDaily:Math.max(...days.map(d=>d.orders)),prefix}};
 }
 function verify(output){
   const expected=JSON.parse(fs.readFileSync(path.join(output,'summary.json'))),results=JSON.parse(fs.readFileSync(path.join(output,'verification.json'))).map(r=>r.results);
