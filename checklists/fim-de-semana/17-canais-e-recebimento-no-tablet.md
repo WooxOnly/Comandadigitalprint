@@ -30,7 +30,7 @@ Requisito confirmado em 22/10/2026. A configuração é de cada cliente no próp
 - [ ] Definir configuração por unidade quando um cliente tiver várias lojas.
 - [ ] Definir comportamento ao trocar de canal, preservando os pedidos já recebidos.
 - [x] Exigir exatamente um canal ativo por loja na configuração, interface pública e servidor; nunca oferecer ambos simultaneamente.
-- [ ] Definir se a lista também aparecerá no portal; isso não substitui a aba nativa solicitada.
+- [x] Recebimento/aceite somente na aba do tablet; portal reservado às configurações, sem caixa de entrada.
 
 ## Verificação
 

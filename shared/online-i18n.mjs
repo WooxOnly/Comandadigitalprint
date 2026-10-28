@@ -1,5 +1,7 @@
 // Shared wording for online ordering across native app and portals.
 export const ONLINE_TRANSLATIONS = {
+  "Desenvolvido por BistroHub": ["Developed by BistroHub", "Desarrollado por BistroHub"],
+  "Informe um telefone válido.": ["Enter a valid phone number.", "Introduce un teléfono válido."],
   "Cardápio online": [
     "Online menu",
     "Menú en línea"
@@ -491,5 +493,89 @@ export const ONLINE_TRANSLATIONS = {
   "Novos pedidos online: {count}": [
     "New online orders: {count}",
     "Nuevos pedidos en línea: {count}"
+  ],
+  "Telefone": [
+    "Phone number",
+    "Teléfono"
+  ],
+  "Forma de pagamento": [
+    "Payment method",
+    "Forma de pago"
+  ],
+  "Dinheiro": [
+    "Cash",
+    "Efectivo"
+  ],
+  "Cartão de crédito": [
+    "Credit card",
+    "Tarjeta de crédito"
+  ],
+  "Cartão de débito": [
+    "Debit card",
+    "Tarjeta de débito"
+  ],
+  "Selecione": [
+    "Select",
+    "Selecciona"
+  ],
+  "Pagamento na entrega ou retirada. Não há cobrança online.": [
+    "Pay on delivery or pickup. No online charge.",
+    "Pago en la entrega o retiro. Sin cobro en línea."
+  ],
+  "Escolha dinheiro, cartão de crédito ou cartão de débito.": [
+    "Choose cash, credit card or debit card.",
+    "Elige efectivo, tarjeta de crédito o débito."
+  ],
+  "Finalizar pedido": [
+    "Checkout",
+    "Finalizar pedido"
+  ],
+  "Continuar escolhendo": [
+    "Keep browsing",
+    "Seguir eligiendo"
+  ],
+  "Escolha os produtos": [
+    "Choose items",
+    "Elige los productos"
+  ],
+  "Grupos de produtos": [
+    "Item groups",
+    "Grupos de productos"
+  ],
+  "Fotos dos produtos": [
+    "Item photos",
+    "Fotos de productos"
+  ],
+  "Escolha um produto e adicione sua foto ao cardápio digital.": [
+    "Choose an item and add its photo to the online menu.",
+    "Elige un producto y añade su foto al menú digital."
+  ],
+  "Produto": [
+    "Item",
+    "Producto"
+  ],
+  "Foto do produto": [
+    "Item photo",
+    "Foto del producto"
+  ],
+  "A imagem será reduzida antes de salvar. A foto ficará pública no cardápio publicado.": [
+    "The image will be resized before saving. It will be public on the published menu.",
+    "La imagen se reducirá antes de guardar. Será pública en el menú publicado."
+  ],
+  "Salvar foto": [
+    "Save photo",
+    "Guardar foto"
+  ],
+  "Remover foto": [
+    "Remove photo",
+    "Eliminar foto"
+  ],
+  "Foto atualizada.": [
+    "Photo updated.",
+    "Foto actualizada."
+  ],
+  "Escolha uma foto JPEG ou PNG de até 120 KB.": [
+    "Choose a JPEG or PNG photo up to 120 KB.",
+    "Elige una foto JPEG o PNG de hasta 120 KB."
   ]
 };

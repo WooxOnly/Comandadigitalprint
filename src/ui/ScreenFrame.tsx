@@ -5,6 +5,6 @@ import { styles } from './theme';
 export function ScreenFrame({ children }: { children: ReactNode }) {
   const { sending, isReady } = useApp();
   return <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
-    <View pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.contentFrame}>{children}</View>
+    <View testID="screen-content-frame" pointerEvents={sending || !isReady ? 'none' : 'auto'} style={styles.contentFrame}>{children}</View>
   </ScrollView>;
 }

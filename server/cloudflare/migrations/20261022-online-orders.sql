@@ -29,3 +29,8 @@ CREATE TABLE IF NOT EXISTS online_audit (
 CREATE TABLE IF NOT EXISTS online_rate_limits (
  key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, reset_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS online_product_photos (
+ store_id TEXT NOT NULL REFERENCES stores(id), product_id TEXT NOT NULL,
+ image TEXT NOT NULL, updated_at TEXT NOT NULL,
+ PRIMARY KEY(store_id,product_id)
+);

@@ -1,0 +1,33 @@
+name: Limpar produtos acidentais em homologacao
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Remover somente os dez IDs autorizados após inspeção e criar backup
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: bistro-homologacao-demo-data
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.ref == 'refs/heads/homologacao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Inspecionar produtos e identidade sem alterações
+        if: ${{ !inputs.apply }}
+        run: node scripts/cleanup-placeholder-products.mjs
+      - name: Remover somente os produtos autorizados com backup e revisão protegida
+        if: inputs.apply
+        run: node scripts/cleanup-placeholder-products.mjs --apply

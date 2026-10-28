@@ -18,11 +18,11 @@ export async function onlineConfig(env, id) {
  preset: { tableCount: preset?.table_count ?? 0, qrMode: preset?.qr_mode ?? 'per-table', revision: preset?.revision ?? 0 },
  settings: settings ? JSON.parse(settings.data) : defaultOnlineSettings(), revision: settings?.revision ?? 0 };
 }
-export async function onlineReadBody(request) {
+export async function onlineReadBody(request, limit = 32768) {
  if (!request.headers.get('Content-Type')?.startsWith('application/json')) onlineFail('INVALID_DATA', 415);
  const reader = request.body?.getReader(); if (!reader) onlineFail('INVALID_DATA');
  const parts = []; let size = 0;
- while (true) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 32768) { await reader.cancel(); onlineFail('TOO_LARGE', 413); } parts.push(value); }
+ while (true) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > limit) { await reader.cancel(); onlineFail('TOO_LARGE', 413); } parts.push(value); }
  const bytes = new Uint8Array(size); let at = 0; for (const part of parts) { bytes.set(part, at); at += part.length; }
  try { const value = JSON.parse(new TextDecoder().decode(bytes)); if (!value || typeof value !== 'object' || Array.isArray(value)) onlineFail('INVALID_DATA'); return value; } catch { onlineFail('INVALID_DATA'); }
 }
@@ -102,7 +102,8 @@ export async function onlineRate(request,env,now) {
 export async function buildOnlineRequest(env,config,input,now) {
  onlineRequirePublished(config);
  if(!/^[a-f0-9-]{36}$/.test(input.id||''))onlineFail('INVALID_DATA');
- if(typeof input.customer!=='string'||!input.customer.trim()||input.customer.length>100||typeof input.contact!=='string'||input.contact.length<5||input.contact.length>100)onlineFail('INVALID_CONTACT');
+ if(typeof input.customer!=='string'||!input.customer.trim()||input.customer.length>100||typeof input.contact!=='string'||input.contact.length>40||!/^[+0-9(). -]+$/.test(input.contact)||input.contact.replace(/[^0-9]/g,'').length<7||input.contact.replace(/[^0-9]/g,'').length>15)onlineFail('INVALID_CONTACT');
+ if(!['cash','credit','debit'].includes(input.paymentMethod))onlineFail('INVALID_PAYMENT');
  if(typeof input.notes!=='string'||input.notes.length>1000 || typeof input.address!=='string'||input.address.length>1000)onlineFail('INVALID_DATA');
  if(!['pickup','delivery','table'].includes(input.fulfillment))onlineFail('INVALID_DATA');
  if(input.fulfillment==='pickup'&&!config.settings.pickup || input.fulfillment==='delivery'&&!config.settings.delivery)onlineFail('FULFILLMENT_UNAVAILABLE');
@@ -128,14 +129,16 @@ export async function buildOnlineRequest(env,config,input,now) {
  const subtotalCents=items.reduce((n,i)=>n+i.unitPriceCents*i.quantity,0);
  if(!Number.isSafeInteger(subtotalCents)||subtotalCents>100000000)onlineFail('INVALID_ITEMS');
  if(input.quotedSubtotalCents!==subtotalCents)onlineFail('PRICE_CHANGED',409);
- return { id:input.id,customer:input.customer.trim(),contact:input.contact.trim(),address:input.fulfillment==='delivery'?input.address.trim():'',notes:input.notes.trim(),fulfillment:input.fulfillment,table,scheduledFor:due?new Date(due).toISOString():null,timeZone:config.settings.timeZone,items,subtotalCents,createdAt:new Date(now).toISOString() };
+ return { id:input.id,paymentMethod:input.paymentMethod,customer:input.customer.trim(),contact:input.contact.trim(),address:input.fulfillment==='delivery'?input.address.trim():'',notes:input.notes.trim(),fulfillment:input.fulfillment,table,scheduledFor:due?new Date(due).toISOString():null,timeZone:config.settings.timeZone,items,subtotalCents,createdAt:new Date(now).toISOString() };
 }
 export async function onlineInbox(env,id) {
  const config=await onlineConfig(env,id);
+ if(!config.entitlements.enabled||config.settings.channel!=='tablet')return{enabled:false,receiving:false,visualAlert:false,soundAlert:false,requests:[]};
  const {results}=await env.DB.prepare('SELECT data,status,updated_at,actor FROM online_requests WHERE store_id=? ORDER BY CASE status WHEN \'pending\' THEN 0 ELSE 1 END,created_at DESC LIMIT 100').bind(id).all();
  return { enabled:config.entitlements.enabled && config.settings.channel==='tablet', receiving:config.entitlements.enabled&&config.settings.published&&config.settings.channel==='tablet', visualAlert:config.settings.visualAlert,soundAlert:config.settings.soundAlert, requests:results.map(r=>({...JSON.parse(r.data),status:r.status,updatedAt:r.updated_at,actor:r.actor})) };
 }
 export async function onlineDecision(env,id,input,actor,now=Date.now()) {
+ const config=await onlineConfig(env,id);if(!config.entitlements.enabled||config.settings.channel!=='tablet')onlineFail('MODULE_DISABLED',403);
  if(!/^[a-f0-9-]{36}$/.test(input.id||'')||!['accepted','declined'].includes(input.status))onlineFail('INVALID_DATA');
  const current=await env.DB.prepare('SELECT status FROM online_requests WHERE store_id=? AND id=?').bind(id,input.id).first();
  if(!current)onlineFail('REQUEST_NOT_FOUND',404);

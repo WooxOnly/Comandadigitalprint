@@ -1,12 +1,12 @@
-import { onlineConfig, onlineReadBody, onlineFail, onlineJson, onlineSign, onlineHash, onlineRate, onlineRequirePublished, buildOnlineRequest, onlineInbox, onlineDecision, saveOnlineSettings, onlineMenu } from './online-orders.mjs';
-import { onlineSettingsPage, onlinePublicPage, onlineInboxPage, onlineStoresPage } from './online-pages.mjs';
+import { onlineConfig, onlineReadBody, onlineFail, onlineJson, onlineSign, onlineHash, onlineRate, onlineRequirePublished, buildOnlineRequest, saveOnlineSettings, onlineMenu } from './online-orders.mjs';
+import { onlineSettingsPage, onlinePublicPage, onlineStoresPage, onlinePhotosPage } from './online-pages.mjs';
 import { html, cookie, readCookie, equal } from './manager-auth.mjs';
 import { translate, requestLanguage } from './manager-i18n.mjs';
 import { managerLogo } from './manager-brand.mjs';
 import { requireStoreLicense } from './licenses.mjs';
 const CSRF='__Host-bistro_online_csrf';
 export const ONLINE_ERRORS={
- INVALID_DATA:'Confira os dados do pedido.',INVALID_SETTINGS:'Confira o canal, telefone, fuso e horários.',TOO_LARGE:'Pedido acima do limite permitido.',
+ INVALID_PAYMENT:'Escolha dinheiro, cartão de crédito ou cartão de débito.',INVALID_PHOTO:'Escolha uma foto JPEG ou PNG de até 120 KB.',INVALID_DATA:'Confira os dados do pedido.',INVALID_SETTINGS:'Confira o canal, telefone, fuso e horários.',TOO_LARGE:'Pedido acima do limite permitido.',
  SETTINGS_CHANGED:'Configuração alterada em outra sessão. Atualize a página.',MODULE_DISABLED:'Módulo de pedidos online desabilitado.',
  ONLINE_UNAVAILABLE:'Cardápio online indisponível.',TABLE_UNAVAILABLE:'Pedido na mesa indisponível para esta loja.',INVALID_TABLE:'Escolha uma mesa válida.',
  INVALID_CONTACT:'Informe nome, contato e endereço quando necessário.',INVALID_SCHEDULE:'Escolha uma data e hora futura válida no horário da loja.',
@@ -53,19 +53,27 @@ export async function onlineAdminResponse(request,env,{browserLogin,sameOrigin,l
  }catch(error){return errorReply(error,language)}
 }
 export async function onlineManagerResponse(request,env,session,language,now=Date.now()){
- const url=new URL(request.url);if(!['/gestor/online/lojas','/gestor/online','/gestor/api/online','/gestor/api/online/inbox','/gestor/api/online/decision'].includes(url.pathname))return null;
+ const url=new URL(request.url);if(!['/gestor/online/lojas','/gestor/online','/gestor/api/online','/gestor/api/online/photos'].includes(url.pathname))return null;
  try{
  if(url.pathname==='/gestor/online/lojas'&&request.method==='GET'){const {results}=await env.DB.prepare('SELECT id,name FROM stores WHERE active=1 AND id IN (SELECT value FROM json_each(?)) ORDER BY name').bind(session.client.store_ids).all();const nonce=crypto.randomUUID();return html(onlineStoresPage(nonce,results,language),nonce)}
  const id=url.searchParams.get('storeId');if(!JSON.parse(session.client.store_ids).includes(id))onlineFail('ACCESS_DENIED',403);
  const config=await onlineConfig(env,id);if(config.clientId!==session.client.id)onlineFail('ACCESS_DENIED',403);
- if(url.pathname==='/gestor/online'&&request.method==='GET'){const nonce=crypto.randomUUID();return html(url.searchParams.get('view')==='orders'?onlineInboxPage(nonce,config,language):onlineSettingsPage(nonce,config,language,false),nonce)}
+ if(url.pathname==='/gestor/online'&&request.method==='GET'&&url.searchParams.get('view')==='photos'){const nonce=crypto.randomUUID(),menu=await onlineMenu(env,id),{results}=await env.DB.prepare('SELECT product_id FROM online_product_photos WHERE store_id=?').bind(id).all();const response=html(onlinePhotosPage(nonce,config,language,menu,results.map(r=>r.product_id)),nonce);response.headers.set('Content-Security-Policy',response.headers.get('Content-Security-Policy').replace("img-src 'self'","img-src 'self' data:"));return response}
+ if(url.pathname==='/gestor/online'&&request.method==='GET'){const nonce=crypto.randomUUID();return html(onlineSettingsPage(nonce,config,language,false),nonce)}
  if(url.pathname==='/gestor/api/online'&&request.method==='GET')return onlineJson(config);
  await requireStoreLicense(env,id,now);
- if(url.pathname==='/gestor/api/online/inbox'&&request.method==='GET')return onlineJson(await onlineInbox(env,id));
+
  safeMethod(request,url.origin);
- const input=await onlineReadBody(request);
+ const input=await onlineReadBody(request,url.pathname==='/gestor/api/online/photos'?180000:32768);
+ if(url.pathname==='/gestor/api/online/photos'){
+ if(!config.entitlements.enabled)onlineFail('MODULE_DISABLED',403);
+ const menu=await onlineMenu(env,id);if(!menu.some(p=>p.id===input.productId))onlineFail('PRODUCT_UNAVAILABLE',404);
+ if(input.image!==null){if(typeof input.image!=='string'||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/.test(input.image)||input.image.length>164000)onlineFail('INVALID_PHOTO');let bytes;try{bytes=atob(input.image.split(',')[1])}catch{onlineFail('INVALID_PHOTO')}if(bytes.length>122880||!(bytes.startsWith('\xff\xd8\xff')||bytes.startsWith('\x89PNG\r\n\x1a\n')))onlineFail('INVALID_PHOTO');await env.DB.prepare('INSERT INTO online_product_photos(store_id,product_id,image,updated_at) VALUES(?,?,?,?) ON CONFLICT(store_id,product_id) DO UPDATE SET image=excluded.image,updated_at=excluded.updated_at').bind(id,input.productId,input.image,new Date(now).toISOString()).run()}
+ else await env.DB.prepare('DELETE FROM online_product_photos WHERE store_id=? AND product_id=?').bind(id,input.productId).run();
+ return onlineJson({ok:true});
+ }
  if(url.pathname==='/gestor/api/online')return onlineJson(await saveOnlineSettings(env,config,input,'manager:'+session.user.id,now));
- if(url.pathname==='/gestor/api/online/decision')return onlineJson(await onlineDecision(env,id,input,'manager:'+session.user.id,now));
+
  onlineFail('INVALID_DATA',405);
  }catch(error){return errorReply(error,language)}
 }
@@ -79,15 +87,17 @@ async function checkTableContext(url,config,env){
  return {mode:config.preset.qrMode,table};
 }
 export async function onlinePublicResponse(request,env,now=Date.now()){
- const url=new URL(request.url),match=url.pathname.match(/^\/pedir\/([a-z0-9-]+)(?:\/(submit|status|logo))?$/);
+ const url=new URL(request.url),match=url.pathname.match(/^\/pedir\/([a-z0-9-]+)(?:\/(submit|status|logo|photo))?$/);
  if(!match)return null;
  const language=requestLanguage(request,readCookie),nonce=crypto.randomUUID();
  try{
  const config=await onlineConfig(env,match[1]);onlineRequirePublished(config);await availableLicense(env,config,now);
  const context=await checkTableContext(url,config,env);
+ if(request.method==='GET'&&match[2]==='photo'){const productId=url.searchParams.get('id'),menu=await onlineMenu(env,config.store.id);if(!menu.some(p=>p.id===productId))onlineFail('PRODUCT_UNAVAILABLE',404);const photo=await env.DB.prepare('SELECT image FROM online_product_photos WHERE store_id=? AND product_id=?').bind(config.store.id,productId).first();if(!photo)return new Response(null,{status:404});const [prefix,encoded]=photo.image.split(',');return new Response(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)),{headers:{'Content-Type':prefix.slice(5,-7),'Cache-Control':'private, max-age=60','X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin'}})}
  if(request.method==='GET'&&!match[2]){
  const csrf=crypto.randomUUID()+'.'+Math.floor(now/3600000);const signed=csrf+'.'+await onlineSign(env,'csrf:'+csrf);
- const response=html(onlinePublicPage(nonce,config,language,signed,context,await onlineMenu(env,config.store.id)),nonce,200,{'Referrer-Policy':'no-referrer'});response.headers.append('Set-Cookie',cookie(CSRF,signed,7200));return response;
+ const {results:photos}=await env.DB.prepare('SELECT product_id FROM online_product_photos WHERE store_id=?').bind(config.store.id).all();
+ const response=html(onlinePublicPage(nonce,config,language,signed,context,await onlineMenu(env,config.store.id),photos.map(p=>p.product_id)),nonce,200,{'Referrer-Policy':'no-referrer'});response.headers.append('Set-Cookie',cookie(CSRF,signed,7200));return response;
  }
  if(request.method==='GET'&&match[2]==='logo'){
  if(!config.settings.publishLogo)return new Response(null,{status:404});
@@ -123,7 +133,7 @@ export async function onlinePublicResponse(request,env,now=Date.now()){
  return receipt('pending');
  }catch(error){return errorReply(error,language)}
 }
-function whatsappMessage(config,record,language){const t=s=>translate(language,s),money=n=>new Intl.NumberFormat({pt:'pt-BR',en:'en-US',es:'es-ES'}[language],{style:'currency',currency:'USD'}).format(n/100);return [config.store.name,t('Pedido online'),record.customer,record.contact,t(record.fulfillment==='delivery'?'Entrega':'Retirada'),record.address,record.scheduledFor?new Date(record.scheduledFor).toLocaleString({pt:'pt-BR',en:'en-US',es:'es-ES'}[language],{timeZone:record.timeZone})+' ('+record.timeZone+')':t('Para agora'),...record.items.map(i=>`${i.quantity} × ${i.name}${i.flavors?' / '+i.flavors[1]:''} — ${money(i.unitPriceCents*i.quantity)}${i.note?'\n'+i.note:''}`),t('Subtotal dos produtos')+': '+money(record.subtotalCents),record.notes,t('Pagamento a combinar com a loja.')].filter(Boolean).join('\n')}
+function whatsappMessage(config,record,language){const t=s=>translate(language,s),money=n=>new Intl.NumberFormat({pt:'pt-BR',en:'en-US',es:'es-ES'}[language],{style:'currency',currency:'USD'}).format(n/100);return [config.store.name,t('Pedido online'),record.customer,record.contact,t(record.fulfillment==='delivery'?'Entrega':'Retirada'),record.address,record.scheduledFor?new Date(record.scheduledFor).toLocaleString({pt:'pt-BR',en:'en-US',es:'es-ES'}[language],{timeZone:record.timeZone})+' ('+record.timeZone+')':t('Para agora'),t('Forma de pagamento')+': '+t({cash:'Dinheiro',credit:'Cartão de crédito',debit:'Cartão de débito'}[record.paymentMethod]),...record.items.map(i=>`${i.quantity} × ${i.name}${i.flavors?' / '+i.flavors[1]:''} — ${money(i.unitPriceCents*i.quantity)}${i.note?'\n'+i.note:''}`),t('Subtotal dos produtos')+': '+money(record.subtotalCents),record.notes,t('Pagamento a combinar com a loja.')].filter(Boolean).join('\n')}
 async function onlineQrResponse(url,env,config,language){
  onlineRequirePublished(config);
  if(!config.entitlements.tables||config.settings.channel!=='tablet'||!config.preset.tableCount)onlineFail('TABLE_UNAVAILABLE',403);

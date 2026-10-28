@@ -1,5 +1,6 @@
+import { CloudStatusFrame } from './CloudStatusFrame';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Text, View } from './ThemedNative';
+import { Alert, AppState, Text } from './ThemedNative';
 import { KeyboardPressable as Pressable } from './KeyboardControls';
 import { cloud } from '../services/cloudStorage';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -32,8 +33,8 @@ export function CloudStatus({ compact = false }: { compact?: boolean }) {
     }
     void cloud.sync();
   }
-  return <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
+  return <CloudStatusFrame compact={compact}>
     <Pressable accessibilityRole="button" onPress={action}><Text numberOfLines={compact ? 1 : undefined} style={styles.helperText}>{t(label)}{state.status === 'SYNCING' && state.received > 0 ? ` · ${t('Registros recebidos')}: ${state.received.toLocaleString(locale)}` : ''}{state.pending ? ` · ${state.pending}` : ''}</Text></Pressable>
     {!compact && state.lastSync && <Text style={styles.mutedText}>{t('Última sincronização')}: {new Date(state.lastSync).toLocaleString(locale)}</Text>}
-  </View>;
+  </CloudStatusFrame>;
 }

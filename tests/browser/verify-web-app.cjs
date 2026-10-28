@@ -56,13 +56,41 @@ const { fixture } = require('../helpers/business-fixture.cjs');
   await page.getByTestId('nav-home').waitFor({ timeout: 30000 });
   await page.getByText('Dados sincronizados',{exact:true}).waitFor({timeout:30000});
   assert.equal(bootstrapRecords.some(row=>row.key.startsWith('order:history-fixture-')),false,'Initial web data must not download old completed history');
-  for (const size of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1024, height: 1366 }, { width: 1366, height: 1024 }, { width: 1920, height: 1080 }, { width: 2560, height: 1440 }]) {
+  async function alignedStatus() {
+   const status = await page.getByTestId('cloud-status-frame').boundingBox();
+   const content = await page.locator('[data-testid="screen-content-frame"]:visible').last().boundingBox();
+   assert.ok(status && content && Math.abs(status.x-content.x)<1 && Math.abs(status.width-content.width)<1,'Synchronization and screen content must share the same horizontal bounds');
+  }
+
+  for (const size of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1024, height: 1366 }, { width: 1366, height: 1024 }, { width: 1376, height: 900 }, { width: 1920, height: 1080 }, { width: 2560, height: 1440 }]) {
    await page.setViewportSize(size);
    for (const tab of ['order', 'menu', 'history', 'preparation', 'preorders', 'customers', 'cash', 'home']) {
     const control = page.getByTestId('nav-' + tab);
     if (size.width >= 1920) await control.click(); else await control.tap();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
    }
+   await alignedStatus();
+   const large = size.width >= 1000 && size.height >= 700, tablet = size.width >= 700 && size.height >= 600;
+   const expectedNav = size.width > size.height ? large ? 28 : tablet ? 24 : 18 : 18;
+   const expectedShortcut = size.width > size.height ? large ? 32 : tablet ? 28 : 25 : size.width >= 760 ? 22 : 25;
+   const iconSize = async target => target.evaluate(node=>{const css=getComputedStyle(node);return node.querySelector('img')?node.getBoundingClientRect().width:parseFloat(css.fontSize)});
+   assert.equal(await iconSize(page.getByTestId('nav-home').getByTestId('navigation-icon')),expectedNav);
+   assert.equal(await iconSize(page.getByTestId('home-module-order').getByTestId('navigation-icon')),expectedShortcut);
+   const cards = await page.locator('[data-testid^="home-module-"]').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().height));
+   assert.ok(Math.max(...cards)-Math.min(...cards)<1,'Home cards retain equal heights after increasing icons');
+   await page.getByTestId('nav-printer').tap();
+   await page.getByLabel('Senha de Configurações',{exact:true}).waitFor();
+   const settingsStatus = await page.getByTestId('cloud-status-frame').boundingBox();
+   await page.getByTestId('nav-home').tap();
+   const homeStatus = await page.getByTestId('cloud-status-frame').boundingBox();
+   assert.ok(Math.abs(settingsStatus.x-homeStatus.x)<1 && Math.abs(settingsStatus.width-homeStatus.width)<1,'Settings gate must retain the same synchronization alignment');
+   await page.getByTestId('nav-printer').tap();
+   const settingsCode = await page.evaluate(()=>{const date=new Date();return String(date.getMonth()+1+date.getDate()+date.getFullYear()+(date.getHours()%12||12))});
+   await page.getByLabel('Senha de Configurações',{exact:true}).fill(settingsCode);
+   await page.getByRole('button',{name:'Desbloquear',exact:true}).tap();
+   await page.getByText('Módulos da empresa',{exact:true}).waitFor();
+   await alignedStatus();
+   await page.getByTestId('nav-home').tap();
    await page.screenshot({ path: path.join(directory, 'ipad-' + size.width + '.png') });
   }
   await page.getByTestId('nav-order').tap();

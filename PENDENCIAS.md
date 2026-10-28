@@ -911,3 +911,34 @@ Proprietário autorizou começar cardápio online com preços/pedido e avaliar p
 - Workflow 39781806854 publicou `f99cc4b` em homologação: 386 testes, lint e TypeScript aprovados; APK/release ignorados.
 - Cardápio público `/pedir/seabra-1` retorna 200, com 49 produtos e carrinho funcionando no navegador, sem erros/overflow na conferência remota. Nenhuma solicitação foi enviada ao banco nessa conferência.
 - Configuração de teste inicializada sem sobrescrever configurações anteriores. Recebimento/aceite pode ser testado no portal; instalar nova aba no tablet continua dependente de autorização do APK.
+
+
+## 22/10/2026 — Correção do primeiro cardápio online
+
+- Recebimento exclusivo no tablet habilitado; retirar recebimento/aceite do portal e não gerar versão/APK/OTA. Configurações e fotos permanecem no portal.
+- Ajustar cardápio para grupos em botões, lupa, linhas compactas e pedido atual no topo/direita; finalizar em diálogo independente do fim da lista.
+- Exigir nome, telefone válido e dinheiro/crédito/débito como preferência, sem pagamento integrado.
+- Campo/envio de foto de produto disponível com validação/redimensionamento.
+- Dez produtos acidentais identificados no catálogo de homologação; limpeza específica com backup e evento protegido por revisão, sem alterar pedidos históricos.
+
+
+## 22/10/2026 — Publicação suspensa e apresentação com APK existente
+
+- Não publicar/push/compilar/disponibilizar o lote local do cardápio online. A remoção dos dez “Novo produto” ficou preparada, não executada. “Produto 1, 2, 3” das imagens são dados isolados de teste local, nunca inseridos no banco.
+- Layout local alinhado ao OrderWorkspace: 66/34 em paisagem, pedido fixo acima em retrato e rolagens independentes; removido botão flutuante. Conferência local: 37 cenários do portal, 17 testes de API/tradução, lint e TypeScript aprovados.
+- Pedido posterior separado: QR regenerado e decodificado para o APK já publicado `homologacao-3887123df83c`, de 20/10/2026. URL de download confirmou HTTP 200; nenhuma build solicitada.
+- Dados de hoje autorizados separadamente e concluídos pelo workflow de dados 39792863371 (sem publicação de app/portal): Seabra Hunters Creek, 22/10/2026, 60 pedidos/preparos, 51 finalizados e 9 ativos (3 aguardando, 3 preparando, 3 prontos), 2 encomendas, TMA 37,8 min (30–45), quatro cozinheiros canônicos. As nove filas sintéticas do dia anterior foram encerradas com backup. Prefixo novo `demo-day-v1-20261022-`; sincronização de 60 pedidos conferida, com funcionamento 07–22 e o padrão de distribuição já aprovado.
+
+
+### Identidade do cardápio — ajuste local solicitado em 22/10/2026
+
+Nome da loja e sua logo publicada no topo, ao lado dos controles de idioma/aparência. Marca/logo BistroHub pequenas no rodapé com “Desenvolvido por BistroHub”, traduzido para EN/ES. Sem alteração dos demais portais nem liberação automática de logos privadas. Sem publicação, push, APK ou OTA.
+
+
+## 27/10/2026 — Retomada do lote online para publicação
+
+Proprietário autorizou publicar as mudanças locais de cardápio online em homologação. Revisados layout, checkout separado, nome/telefone/pagamento obrigatório, fotos, identidade da loja e recebimento exclusivo no app. Os 14 testes de API e 37 cenários de navegador passaram. Limpeza dos dez IDs acidentais preparada para inspeção e aplicação com backup e guardas de revisão/dados; três testes conferem escopo, idempotência e recusa de concorrência. Não houve autorização de novo APK/OTA. Novas correções da web aguardam descrição do proprietário; não marcá-las como concluídas.
+
+### Correções web indicadas pelo proprietário
+
+Alinhar o estado/horário de sincronização à coluna principal em Início e Ajustes (bloqueado/desbloqueado). Aumentar na web os ícones dos atalhos e da navegação inferior no iPad de 13″; proprietário confirmou ambos. Teste com export Expo/provedores reais passou em seis resoluções, com conferência de alinhamento, tamanhos de ícones, alturas iguais, navegação, pedido, prévia, paginação histórica e detalhes. Publicação somente web/portais; APK e OTA continuam proibidos até pedido explícito.

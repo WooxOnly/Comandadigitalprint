@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <ScrollView ref={navScroll} horizontal showsHorizontalScrollIndicator={navWidth > width} style={{ flexGrow: 0 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} onContentSizeChange={() => navScroll.current?.scrollTo({ x: selectedOffset, animated: false })}>
               <View testID="navigation-content" style={[styles.bottomNav, { width: navWidth, maxWidth: navWidth }]}>
                 {tabs.map((tab) => <Pressable testID={'nav-' + tab.screen} key={tab.screen} accessibilityRole="tab" accessibilityLabel={t(tab.title)} accessibilityState={{ selected: screen === tab.screen }} aria-selected={screen === tab.screen} onPress={() => router.navigate(ROUTES[tab.screen])} style={({ pressed }) => [styles.bottomNavButton, isWide && styles.bottomNavButtonWide, screen === tab.screen && styles.activeBottomNavButton, kitchen && { paddingVertical: 4, minHeight: 44 }, pressed && styles.pressed]}>
-                  <View style={{ marginBottom: 2 }}><NavigationIcon icon={tab.icon} size={18} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
+                  <View style={{ marginBottom: 2 }}><NavigationIcon variant="navigation" icon={tab.icon} size={18} color={screen === tab.screen ? COLORS.primary : COLORS.muted} /></View>
                   <Text numberOfLines={2} style={[styles.bottomNavText, screen === tab.screen && styles.activeBottomNavText]}>{t(tab.label)}{tab.screen === 'online' && online?.visualAlert && online.pending > 0 ? ' (' + online.pending + ')' : ''}</Text>
                 </Pressable>)}
               </View>

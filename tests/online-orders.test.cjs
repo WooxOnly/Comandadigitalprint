@@ -22,7 +22,7 @@ async function onlineFixture(t){
  const page=await publicCall('/pedir/seabra-1'),csrfCookie=page.headers.get('set-cookie').split(';')[0],csrf=csrfCookie.slice(csrfCookie.indexOf('=')+1);
  const menu=[{id:'p1',name:'Bread <test>',category:'Breakfast',price:5},{id:'p2',name:'Pizza',category:'Pizzas',price:10,kind:'pizza'},{id:'p3',name:'Cheese',category:'Pizzas',price:12,kind:'pizza'}];
  for(const store of ['seabra-1','seabra-2'])f.db.prepare('INSERT INTO store_events(store_id,mutation,key,data,actor,created_at) VALUES(?,?,?,?,?,?)').run(store,randomUUID(),'menu',JSON.stringify(menu),'test',new Date(now).toISOString());
- const input=()=>({id:randomUUID(),customer:'Test customer',contact:'5551234567',address:'',notes:'No onions',fulfillment:'pickup',table:'',scheduledFor:'',quotedSubtotalCents:1000,items:[{productId:'p1',quantity:2,note:''}],csrf});
+ const input=()=>({id:randomUUID(),customer:'Test customer',contact:'5551234567',paymentMethod:'cash',address:'',notes:'No onions',fulfillment:'pickup',table:'',scheduledFor:'',quotedSubtotalCents:1000,items:[{productId:'p1',quantity:2,note:''}],csrf});
  const send=(data,headers={})=>publicCall('/pedir/seabra-1/submit',data,{Cookie:csrfCookie,...headers});
  const settings=(change,store='seabra-1')=>{const row=f.db.prepare('SELECT data FROM online_store_settings WHERE store_id=?').get(store);f.db.prepare('UPDATE online_store_settings SET data=?,revision=revision+1 WHERE store_id=?').run(JSON.stringify({...JSON.parse(row.data),...change}),store)};
  return{...f,...api,...core,publicCall,input,send,settings,csrfCookie,csrf};
@@ -57,7 +57,7 @@ test('signed table QR works only with entitlement, valid table and automatic cha
  r=await send({...f.input(),fulfillment:'table',table:'3'});assert.equal(r.status,403);
  r=await f.publicCall('/pedir/seabra-1?'+query);assert.equal(r.status,403);
  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM online_requests').get().n,1);
- const inbox=await f.onlineInbox(f.env,'seabra-1');assert.equal(inbox.receiving,false);assert.equal(inbox.requests.length,1);
+ const inbox=await f.onlineInbox(f.env,'seabra-1');assert.equal(inbox.receiving,false);assert.equal(inbox.requests.length,0);
 });
 test('immediate orders require opening; scheduled orders may arrive while closed for a future valid store-local time',async t=>{
  const f=await onlineFixture(t),closed=f.defaultOnlineSettings().hours;closed[4]={closed:false,open:'16:00',close:'22:00'};f.settings({hours:closed});
@@ -93,7 +93,7 @@ test('manager cannot escalate entitlements, cross tenants or save stale settings
 test('generated public and admin page scripts compile and escape catalog and company markup',async t=>{
  const f=await onlineFixture(t),pages=await import('../server/cloudflare/online-pages.mjs');
  const config=await f.onlineConfig(f.env,'seabra-1');config.store.name='<script>bad()</script>';
- for(const language of ['pt','en','es'])for(const markup of [pages.onlinePublicPage('nonce',config,language,f.csrf,null,[{id:'test',name:'</script><script>bad()</script>',category:'test',price:2}]),pages.onlineSettingsPage('nonce',config,language,true),pages.onlineSettingsPage('nonce',config,language,false),pages.onlineInboxPage('nonce',config,language)]){
+ for(const language of ['pt','en','es'])for(const markup of [pages.onlinePublicPage('nonce',config,language,f.csrf,null,[{id:'test',name:'</script><script>bad()</script>',category:'test',price:2}]),pages.onlineSettingsPage('nonce',config,language,true),pages.onlineSettingsPage('nonce',config,language,false),pages.onlinePhotosPage('nonce',config,language,[{id:'p1',name:'Photo product'}],[])]){
  assert.ok(!markup.includes('<script>bad()'));
  for(const script of markup.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g))new Function(script[1]);
  }
@@ -120,3 +120,27 @@ test('generic internal QR requires a valid entered table and cannot bypass admin
  r=await send({...f.input(),fulfillment:'table',table:'11'});assert.equal(r.status,400);
  f.db.prepare('UPDATE online_client_modules SET tables_enabled=0').run();r=await send({...f.input(),fulfillment:'table',table:'2'});assert.equal(r.status,403);
 });
+test('checkout requires a phone number and one of three payment preferences, without recording a payment',async t=>{
+ const f=await onlineFixture(t);
+ for(const patch of [{contact:'letters only'},{contact:'123'},{paymentMethod:''},{paymentMethod:'paid'},{customer:' '}]){const r=await f.send({...f.input(),...patch});assert.equal(r.status,400)}
+ for(const paymentMethod of ['cash','credit','debit']){const input={...f.input(),paymentMethod},r=await f.send(input);assert.equal(r.status,200);const row=f.db.prepare('SELECT data FROM online_requests WHERE id=?').get(input.id);assert.equal(JSON.parse(row.data).paymentMethod,paymentMethod)}
+ assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM store_records WHERE key LIKE 'order:%'").get().n,0);
+});
+test('portal has configuration/photos only; receiving and acceptance remain exclusive to authenticated tablet APIs',async t=>{
+ const f=await onlineFixture(t),cfg=await f.onlineConfig(f.env,'seabra-1'),session={client:{id:cfg.clientId,store_ids:'["seabra-1"]'},user:{id:'manager'}};
+ for(const path of ['/gestor/api/online/inbox','/gestor/api/online/decision'])assert.equal(await f.onlineManagerResponse(new Request(origin+path+'?storeId=seabra-1'),f.env,session,'en',now),null);
+ const page=await f.onlineManagerResponse(new Request(origin+'/gestor/online?storeId=seabra-1&view=orders'),f.env,session,'en',now),markup=await page.text();assert.ok(!markup.includes('online-inbox'));assert.ok(markup.includes('view=photos'));
+});
+test('product photos require store authorization, valid catalog product and bounded raster content',async t=>{
+ const f=await onlineFixture(t),cfg=await f.onlineConfig(f.env,'seabra-1'),session={client:{id:cfg.clientId,store_ids:'["seabra-1"]'},user:{id:'manager'}};
+ const call=(store,data)=>f.onlineManagerResponse(new Request(origin+'/gestor/api/online/photos?storeId='+store,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(data)}),f.env,session,'en',now);
+ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aH0sAAAAASUVORK5CYII=';
+ assert.equal((await call('seabra-2',{productId:'p1',image})).status,403);
+ assert.equal((await call('seabra-1',{productId:'missing',image})).status,404);
+ assert.equal((await call('seabra-1',{productId:'p1',image:'data:image/svg+xml;base64,PHN2Zz4='})).status,400);
+ assert.equal((await call('seabra-1',{productId:'p1',image})).status,200);
+ let r=await f.publicCall('/pedir/seabra-1/photo?id=p1');assert.equal(r.status,200);assert.equal(r.headers.get('Content-Type'),'image/png');
+ assert.equal((await call('seabra-1',{productId:'p1',image:null})).status,200);r=await f.publicCall('/pedir/seabra-1/photo?id=p1');assert.equal(r.status,404);
+});
+
+test('disabled online module hides native requests and blocks decisions without deleting historical requests',async t=>{const f=await onlineFixture(t),input=f.input();await f.send(input);f.db.prepare('UPDATE online_client_modules SET enabled=0').run();const inbox=await f.onlineInbox(f.env,'seabra-1');assert.equal(inbox.enabled,false);assert.deepEqual(inbox.requests,[]);await assert.rejects(()=>f.onlineDecision(f.env,'seabra-1',{id:input.id,status:'accepted'},'admin'),/MODULE_DISABLED/);assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM online_requests').get().n,1)});

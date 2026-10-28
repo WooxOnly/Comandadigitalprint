@@ -45,7 +45,7 @@ A mensagem deve identificar claramente loja, nome/contato do consumidor, produto
 
 “Automático” significa entrada automática na caixa de pedidos online; **não significa aceite automático, venda paga ou início automático do preparo**. Repetição de envio, sincronização ou aceite não pode duplicar a solicitação nem o pedido resultante.
 
-A lista nativa exige alteração do app e atualização de APK; a autorização para começar a frente online não substitui a autorização específica para compilar um APK. O portal é o local de configuração; uma caixa de entrada web adicional pode ser avaliada, mas não substitui silenciosamente a aba nativa definida pelo proprietário.
+A lista nativa exige alteração do app e atualização de APK; a autorização para começar a frente online não substitui a autorização específica para compilar um APK. O portal é o local de configuração; o proprietário determinou que o portal não tenha caixa de entrada nem aceite; essas operações pertencem somente ao tablet. Não gerar APK/versão/OTA nesta rodada.
 
 ## Avisos e som no tablet
 

@@ -1,5 +1,12 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Online publication resumed — owner 2026-10-27
+
+- Owner asked to publish the pending changes and mentioned additional web corrections. This lifts the earlier hold for the online-menu layout, photos, required contact/payment preference, tablet-only receiving and the ten specifically identified accidental products in homologação. Preserve production, historical orders, current operational web performance changes and native geometry. APK/OTA remain separately authorized; do not compile them in this delivery.
+- Publish backend/portals with `build_apk=false` and `enable_online_demo=false`, applying only the existing additive migration. Inspect the targeted product cleanup before applying; use the fixed homologação destination, exact IDs/unchanged placeholders, backup and revision/data-guarded menu event. Do not broadly delete products or overwrite store settings.
+- Owner subsequently identified the synchronization block outside the shared horizontal alignment on Home and Settings. Correct its container only on web, using the same content inset/max width; preserve native padding and synchronization behavior. Verify Home, locked Settings and unlocked Settings in portrait/landscape. Publish both app web and portals with `publish_web=true`, `web_only=false`, `build_apk=false`; do not imply authorization for APK.
+- Owner also confirmed both Home shortcut icons and bottom navigation icons are too small on a 13-inch iPad. Resize only their web rendering responsively, preserve equal Home card heights and all native icon sizes. Owner then approved the existing portrait presentation: preserve portrait icon/badge sizes and apply enlargement in landscape only. Latest explicit clarification: publish corrections only to web; no APK or OTA until the owner explicitly requests it.
+
 ## Operational web adaptation — owner 2026-10-23
 
 - Owner authorized adapting the existing system for touch presentation on iPad Pro, preserving the current layout and business rules. Implement platform adapters, not a separate mock interface. The new web build uses the actual providers, store binding, users, roles, signed licenses and cloud API. HTTPS/IndexedDB/WebCrypto are required; browser protection is origin-scoped, not an OS keychain. Do not promise durable offline assets or native TCP printing.
