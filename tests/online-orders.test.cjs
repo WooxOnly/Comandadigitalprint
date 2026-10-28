@@ -144,3 +144,26 @@ test('product photos require store authorization, valid catalog product and boun
 });
 
 test('disabled online module hides native requests and blocks decisions without deleting historical requests',async t=>{const f=await onlineFixture(t),input=f.input();await f.send(input);f.db.prepare('UPDATE online_client_modules SET enabled=0').run();const inbox=await f.onlineInbox(f.env,'seabra-1');assert.equal(inbox.enabled,false);assert.deepEqual(inbox.requests,[]);await assert.rejects(()=>f.onlineDecision(f.env,'seabra-1',{id:input.id,status:'accepted'},'admin'),/MODULE_DISABLED/);assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM online_requests').get().n,1)});
+test('online-only descriptions enforce scope, input limits and preserve the operational catalog',async t=>{
+ const f=await onlineFixture(t),session={client:{id:'store:seabra-1',store_ids:'["seabra-1"]'},user:{id:'test-manager'}};
+ const call=(store,description,productId='p1')=>f.onlineManagerResponse(new Request(origin+'/gestor/api/online/details?storeId='+store,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({productId,description})}),f.env,session,'en',now);
+ const original=f.db.prepare("SELECT data FROM store_records WHERE store_id='seabra-1' AND key='menu'").get().data;
+ assert.equal((await call('seabra-2','Wrong tenant')).status,403);
+ assert.equal((await call('seabra-1','x'.repeat(2001))).status,400);
+ assert.equal((await call('seabra-1','Description','missing')).status,404);
+ assert.equal((await call('seabra-1','  Fresh bread <b>daily</b>  ')).status,200);
+ assert.equal((await f.onlineMenu(f.env,'seabra-1'))[0].description,'Fresh bread <b>daily</b>');
+ assert.equal((await f.onlineMenu(f.env,'seabra-2'))[0].description,undefined);
+ assert.equal(f.db.prepare("SELECT data FROM store_records WHERE store_id='seabra-1' AND key='menu'").get().data,original);
+ assert.equal((await call('seabra-1','')).status,200);assert.equal((await f.onlineMenu(f.env,'seabra-1'))[0].description,'');
+ f.db.prepare('UPDATE online_client_modules SET enabled=0').run();assert.equal((await call('seabra-1','Disabled')).status,403);
+});
+test('display preferences accept legacy settings, reject invalid flags and keep saved preferences on older-client saves',async t=>{
+ const f=await onlineFixture(t),{showPhotos,showDescriptions,showSubgroups,...legacy}=f.defaultOnlineSettings();
+ assert.equal(f.validateOnlineSettings(legacy).showPhotos,true);
+ assert.throws(()=>f.validateOnlineSettings({...legacy,showPhotos:'false'}),/INVALID_SETTINGS/);
+ const config=await f.onlineConfig(f.env,'seabra-1');
+ const changed=await f.saveOnlineSettings(f.env,config,{revision:config.revision,settings:{...config.settings,showPhotos:false,showDescriptions:false,showSubgroups:false}},'test',now);
+ const updated=await f.saveOnlineSettings(f.env,changed,{revision:changed.revision,settings:legacy},'test',now);
+ assert.equal(updated.settings.showPhotos,false);assert.equal(updated.settings.showDescriptions,false);assert.equal(updated.settings.showSubgroups,false);
+});

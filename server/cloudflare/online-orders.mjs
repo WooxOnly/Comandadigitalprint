@@ -7,7 +7,7 @@ export const onlineFail = (code, status = 400) => { throw Object.assign(Error(co
 export const onlineJson = (value, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } });
 export const defaultOnlineSettings = () => ({ published: false, channel: 'tablet', whatsapp: '', timeZone: 'America/New_York',
  hours: Array.from({ length: 7 }, () => ({ closed: false, open: '07:00', close: '22:00' })),
- pickup: true, delivery: false, visualAlert: true, soundAlert: false, publishLogo: false });
+ pickup: true, delivery: false, visualAlert: true, soundAlert: false, publishLogo: false, showPhotos: true, showDescriptions: true, showSubgroups: true });
 const disabled = () => ({ enabled: false, scheduling: false, tables: false, revision: 0 });
 export async function onlineConfig(env, id) {
  const store = await activeStore(env, id), clientId = await licenseClient(env, store.id);
@@ -16,7 +16,7 @@ export async function onlineConfig(env, id) {
  const settings = await env.DB.prepare('SELECT * FROM online_store_settings WHERE store_id = ?').bind(store.id).first();
  return { store, clientId, entitlements: entitlement ? { enabled: !!entitlement.enabled, scheduling: !!entitlement.scheduling, tables: !!entitlement.tables_enabled, revision: entitlement.revision } : disabled(),
  preset: { tableCount: preset?.table_count ?? 0, qrMode: preset?.qr_mode ?? 'per-table', revision: preset?.revision ?? 0 },
- settings: settings ? JSON.parse(settings.data) : defaultOnlineSettings(), revision: settings?.revision ?? 0 };
+ settings: settings ? { ...defaultOnlineSettings(), ...JSON.parse(settings.data) } : defaultOnlineSettings(), revision: settings?.revision ?? 0 };
 }
 export async function onlineReadBody(request, limit = 32768) {
  if (!request.headers.get('Content-Type')?.startsWith('application/json')) onlineFail('INVALID_DATA', 415);
@@ -28,9 +28,10 @@ export async function onlineReadBody(request, limit = 32768) {
 }
 const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value,k));
 export function validateOnlineSettings(value) {
+ value = { showPhotos: true, showDescriptions: true, showSubgroups: true, ...value };
  const keys = Object.keys(defaultOnlineSettings());
  if (!exactKeys(value, keys) || !['tablet','whatsapp'].includes(value.channel) || typeof value.whatsapp !== 'string' || value.whatsapp.length > 16 || value.whatsapp && !/^[1-9][0-9]{7,14}$/.test(value.whatsapp) || value.channel === 'whatsapp' && !value.whatsapp) onlineFail('INVALID_SETTINGS');
- for (const key of ['published','pickup','delivery','visualAlert','soundAlert','publishLogo']) if (typeof value[key] !== 'boolean') onlineFail('INVALID_SETTINGS');
+ for (const key of ['published','pickup','delivery','visualAlert','soundAlert','publishLogo','showPhotos','showDescriptions','showSubgroups']) if (typeof value[key] !== 'boolean') onlineFail('INVALID_SETTINGS');
  try { if (typeof value.timeZone !== 'string' || value.timeZone.length > 80) onlineFail('INVALID_SETTINGS'); new Intl.DateTimeFormat('en-US', { timeZone: value.timeZone }).format(); } catch { onlineFail('INVALID_SETTINGS'); }
  const time = v => typeof v === 'string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
  if (!Array.isArray(value.hours) || value.hours.length !== 7 || !value.hours.every(h => exactKeys(h,['closed','open','close']) && typeof h.closed === 'boolean' && time(h.open) && time(h.close) && h.open < h.close)) onlineFail('INVALID_SETTINGS');
@@ -38,7 +39,7 @@ export function validateOnlineSettings(value) {
 }
 export async function saveOnlineSettings(env, config, input, actor, now = Date.now()) {
  if (!exactKeys(input,['revision','settings']) || input.revision !== config.revision) onlineFail('SETTINGS_CHANGED',409);
- const value = validateOnlineSettings(input.settings);
+ const value = validateOnlineSettings({ ...config.settings, ...input.settings });
  if (!config.entitlements.enabled) onlineFail('MODULE_DISABLED',403);
  const stamp = new Date(now).toISOString();
  try { await env.DB.batch([
@@ -74,7 +75,9 @@ export async function onlineMenu(env, id) {
  if(!isValidMenu(menu))onlineFail('UNAVAILABLE',503);
  const { results }=await env.DB.prepare("SELECT key,data FROM store_records WHERE store_id=? AND key LIKE 'product-option:%'").bind(id).all();
  const unavailable=new Set(results.filter(r=>JSON.parse(r.data)?.available===false).map(r=>r.key.slice(15)));
- return menu.filter(p=>!unavailable.has(p.id));
+ const { results: details }=await env.DB.prepare('SELECT product_id,description FROM online_product_details WHERE store_id=?').bind(id).all();
+ const descriptions=new Map(details.map(d=>[d.product_id,d.description]));
+ return menu.filter(p=>!unavailable.has(p.id)).map(p=>descriptions.has(p.id)?{...p,description:descriptions.get(p.id)}:p);
 }
 export function onlineRequirePublished(config) {
  if(!config.entitlements.enabled || !config.settings.published)onlineFail('ONLINE_UNAVAILABLE',404);

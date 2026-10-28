@@ -34,3 +34,10 @@ CREATE TABLE IF NOT EXISTS online_product_photos (
  image TEXT NOT NULL, updated_at TEXT NOT NULL,
  PRIMARY KEY(store_id,product_id)
 );
+
+-- Online-only descriptions; never rewrite the tablet's catalog.
+CREATE TABLE IF NOT EXISTS online_product_details (
+ store_id TEXT NOT NULL REFERENCES stores(id), product_id TEXT NOT NULL,
+ description TEXT NOT NULL, updated_at TEXT NOT NULL,
+ PRIMARY KEY(store_id, product_id)
+);

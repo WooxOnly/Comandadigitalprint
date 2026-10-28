@@ -129,3 +129,9 @@ Fontes consultadas em 22/10/2026:
 As caixas de decisões confirmam requisitos explicitamente definidos; não marcam implementação ou publicação como concluída.
 
 Referências: [índice completo](CHECKLIST-FIM-DE-SEMANA.md), [canal e tablet](checklists/fim-de-semana/17-canais-e-recebimento-no-tablet.md), [avisos e som](checklists/fim-de-semana/18-avisos-e-som-online.md) , [horários, agendamento e aceite](checklists/fim-de-semana/19-horarios-agendamento-e-aceite.md) e [preset do administrador](checklists/fim-de-semana/20-configuracao-administrativa-online.md).
+
+## Referência de configuração enviada pelo proprietário — 2026-10-28
+
+Fonte consultada: https://ajuda.programaconsumer.com.br/como-publicar-seu-cardapio-online-e-receber-pedidos-pela-internet/ e categoria https://ajuda.programaconsumer.com.br/category/pedidos-online/ . Referência funcional, preservando identidade e regras do BistroHub.
+
+Proposta para evolução do painel do gestor: separar Estabelecimento/horários, Aparência, Produtos (grupos/subgrupos, fotos e descrições), Recebimento/agendamento, Retirada/entrega, Formas de pagamento e Link/QR de divulgação. O guia Consumer permite escolher exibição de foto/descrição/preço e categorias compactas/detalhadas; também apresenta mínimo de compra, áreas/taxas de entrega e destaques. Esses recursos adicionais são referências para revisão, não requisitos aprovados nem implementação entregue nesta atualização. Pagamento online, chat e integração de mapas continuam fora desta fase. Não importar planos, limites, dependência de computador ligado ou regras de cobrança do Consumer para o BistroHub. Nosso recebimento continua exclusivo WhatsApp OU automático na aplicação operacional, sem recebimento no portal do gestor; QR de mesa somente automático.

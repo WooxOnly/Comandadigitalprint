@@ -1,5 +1,23 @@
 // Shared wording for online ordering across native app and portals.
 export const ONLINE_TRANSLATIONS = {
+  "Pedido atual": ["Current order", "Pedido actual"],
+  "Fotos e descrições dos produtos": ["Product photos and descriptions", "Fotos y descripciones de los productos"],
+  "Escolha um produto para configurar a foto e a descrição no cardápio digital.": ["Choose a product to configure its photo and description in the online menu.", "Elige un producto para configurar su foto y descripción en el menú en línea."],
+  "Exibição do cardápio": ["Menu display", "Visualización del menú"],
+  "Mostrar fotos dos produtos": ["Show product photos", "Mostrar fotos de los productos"],
+  "Mostrar descrições dos produtos": ["Show product descriptions", "Mostrar descripciones de los productos"],
+  "Mostrar subgrupos": ["Show subgroups", "Mostrar subgrupos"],
+  "Subgrupos de produtos": ["Product subgroups", "Subgrupos de productos"],
+  "Ampliar foto": ["Enlarge photo", "Ampliar foto"],
+  "Fechar foto": ["Close photo", "Cerrar foto"],
+  "Descrição do produto": ["Product description", "Descripción del producto"],
+  "A descrição vale somente para o cardápio online.": ["The description applies only to the online menu.", "La descripción se aplica solo al menú en línea."],
+  "Salvar descrição": ["Save description", "Guardar descripción"],
+  "Descrição atualizada.": ["Description updated.", "Descripción actualizada."],
+  "Copiar senha": ["Copy password", "Copiar contraseña"],
+  "Senha copiada.": ["Password copied.", "Contraseña copiada."],
+  "Não foi possível copiar. Selecione a senha e copie manualmente.": ["Could not copy. Select the password and copy it manually.", "No se pudo copiar. Selecciona la contraseña y cópiala manualmente."],
+
   "Desenvolvido por BistroHub": ["Developed by BistroHub", "Desarrollado por BistroHub"],
   "Informe um telefone válido.": ["Enter a valid phone number.", "Introduce un teléfono válido."],
   "Cardápio online": [

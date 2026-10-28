@@ -94,3 +94,12 @@ Confirmado pelo proprietário: aumentar tanto os atalhos de Início quanto os í
 - Workflow 40607017461 habilitou a logo salva do Seabra, com backup/guarda de revisão e sem alterar canal, horários ou outros dados.
 - Conferência pública concluída em 390, 1032, 1376 e 1920px: cardápio com 39 produtos reais, logo carregada, sem transbordamento horizontal ou erro JavaScript; bundle do app contém as correções de sincronização e ícones. Nenhum pedido foi enviado na conferência remota.
 - Retrato preservado conforme aprovação do proprietário; ícones maiores em paisagem, adaptados à janela. Ajustes e Início usam o mesmo alinhamento de sincronização. Nenhum APK/OTA gerado.
+
+## Cardápio configurável e senhas — 2026-10-28
+
+- Subgrupos reutilizam `subcategory` do catálogo, filtrados pelo grupo escolhido; sem criar grupos fictícios.
+- Fotos existentes aparecem como miniaturas com ampliação em diálogo por toque/teclado. Cadastro de fotos e descrição por produto em `/gestor/online?storeId=seabra-1&view=photos`. Fotos reais devem ser cadastradas pelo gestor; produtos sem foto continuam legíveis.
+- Gestor configura separadamente a exibição de fotos, descrições e subgrupos. Preferências antigas continuam compatíveis e o botão Desfazer preserva o estado salvo.
+- Descrições online são isoladas em `online_product_details`, com autorização por loja/licença/módulo, até 2.000 caracteres, texto simples e fallback para a descrição do catálogo. Não alteram o catálogo do tablet. Migração aditiva/idempotente incluída.
+- Gerenciar senhas: cada senha revelada tem seu próprio botão Copiar senha; cópia somente do valor, com retorno localizado, fallback de área de transferência e falha explícita. Os botões desaparecem junto com a revelação existente após um minuto/troca de aba/saída.
+- Verificação local: 16 testes de API online; 39 cenários de navegador em PT/EN/ES e cinco resoluções/orientações, incluindo filtros, foto ampliada, descrição sem HTML e preferências; teste de cópia com valores sintéticos distintos, sucesso, recusa e fallback. Lint e TypeScript aprovados. Publicação somente em homologação web/portais; APK/OTA continuam sem autorização.

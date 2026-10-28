@@ -8,6 +8,10 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 - Owner also confirmed both Home shortcut icons and bottom navigation icons are too small on a 13-inch iPad. Resize only their web rendering responsively, preserve equal Home card heights and all native icon sizes. Owner then approved the existing portrait presentation: preserve portrait icon/badge sizes and apply enlargement in landscape only. Latest explicit clarification: publish corrections only to web; no APK or OTA until the owner explicitly requests it.
 - Staging inspection found exactly ten unchanged placeholders and an existing synchronized Seabra logo with public display disabled. The owner's earlier explicit request for that logo remains authorized. Publish only that saved merchant logo with a backup and settings/logo revision/data guards; preserve every other online setting, store and order.
 
+## Online menu details — owner 2026-10-28
+
+- Owner requested catalog subgroups, per-item thumbnails enlarged on click/touch and product descriptions, configurable in the customer manager portal. Reuse the existing catalog subgroup; keep online photo/description edits separate from the tablet catalog. Preserve responsive layouts and exclusive receiving-channel rules. The earlier copy-password request is also authorized: per revealed password, copy only its value and preserve one-minute disappearance. Deliver only homologação portals; no APK/OTA.
+
 ## Operational web adaptation — owner 2026-10-23
 
 - Owner authorized adapting the existing system for touch presentation on iPad Pro, preserving the current layout and business rules. Implement platform adapters, not a separate mock interface. The new web build uses the actual providers, store binding, users, roles, signed licenses and cloud API. HTTPS/IndexedDB/WebCrypto are required; browser protection is origin-scoped, not an OS keychain. Do not promise durable offline assets or native TCP printing.

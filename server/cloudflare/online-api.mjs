@@ -53,7 +53,7 @@ export async function onlineAdminResponse(request,env,{browserLogin,sameOrigin,l
  }catch(error){return errorReply(error,language)}
 }
 export async function onlineManagerResponse(request,env,session,language,now=Date.now()){
- const url=new URL(request.url);if(!['/gestor/online/lojas','/gestor/online','/gestor/api/online','/gestor/api/online/photos'].includes(url.pathname))return null;
+ const url=new URL(request.url);if(!['/gestor/online/lojas','/gestor/online','/gestor/api/online','/gestor/api/online/photos','/gestor/api/online/details'].includes(url.pathname))return null;
  try{
  if(url.pathname==='/gestor/online/lojas'&&request.method==='GET'){const {results}=await env.DB.prepare('SELECT id,name FROM stores WHERE active=1 AND id IN (SELECT value FROM json_each(?)) ORDER BY name').bind(session.client.store_ids).all();const nonce=crypto.randomUUID();return html(onlineStoresPage(nonce,results,language),nonce)}
  const id=url.searchParams.get('storeId');if(!JSON.parse(session.client.store_ids).includes(id))onlineFail('ACCESS_DENIED',403);
@@ -65,6 +65,13 @@ export async function onlineManagerResponse(request,env,session,language,now=Dat
 
  safeMethod(request,url.origin);
  const input=await onlineReadBody(request,url.pathname==='/gestor/api/online/photos'?180000:32768);
+ if(url.pathname==='/gestor/api/online/details'){
+ if(!config.entitlements.enabled)onlineFail('MODULE_DISABLED',403);
+ if(Object.keys(input).sort().join(',')!=='description,productId'||typeof input.description!=='string'||input.description.length>2000)onlineFail('INVALID_DATA');
+ const menu=await onlineMenu(env,id);if(!menu.some(p=>p.id===input.productId))onlineFail('PRODUCT_UNAVAILABLE',404);
+ await env.DB.prepare('INSERT INTO online_product_details(store_id,product_id,description,updated_at) VALUES(?,?,?,?) ON CONFLICT(store_id,product_id) DO UPDATE SET description=excluded.description,updated_at=excluded.updated_at').bind(id,input.productId,input.description.trim(),new Date(now).toISOString()).run();
+ return onlineJson({ok:true});
+ }
  if(url.pathname==='/gestor/api/online/photos'){
  if(!config.entitlements.enabled)onlineFail('MODULE_DISABLED',403);
  const menu=await onlineMenu(env,id);if(!menu.some(p=>p.id===input.productId))onlineFail('PRODUCT_UNAVAILABLE',404);
