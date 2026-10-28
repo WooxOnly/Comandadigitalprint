@@ -97,7 +97,7 @@ Confirmado pelo proprietário: aumentar tanto os atalhos de Início quanto os í
 
 ## Cardápio configurável e senhas — 2026-10-28
 
-- Subgrupos reutilizam `subcategory` do catálogo, filtrados pelo grupo escolhido; sem criar grupos fictícios.
+- Subgrupos reutilizam `subcategory` do catálogo; abrem pelo grupo com chevron em diálogo, no padrão da tela de pedidos do aplicativo, sem segunda faixa fixa nem grupos fictícios. Ao fechar os detalhes de um produto, preserva a rolagem anterior do catálogo.
 - Fotos existentes aparecem como miniaturas com ampliação em diálogo por toque/teclado. Cadastro de fotos e descrição por produto em `/gestor/online?storeId=seabra-1&view=photos`. Fotos reais devem ser cadastradas pelo gestor; produtos sem foto continuam legíveis.
 - Gestor configura separadamente a exibição de fotos, descrições e subgrupos. Preferências antigas continuam compatíveis e o botão Desfazer preserva o estado salvo.
 - Descrições online são isoladas em `online_product_details`, com autorização por loja/licença/módulo, até 2.000 caracteres, texto simples e fallback para a descrição do catálogo. Não alteram o catálogo do tablet. Migração aditiva/idempotente incluída.

@@ -346,13 +346,13 @@ test('admin panel reveals the same settings code using the browser local time', 
   assert.ok(script, 'The administrative password script is present');
   const elements = new Map();
   const element = (selector) => {
-    if (!elements.has(selector)) elements.set(selector, { textContent: '', handlers: {}, addEventListener(event, callback) { this.handlers[event] = callback; } });
+    if (!elements.has(selector)) elements.set(selector, { textContent: '', style: {}, children: [], append(...nodes) { this.children.push(...nodes); }, setAttribute() {}, handlers: {}, addEventListener(event, callback) { this.handlers[event] = callback; } });
     return elements.get(selector);
   };
   const localTime = new Date(2026, 9, 3, 15, 30);
   class LocalDate extends Date { constructor(...args) { super(...(args.length ? args : [localTime.getTime()])); } static now() { return localTime.getTime(); } }
   vm.runInNewContext(script, {
-    Date: LocalDate, document: { querySelector: element, querySelectorAll: () => [], addEventListener() {} },
+    Date: LocalDate, document: { createElement: tag => element('created-'+tag), querySelector: element, querySelectorAll: () => [], addEventListener() {} },
     window: { addEventListener() {} }, location: { hash: '' }, setInterval() {}, setTimeout() {}, clearTimeout() {},
   });
   element('#view-settings-password').handlers.click();
