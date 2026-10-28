@@ -1,5 +1,9 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Preparation action correction — owner screenshots 2026-10-28
+
+- Owner reports web stage buttons do nothing on cards/details. Confirmed installed RN Web Alert.alert is empty. Intermediate preparing/ready transitions execute directly; only explicit ready-to-completed uses a real cross-platform confirmation Modal. Preserve automatic completion-on-ready policy. Card touch/keyboard opens details; child actions must stop propagation. Surface save failures and prevent duplicate rapid writes. Preserve all board proportions and geometry. Publish only operational homologação web; no APK/OTA or unrelated backend changes.
+
 ## Automatic build correction — 2026-10-28
 
 - The owner reported failed GitHub notifications. Investigation found legacy Validate push automation deploying and requesting EAS cloud APK despite the web-only instruction; the attempt failed at Expo Free monthly quota and produced no APK. Remove that obsolete deployment/build job: pushes and PRs validate only. Manual deliver-homologacao build_apk defaults false and only an explicit, owner-authorized request may set true. Never upgrade Expo or change billing to resolve a notification. Current web corrections were delivered successfully via the separate manual portal workflow.

@@ -3,7 +3,7 @@ import { FilterIcon } from '../ui/FilterIcon';
 import { ActionIcon } from '../ui/ActionIcon';
 import { canUndoPreparation } from '../services/preparationUndo';
 import { PasswordField } from '../ui/AccessGate';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Modal, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from '../ui/ThemedNative';
 import { cloud } from '../services/cloudStorage';
@@ -34,6 +34,8 @@ export default function PreparationScreen() {
   const [filterDay, setFilterDay] = useState(false), [filters, setFilters] = useState(false), [pageStart, setPageStart] = useState(0), [detailId, setDetailId] = useState<string | null>(null);
   const [correction, setCorrection] = useState<{ orderId: string; status: Preparation['status']; updatedAt: string } | null>(null);
   const [authorizers, setAuthorizers] = useState<{ username: string; role: string }[]>([]), [authorizer, setAuthorizer] = useState(''), [password, setPassword] = useState(''), [correctionError, setCorrectionError] = useState('');
+  const [finishId, setFinishId] = useState<string | null>(null), [advanceError, setAdvanceError] = useState('');
+  const advancing = useRef(false);
   const [area, setArea] = useState({ width: 0, height: 0 });
   const today = agendaWindow(localDayText(new Date(now)), 'day');
   const todayOrders = useMemo(() => history.filter(order => Date.parse(order.createdAt) >= today.start && Date.parse(order.createdAt) < today.end), [history, today.start, today.end]);
@@ -66,9 +68,19 @@ export default function PreparationScreen() {
   const detail = history.find(order => order.id === detailId);
   if (!modules.preparation) return <ScreenFrame><Text style={styles.settingsIntro}>{t('Módulo não habilitado para esta empresa.')}</Text></ScreenFrame>;
   function setPage(value: number) { setPageStart(value * pageSize); }
+  async function saveAdvance(id: string, next: Preparation['status']) {
+    if (busy || advancing.current) return;
+    advancing.current = true; setAdvanceError('');
+    try { await advancePreparation(id, next); alerts.acknowledge(id); setFinishId(null); }
+    catch (error) { setAdvanceError(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.'); }
+    finally { advancing.current = false; }
+  }
   function advance(id: string) {
+    if (busy || advancing.current) return;
     const next = statuses[statuses.indexOf(state(id)) + 1]; if (!next) return;
-    Alert.alert(t('Alterar status'), t(labels[next]), [{ text: t('Cancelar') }, { text: t('Confirmar'), onPress: () => { void advancePreparation(id, next).then(() => alerts.acknowledge(id)).catch(e => Alert.alert(t('Falha ao salvar'), t(e.message))); } }]);
+    setAdvanceError('');
+    if (next === 'completed') { setFinishId(id); return; }
+    void saveAdvance(id, next);
   }
   function closeCorrection() { if (busy) return; setCorrection(null); setPassword(''); setAuthorizer(''); setCorrectionError(''); }
   async function chooseCorrection(orderId: string, status: Preparation['status']) {
@@ -94,6 +106,7 @@ export default function PreparationScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('Filtros e avisos')} accessibilityState={{ expanded: filters }} aria-expanded={filters} style={board.smallButton} onPress={() => setFilters(true)}><FilterIcon /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('Atualizar pedidos')} style={board.smallButton} onPress={() => void cloud.sync()}><Text style={board.actionText}>↻</Text></Pressable>
     </View>
+    {!!advanceError && <Text role="alert" style={styles.errorText}>{t('Falha ao salvar')}: {t(advanceError)}</Text>}
     {remoteOrders.loading && <Text style={board.caption}>{t('Carregando pedidos…')}</Text>}
     {remoteOrders.error && <Pressable accessibilityRole="button" onPress={remoteOrders.reload}><Text style={board.caption}>{t('Não foi possível consultar os pedidos. Toque para tentar novamente.')}</Text></Pressable>}
     <View testID='preparation-pages' {...gestures.panHandlers} style={[board.viewport, { maxHeight: rows * maxCardHeight + (rows - 1) * 8 }]} onLayout={event => { const { width, height } = event.nativeEvent.layout; setArea(current => current.width === width && current.height === height ? current : { width, height }); }}>
@@ -106,19 +119,19 @@ export default function PreparationScreen() {
           const heading = [order.serviceMode === 'takeout' ? t('Para levar') : t('Mesa') + (order.plate ? ' ' + order.plate : ''), order.customer?.trim()].filter(Boolean).join(' · ');
           const elapsed = minutes === null ? t(labels[current]) : t(labels[current]) + ' - ' + minutes.toLocaleString(locale) + 'm';
           const next = statuses[statuses.indexOf(current) + 1];
-          return <View testID={'preparation-card-' + order.id} key={order.id} style={[board.card, { width: cardWidth, height: cardHeight, borderTopColor: late ? '#AE4328' : accents[current] }]}>
+          return <Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} onPress={() => setDetailId(order.id)} testID={'preparation-card-' + order.id} key={order.id} style={[board.card, { width: cardWidth, height: cardHeight, borderTopColor: late ? '#AE4328' : accents[current] }]}>
             <ScrollView testID={'preparation-items-' + order.id} style={board.itemPreview} contentContainerStyle={board.itemContent} nestedScrollEnabled persistentScrollbar showsVerticalScrollIndicator>
               <View style={[board.row, { alignItems: 'flex-start' }]}><Text style={board.orderNumber}>{heading}</Text><Text style={[board.status, { color: late ? '#AE4328' : accents[current] }]}>{elapsed}</Text></View>
               <Text style={board.meta}>{late ? t('Atrasado') + ' · ' : ''}{localDayText(new Date(order.createdAt)) !== localDayText(new Date(now)) ? new Date(order.createdAt).toLocaleDateString(locale, { month: '2-digit', day: '2-digit' }) + ' ' : ''}{new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {t('Pedido')} {orderNumberLabel(order) || order.plate}</Text>
               {order.items.map((item, index) => <View key={item.id + '-' + index} style={board.itemContent}><Text style={board.item}>{item.quantity}× {item.name}</Text>{!!item.note && <Text style={board.meta}>{item.note}</Text>}</View>)}
               {order.items.some(item => item.flavors?.length || item.extras?.length) && <Text style={board.caption}>{t('Itens e observações nos detalhes')}</Text>}
             </ScrollView>
-            <View style={board.actions}><Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} style={board.action} onPress={() => setDetailId(order.id)}><Text style={board.actionText}>{t('Detalhes')}</Text></Pressable>
-              {canReprint && <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={printing} style={[board.action, printing && styles.pressed]} onPress={() => reprint(order)}><ActionIcon kind="printer" /></Pressable>}
-              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={() => advance(order.id)}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' || settings.useFinishButton === false ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
+            <View style={board.actions}><Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} style={board.action} onPress={event => { event.stopPropagation(); setDetailId(order.id); }}><Text style={board.actionText}>{t('Detalhes')}</Text></Pressable>
+              {canReprint && <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={printing} style={[board.action, printing && styles.pressed]} onPress={event => { event.stopPropagation(); reprint(order); }}><ActionIcon kind="printer" /></Pressable>}
+              {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={event => { event.stopPropagation(); advance(order.id); }}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' || settings.useFinishButton === false ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
             </View>
             {cloud.pending('preparation:' + order.id) && <Text style={board.caption}>{t('Pendente de sincronização')}</Text>}
-          </View>;
+          </Pressable>;
         })}
         {!orders.length && <Text style={styles.emptyText}>{t('Nenhuma comanda neste período.')}</Text>}
       </ScrollView>
@@ -143,7 +156,12 @@ export default function PreparationScreen() {
         {statuses.slice(0, statuses.indexOf(record.status)).map(status => <Pressable key={status} accessibilityRole="button" disabled={busy} style={board.filterButton} onPress={() => { void chooseCorrection(detail.id, status); }}><Text style={board.actionText}>{t('Voltar para {stage}').replace('{stage}', t(labels[status]))}</Text></Pressable>)}
         {record.correction && <Text style={styles.helperText}>{t('Última correção')}: {record.correction.requestedBy} · {record.correction.authorizedBy || t('Desfazer')} · {new Date(record.correction.at).toLocaleString(locale)}</Text>}
       </View>; })()}
-    </ScrollView><View style={board.actions}>{canReprint && <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={printing} style={board.action} onPress={() => { setDetailId(null); reprint(detail); }}><ActionIcon kind="printer" /></Pressable>}{state(detail.id) !== 'completed' && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance]} onPress={() => advance(detail.id)}><Text style={board.advanceText}>{t('Alterar status')}</Text></Pressable>}</View></>}</View></View></Modal>
+    </ScrollView>{!!advanceError && <Text role="alert" style={styles.errorText}>{t('Falha ao salvar')}: {t(advanceError)}</Text>}<View style={board.actions}>{canReprint && <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={printing} style={board.action} onPress={() => { setDetailId(null); reprint(detail); }}><ActionIcon kind="printer" /></Pressable>}{state(detail.id) !== 'completed' && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance]} onPress={() => advance(detail.id)}><Text style={board.advanceText}>{t('Alterar status')}</Text></Pressable>}</View></>}</View></View></Modal>
+    <Modal visible={!!finishId} transparent animationType="fade" onRequestClose={() => { if (!busy) setFinishId(null); }}><View style={board.backdrop}><View testID="preparation-finish-confirmation" accessibilityViewIsModal style={board.modal}>
+      <Text style={board.title}>{t('Finalizar')}</Text><Text style={styles.cardTitle}>{t('Confirmar finalização do pedido?')}</Text>
+      {!!advanceError && <Text role="alert" style={styles.errorText}>{t('Falha ao salvar')}: {t(advanceError)}</Text>}
+      <View style={board.actions}><Pressable accessibilityRole="button" disabled={busy} style={board.action} onPress={() => setFinishId(null)}><Text style={board.actionText}>{t('Cancelar')}</Text></Pressable><Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance]} onPress={() => { if (finishId && state(finishId) === 'ready') void saveAdvance(finishId, 'completed'); else setFinishId(null); }}><Text style={board.advanceText}>{t('Confirmar')}</Text></Pressable></View>
+    </View></View></Modal>
     <Modal visible={!!correction} transparent animationType="fade" onRequestClose={closeCorrection}><View style={board.backdrop}><View testID="preparation-correction" style={board.modal}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={board.detailItems}>
       <Text style={board.title}>{t('Autorizar correção do preparo')}</Text>
       {correction && <Text style={styles.helperText}>{t('Voltar para {stage}').replace('{stage}', t(labels[correction.status]))}</Text>}
