@@ -79,7 +79,7 @@ export default function PreparationScreen() {
     if (busy || advancing.current) return;
     const next = statuses[statuses.indexOf(state(id)) + 1]; if (!next) return;
     setAdvanceError('');
-    if (next === 'completed') { setFinishId(id); return; }
+    if (next === 'completed' && settings.useFinishButton !== false) { setFinishId(id); return; }
     void saveAdvance(id, next);
   }
   function closeCorrection() { if (busy) return; setCorrection(null); setPassword(''); setAuthorizer(''); setCorrectionError(''); }
@@ -119,19 +119,19 @@ export default function PreparationScreen() {
           const heading = [order.serviceMode === 'takeout' ? t('Para levar') : t('Mesa') + (order.plate ? ' ' + order.plate : ''), order.customer?.trim()].filter(Boolean).join(' · ');
           const elapsed = minutes === null ? t(labels[current]) : t(labels[current]) + ' - ' + minutes.toLocaleString(locale) + 'm';
           const next = statuses[statuses.indexOf(current) + 1];
-          return <Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} onPress={() => setDetailId(order.id)} testID={'preparation-card-' + order.id} key={order.id} style={[board.card, { width: cardWidth, height: cardHeight, borderTopColor: late ? '#AE4328' : accents[current] }]}>
-            <ScrollView testID={'preparation-items-' + order.id} style={board.itemPreview} contentContainerStyle={board.itemContent} nestedScrollEnabled persistentScrollbar showsVerticalScrollIndicator>
+          return <View testID={'preparation-card-' + order.id} key={order.id} style={[board.card, { width: cardWidth, height: cardHeight, borderTopColor: late ? '#AE4328' : accents[current] }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('Ver detalhes') + ' ' + (orderNumberLabel(order) || order.plate)} onPress={() => setDetailId(order.id)} style={board.itemPreview}><ScrollView testID={'preparation-items-' + order.id} style={board.itemPreview} contentContainerStyle={board.itemContent} nestedScrollEnabled persistentScrollbar showsVerticalScrollIndicator>
               <View style={[board.row, { alignItems: 'flex-start' }]}><Text style={board.orderNumber}>{heading}</Text><Text style={[board.status, { color: late ? '#AE4328' : accents[current] }]}>{elapsed}</Text></View>
               <Text style={board.meta}>{late ? t('Atrasado') + ' · ' : ''}{localDayText(new Date(order.createdAt)) !== localDayText(new Date(now)) ? new Date(order.createdAt).toLocaleDateString(locale, { month: '2-digit', day: '2-digit' }) + ' ' : ''}{new Date(order.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {t('Pedido')} {orderNumberLabel(order) || order.plate}</Text>
               {order.items.map((item, index) => <View key={item.id + '-' + index} style={board.itemContent}><Text style={board.item}>{item.quantity}× {item.name}</Text>{!!item.note && <Text style={board.meta}>{item.note}</Text>}</View>)}
               {order.items.some(item => item.flavors?.length || item.extras?.length) && <Text style={board.caption}>{t('Itens e observações nos detalhes')}</Text>}
-            </ScrollView>
+            </ScrollView></Pressable>
             <View style={board.actions}><Pressable accessibilityRole="button" accessibilityLabel={t('Detalhes do pedido') + ' ' + (orderNumberLabel(order) || order.plate)} style={board.action} onPress={event => { event.stopPropagation(); setDetailId(order.id); }}><Text style={board.actionText}>{t('Detalhes')}</Text></Pressable>
               {canReprint && <Pressable accessibilityRole="button" accessibilityLabel={t('Reimprimir')} disabled={printing} style={[board.action, printing && styles.pressed]} onPress={event => { event.stopPropagation(); reprint(order); }}><ActionIcon kind="printer" /></Pressable>}
               {next && <Pressable accessibilityRole="button" disabled={busy} style={[board.action, board.advance, busy && styles.pressed]} onPress={event => { event.stopPropagation(); advance(order.id); }}><Text style={board.advanceText}>{t(next === 'preparing' ? 'Em preparo' : next === 'ready' || settings.useFinishButton === false ? 'Pronto' : 'Finalizar')}</Text></Pressable>}
             </View>
             {cloud.pending('preparation:' + order.id) && <Text style={board.caption}>{t('Pendente de sincronização')}</Text>}
-          </Pressable>;
+          </View>;
         })}
         {!orders.length && <Text style={styles.emptyText}>{t('Nenhuma comanda neste período.')}</Text>}
       </ScrollView>

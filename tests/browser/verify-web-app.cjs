@@ -100,7 +100,7 @@ const { fixture } = require('../helpers/business-fixture.cjs');
   }
   // Actual providers/storage: touch/card details, direct transitions and explicit completion.
   await page.setViewportSize({width:1376,height:900});await page.getByTestId('nav-preparation').tap();
-  const card=page.getByTestId('preparation-card-action-fixture-0');
+  const card=page.getByTestId('preparation-card-action-fixture-0');assert.equal(await card.locator('button button').count(),0,'Card body and footer actions must not be nested buttons');
   await card.getByRole('button',{name:'Em preparo',exact:true}).tap();await card.getByRole('button',{name:'Pronto',exact:true}).waitFor();
   assert.equal(await page.getByTestId('preparation-finish-confirmation').count(),0);assert.equal(await page.getByTestId('preparation-details').count(),0);
   await card.getByText(/Kitchen action 0/).tap();const details=page.getByTestId('preparation-details');await details.waitFor();
@@ -108,7 +108,7 @@ const { fixture } = require('../helpers/business-fixture.cjs');
   await details.getByRole('button',{name:'Alterar status',exact:true}).tap();const confirmation=page.getByTestId('preparation-finish-confirmation');await confirmation.waitFor();
   await confirmation.getByRole('button',{name:'Cancelar',exact:true}).tap();await details.getByText(/9 · Pronto/).waitFor();
   await details.getByRole('button',{name:'Alterar status',exact:true}).tap();await confirmation.getByRole('button',{name:'Confirmar',exact:true}).tap();await details.getByText(/9 · Finalizado/).waitFor();await details.getByRole('button',{name:'Fechar',exact:true}).tap();await details.waitFor({state:'detached'});await card.waitFor({state:'detached'});
-  await page.setViewportSize({width:1032,height:1376});const ready=page.getByTestId('preparation-card-action-fixture-2');await ready.focus();await page.keyboard.press('Enter');await details.waitFor();await details.getByRole('button',{name:'Fechar',exact:true}).tap();await details.waitFor({state:'detached'});
+  await page.setViewportSize({width:1032,height:1376});const ready=page.getByTestId('preparation-card-action-fixture-2');await ready.getByRole('button',{name:'Ver detalhes 9',exact:true}).first().focus();await page.keyboard.press('Enter');await details.waitFor();await details.getByRole('button',{name:'Fechar',exact:true}).tap();await details.waitFor({state:'detached'});
   await ready.getByRole('button',{name:'Finalizar',exact:true}).tap();await confirmation.waitFor();assert.equal(await details.count(),0,'Action button must not also open the card details');await confirmation.getByRole('button',{name:'Confirmar',exact:true}).tap();await ready.waitFor({state:'detached'});
   await page.getByTestId('nav-order').tap();
   await page.getByRole('radio', { name: 'Para levar', exact: true }).tap();
