@@ -16,7 +16,7 @@ As transições intermediárias do preparo continuam diretas; a confirmação ex
 
 Cada consulta periódica regravava os IDs já vistos e atualizava o contexto, mesmo com resposta idêntica. Agora o armazenamento só recebe IDs diferentes e o contexto só recebe uma resposta diferente. A frequência de consulta e as regras de recebimento, aceite e som foram preservadas. Atualização manual continua com indicador de carregamento; a consulta de fundo não alterna esse indicador.
 
-O teste verificou **20 consultas idênticas, zero gravações adicionais e zero renderizações adicionais do consumidor**. Um pedido novo continuou atualizando a contagem e solicitando o som. Isso comprova redução de trabalho redundante nesse cenário; não é uma porcentagem de ganho geral do aplicativo.
+O teste verificou **20 consultas idênticas, zero gravações adicionais e zero renderizações adicionais do consumidor**. Um pedido novo continuou atualizando a contagem e solicitando o som. Também foram verificados 601 pedidos pendentes e três consultas idênticas posteriores, sem repetir som/gravação/renderização: o checkpoint salvo limita-se a 500 IDs, mas a sessão conserva todos os IDs vistos. Isso comprova redução de trabalho redundante nesse cenário; não é uma porcentagem de ganho geral do aplicativo.
 
 Essa otimização está também no código compartilhado usado pelo Android, mas só chegará ao APK instalado quando houver uma nova compilação autorizada.
 

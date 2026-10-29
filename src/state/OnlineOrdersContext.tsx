@@ -27,7 +27,9 @@ function useOnlineState() {
    const nextIds = new Set(seen.current); pending.forEach(r => nextIds.add(r.id));
    const nextSeen = JSON.stringify([...nextIds].slice(-500));
    if (nextSeen !== savedSeen.current) { await appStorage.setItem(key, nextSeen); savedSeen.current = nextSeen; }
-   seen.current = new Set(JSON.parse(nextSeen) as string[]);
+   // Bound the persisted checkpoint, but remember every ID for this session so
+   // an inbox larger than 500 does not replay the sound on every idle poll.
+   seen.current = nextIds;
    if (!mounted.current) return;
    const signature = JSON.stringify(value);
    if (signature !== inboxSignature.current) { inboxSignature.current = signature; setInbox(value); }
