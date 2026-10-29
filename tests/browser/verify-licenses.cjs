@@ -46,7 +46,7 @@ const { decodeLicenseCode } = require('../../shared/license.mjs');
     for (const language of ['pt', 'en', 'es']) {
       await page.goto(base + '/admin?groupId=' + group + '#license');
       const languageButton = page.locator('[data-language=' + language + ']');
-      if (await languageButton.getAttribute('aria-pressed') !== 'true') await Promise.all([page.waitForNavigation(), languageButton.click()]);
+      if (await languageButton.getAttribute('aria-pressed') !== 'true') { await page.locator('#language>summary').click(); await Promise.all([page.waitForNavigation(), languageButton.click()]); }
       await page.locator('#license-status').filter({ hasText: translate('Licença ativa', language) }).waitFor();
       for (const theme of ['light', 'dark']) {
         if(await page.locator('html').getAttribute('data-theme')!==theme)await page.locator('.theme-switch').click();

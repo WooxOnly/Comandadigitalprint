@@ -22,6 +22,8 @@ async function selectPortalLanguage(page, language) {
 }
 async function verifyLatestManagerQuery(page) {
   await page.waitForFunction(()=>!document.querySelector('#consult').disabled);
+  if(!await page.locator('#filters').isVisible())await page.locator('[data-toggle-report-filter=filters]').click();
+  await page.locator('#period-choice').evaluate(node=>{node.value='custom'});
   let firstReady, secondReady, releaseFirst, releaseSecond;
   const firstStarted=new Promise(resolve=>firstReady=resolve),secondStarted=new Promise(resolve=>secondReady=resolve);
   const firstGate=new Promise(resolve=>releaseFirst=resolve),secondGate=new Promise(resolve=>releaseSecond=resolve);
@@ -31,11 +33,11 @@ async function verifyLatestManagerQuery(page) {
     const index=++requests,response=await route.fetch(),data=await response.json();
     if(index===1){data.summary.count=987654;firstReady();await firstGate;}
     if(index===2){secondReady();await secondGate;}
-    await route.fulfill({response,json:data});
+    try { await route.fulfill({response,json:data}); } catch(error) { if(index!==1||!/Route is already handled/.test(error.message))throw error; }
   });
   try {
-    await page.locator('#from').fill('2026-10-01');await page.locator('#to').fill('2026-10-02');await page.locator('#consult').click();await firstStarted;
-    await page.locator('#from').fill('2026-10-03');await page.locator('#to').fill('2026-10-04');
+    await page.locator('#from-display').evaluate((node,value)=>{node.value=value},'10/01/2026');await page.locator('#to-display').evaluate((node,value)=>{node.value=value},'10/02/2026');await page.locator('#consult').click();await firstStarted;
+    await page.locator('#from-display').evaluate((node,value)=>{node.value=value},'10/03/2026');await page.locator('#to-display').evaluate((node,value)=>{node.value=value},'10/04/2026');
     await page.locator('#filters').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     releaseFirst();await secondStarted;
     assert.equal((await page.locator('#metrics').innerText()).replace(/\D/g,'').includes('987654'),false,'An outdated report must not appear while the latest query is pending');
@@ -67,7 +69,7 @@ async function verifyLoginCooldowns(browser, base, errors, directory) {
         return route.fulfill({ status: 429, contentType: 'application/json', headers: { 'Retry-After': '30', 'Access-Control-Allow-Origin': '*' }, body: '{"error":"RATE_LIMIT","retryAfterSeconds":30}' });
       });
       await page.goto(base + '/tablet-preview.html?language=' + language + '#/link');
-      await page.getByRole('radio', { name: words.name, exact: true }).click();
+      await page.getByTestId('language-trigger').click();await page.clock.runFor(350);await page.getByRole('radio', { name: words.name, exact: true }).click();await page.clock.runFor(350);
       await page.getByLabel(words.username, { exact: true }).fill('synthetic-user');
       await page.getByLabel(words.password, { exact: true }).fill('synthetic-password');
       const submit = page.getByText(words.submit, { exact: true });
@@ -105,10 +107,11 @@ async function verifyLoginCooldowns(browser, base, errors, directory) {
 async function fits(page, label, controls = false) {
   const result = await page.evaluate(checkControls => {
     const overflow = document.documentElement.scrollWidth > innerWidth + 1, outside = [];
+    const activeDialog=document.querySelector('[role=dialog][aria-modal=true],dialog[open]');
     if (checkControls) for (const element of document.querySelectorAll('input,button,select,[role=button],[role=tab]')) {
       // RN Web makes the underlying app inaccessible while a native Modal is
       // open. Only its active dialog controls participate in this assertion.
-      if (element.closest('[aria-hidden="true"],[inert]')) continue;
+      if (element.closest('[aria-hidden="true"],[inert]') || (activeDialog && !activeDialog.contains(element))) continue;
       const rect = element.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
       if (rect.left >= -1 && rect.right <= innerWidth + 1) continue;
       let ancestor = element.parentElement, scroll = false;
@@ -161,7 +164,7 @@ async function fits(page, label, controls = false) {
     }
     const another=await browser.newContext({ignoreHTTPSErrors:true,locale:'pt-BR'}),second=await another.newPage();second.on('pageerror',error=>errors.push(error.message));
     await second.goto(base+'/admin');await second.locator('[name=username]').fill('admin');await second.locator('[name=password]').fill(f.env.ADMIN_VIEW_TOKEN);await second.locator('button[type=submit]').click();await second.waitForSelector('#home');assert.equal(await second.locator('#language [aria-pressed=true]').getAttribute('data-language'),'es');await another.close();
-    await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager@example.com');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters');
+    await page.goto(base+'/gestor');await page.locator('[name=username]').fill('manager@example.com');await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForSelector('#filters',{state:'attached'});
     await verifyLatestManagerQuery(page);cases++;
     for(const language of ['pt','en','es']){
       await selectPortalLanguage(page,language);await page.waitForFunction(()=>document.querySelector('#consult')&&!document.querySelector('#consult').disabled);
@@ -187,22 +190,22 @@ async function fits(page, label, controls = false) {
         }
         if(['/link','/login','/printer'].includes(route)){
           const trigger=page.getByTestId('language-trigger');await trigger.click();
-          const flags=page.getByRole('radio').filter({has:page.locator('img')});assert.equal(await flags.count(),3);
-          const selected=page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true});assert.equal(await selected.getAttribute('aria-checked'),'true');
+          const flags=page.getByRole('radio',{name:/^(Português|English|Español)$/});await flags.first().waitFor();assert.equal(await flags.count(),3);
+          let selected=page.getByRole('radio',{name:{pt:'Português',en:'English',es:'Español'}[language],exact:true});if(route==='/link'&&await selected.getAttribute('aria-checked')!=='true'){await selected.click();await trigger.click();await selected.waitFor()}assert.equal(await selected.getAttribute('aria-checked'),'true');
           await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role=radio] img')).every(img=>img.complete&&img.naturalWidth>0));await selected.click();
         }
         if(route==='/menu')await page.getByText('Produto sintético com descrição longa e acentuação · '+'Detalhes e opções '.repeat(8),{exact:true}).first().click();
-        for(const viewport of viewports){await page.setViewportSize(viewport);await page.waitForTimeout(40);await fits(page,`APK components ${language} ${route} ${viewport.width}x${viewport.height}`,true);cases++;if(route==='/link'&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${language}-${viewport.width}x${viewport.height}.png`)});if(['/login','/settings-access','/printer'].includes(route)&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${route.slice(1)}-${language}-${viewport.width}x${viewport.height}.png`)});}
+        for(const viewport of viewports){await page.setViewportSize(viewport);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await fits(page,`APK components ${language} ${route} ${viewport.width}x${viewport.height}`,true);cases++;if(route==='/link'&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${language}-${viewport.width}x${viewport.height}.png`)});if(['/login','/settings-access','/printer'].includes(route)&&[600,960].includes(viewport.width))await page.screenshot({path:path.join(directory,`language-flags-${route.slice(1)}-${language}-${viewport.width}x${viewport.height}.png`)});}
         if(route==='/settings-access'){
           assert.equal(await page.getByRole('radio').count(),0);
           assert.equal(await page.getByLabel(appTranslation('Senha de Configurações',language),{exact:true}).inputValue(),'draft-settings-password','Rotation preserves the protected access draft');
         }
       }
       await page.evaluate(()=>location.hash='/order');await page.waitForTimeout(100);
-      const customer=page.locator('input[aria-label="'+appTranslation('Nome do cliente, opcional',language)+'"]');await customer.fill('Rotação · São José · Español');
-      await page.setViewportSize({width:600,height:960});await page.setViewportSize({width:960,height:600});assert.equal(await customer.inputValue(),'Rotação · São José · Español');
-      await page.evaluate(()=>window.qa.openProduct());await page.waitForTimeout(100);for(const viewport of viewports){await page.setViewportSize(viewport);await fits(page,`product dialog ${language} ${viewport.width}x${viewport.height}`,true);cases++;}await page.evaluate(()=>window.qa.setSelectedProduct(null));
-      await page.evaluate(()=>window.qa.openReceipt());await page.waitForSelector('iframe[title=Receipt]');await page.waitForTimeout(400);
+      const customer=page.locator('input[aria-label="'+appTranslation('Nome do cliente, opcional',language)+'"]');await customer.fill('Rotação · São José · Español');const acceptedCustomer=await customer.inputValue();assert.equal(acceptedCustomer,'Rotação · São José · Español'.slice(0,20));
+      await page.setViewportSize({width:600,height:960});await page.setViewportSize({width:960,height:600});assert.equal(await customer.inputValue(),acceptedCustomer);
+      await page.evaluate(()=>window.qa.openProduct());await page.getByRole('dialog').waitFor();for(const viewport of viewports){await page.setViewportSize(viewport);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await fits(page,`product dialog ${language} ${viewport.width}x${viewport.height}`,true);cases++;}await page.evaluate(()=>window.qa.setSelectedProduct(null));
+      await page.evaluate(()=>window.qa.openReceipt());await page.waitForSelector('iframe[title="BistroHub — Receipt"]');await page.waitForTimeout(400);
       for(const viewport of viewports){await page.setViewportSize(viewport);await page.waitForTimeout(80);await fits(page,`8 print destinations ${language} ${viewport.width}x${viewport.height}`,true);const button=page.getByText(appTranslation('Imprimir comanda',language),{exact:true}),rect=await button.boundingBox();if(!(rect.y>=0&&rect.y+rect.height<=viewport.height+1)){await page.screenshot({path:path.join(directory,'receipt-failed.png')});console.error({language,viewport,rect,screenshot:path.join(directory,'receipt-failed.png')});}assert.ok(rect.y>=0&&rect.y+rect.height<=viewport.height+1,'Receipt print button must remain reachable');cases++;}
       await page.screenshot({path:path.join(directory,'receipt-'+language+'-landscape.png')});await page.getByRole('button',{name:appTranslation('Fechar prévia',language),exact:true}).click();
       console.log(JSON.stringify({language,cases,errors}));

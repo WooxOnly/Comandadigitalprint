@@ -1,5 +1,9 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## General audit — owner 2026-10-29
+
+- Owner authorized reviewing all existing modules, buttons, bugs and performance, with broad web/native-source tests. Findings and limits are recorded in REVISAO-GERAL-2026-10-29.md. Preserve existing geometry/business rules. Common web alerts now use AppAlert/AlertHost; keep native Alert passthrough and mount the web Modal only when active so it sits above existing editors. Clear pending alerts on identity changes. Identical online polls must not rewrite seen IDs or rerender consumers; new requests must still alert. Publish operational homologação web only; APK/OTA still require separate explicit authorization. Physical Android/printer/iPad tests, dependency advisories and history virtualization remain open; planned cash/online integrations must not be described as completed by this audit.
+
 ## Preparation action correction — owner screenshots 2026-10-28
 
 - Owner reports web stage buttons do nothing on cards/details. Confirmed installed RN Web Alert.alert is empty. Intermediate preparing/ready transitions execute directly; only explicit ready-to-completed uses a real cross-platform confirmation Modal. Preserve automatic completion-on-ready policy. Card touch/keyboard opens details; child actions must stop propagation. Surface save failures and prevent duplicate rapid writes. Preserve all board proportions and geometry. Publish only operational homologação web; no APK/OTA or unrelated backend changes.

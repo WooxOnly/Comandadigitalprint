@@ -5,6 +5,7 @@ import { darkColor } from '../../shared/appearance.mjs';
 import { createThemedStyleResolver } from './themedStyleResolver';
 import { useAppearance } from './AppearanceContext';
 export * from 'react-native';
+export { Alert } from './AppAlert';
 
 const themedStyle = createThemedStyleResolver(Native.StyleSheet.flatten);
 // These wrappers retain native refs, gestures and accessibility props. Existing

@@ -27,7 +27,7 @@ async function fits(page, label) {
 async function visible(page, id) { await page.waitForFunction(id => document.getElementById(id) && !document.getElementById(id).hidden, id); }
 async function choose(page, language) {
   const button = page.locator('#language [data-language=' + language + ']');
-  if (await button.getAttribute('aria-pressed') !== 'true') await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), button.click()]);
+  if (await button.getAttribute('aria-pressed') !== 'true') { await page.locator('#language>summary').click(); await button.click(); await page.waitForFunction(lang => document.documentElement.lang === lang, locales[language]); }
   assert.equal(await page.locator('html').getAttribute('lang'), locales[language]);
 }
 

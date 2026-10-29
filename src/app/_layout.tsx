@@ -1,3 +1,4 @@
+import { AlertHost } from '../ui/AlertHost';
 import { OnlineOrdersProvider } from '../state/OnlineOrdersContext';
 import { LicenseGate } from '../ui/LicenseGate';
 import { AppearanceProvider, useAppearance } from '../ui/AppearanceContext';
@@ -21,7 +22,7 @@ export default function RootLayout() {
 function ReadyApp() {
   useEffect(startDiagnostics, []);
   useEffect(() => startLocalBackupScheduler((error) => logError('backup.failed', error)), []);
-  return <LanguageProvider><AuthProvider><AppProvider><BusinessProvider><LicenseGate><LoginGate><Navigation /></LoginGate></LicenseGate></BusinessProvider></AppProvider></AuthProvider></LanguageProvider>;
+  return <LanguageProvider><AuthProvider><AlertHost /><AppProvider><BusinessProvider><LicenseGate><LoginGate><Navigation /></LoginGate></LicenseGate></BusinessProvider></AppProvider></AuthProvider></LanguageProvider>;
 }
 function Navigation() {
   const { theme } = useAppearance();

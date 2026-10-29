@@ -1,3 +1,9 @@
+## Revisão geral de 29/10/2026
+
+Corrigidos alertas/confirmações inoperantes na web, trabalho redundante nas consultas online e permanência de logo removida. Aprovados 424 testes Node, 38 suítes de navegador, lint, tipos e exportação JS Android. Aplicativo completo testado em Chromium e WebKit com base isolada. Entrega apenas web; nenhum novo APK. [Relatório completo, evidências e limites](REVISAO-GERAL-2026-10-29.md).
+
+Pendentes: testes físicos Android/iPad/impressora, alertas de versões Expo/TCP socket, virtualização validada do histórico nativo e integrações de caixa/gorjeta/online já previstas nos checklists. A revisão não conclui essas funcionalidades planejadas nem altera suas regras.
+
 ## Resumos de consumo duas vezes ao dia e novo dia demonstrativo — 21/10/2026
 
 - Aplicado e validado no workflow 39589089383: 73 pedidos em 21/10, 64 concluídos, três recebidos/três em preparo/três prontos, duas encomendas, TMA 37,6min (30–45), quatro operadores e 73 pedidos sincronizáveis. Nove preparações fictícias antigas finalizadas com backup. Validação geral 39589059007 concluída com sucesso.

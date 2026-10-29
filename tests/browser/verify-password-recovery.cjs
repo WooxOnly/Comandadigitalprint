@@ -14,6 +14,7 @@ const redact = value => String(value).replace(/(token=)[^&\s"']+/g, '$1[redacted
 async function languageChoice(page, language) {
   const button = page.locator(`[data-language=${language}]`);
   if (await button.getAttribute('aria-pressed') !== 'true') {
+    await page.locator('#language>summary').click();
     const [response] = await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), button.click()]);
     assert.equal(response.request().method(), 'GET', 'A language change never resubmits the recovery form');
     assert.equal(response.status(), 200);
@@ -31,13 +32,10 @@ async function fits(page, label) {
     return { overflow: document.documentElement.scrollWidth > innerWidth + 1, outside };
   });
   assert.deepEqual(result, { overflow: false, outside: [] }, label);
-  assert.deepEqual(await page.locator('#language button').allTextContents(), ['', '', '']);
-  assert.equal(await page.locator('#language svg[aria-hidden=true]').count(), 3);
-  const sizes = await page.locator('#language button').evaluateAll(buttons => buttons.map(button => {
-    const box = button.getBoundingClientRect(), flag = button.querySelector('svg').getBoundingClientRect();
-    return [box.width, box.height, flag.width, flag.height, !!button.getAttribute('aria-label')];
-  }));
-  assert.ok(sizes.every(([width, height, flagWidth, flagHeight, named]) => width === 44 && height === 44 && flagWidth === 20 && flagHeight === 15 && named), 'Discreet flags retain named 44px touch targets');
+  assert.deepEqual(await page.locator('#language button').allTextContents(), ['Português','English','Español']);
+  const trigger=page.locator('#language>summary'),bounds=await trigger.boundingBox();assert.equal(bounds.height,44);assert.equal(bounds.width,48);
+  const flag=await trigger.locator('svg').first().boundingBox();assert.equal(flag.width,16);assert.equal(flag.height,12);
+  assert.ok(await trigger.getAttribute('aria-label'));
   const link = page.locator('.recovery-link');
   assert.ok((await link.boundingBox()).height >= 44, 'Recovery links have accessible touch targets');
   await link.focus();
@@ -176,7 +174,7 @@ async function fits(page, label) {
         await page.locator('[name=username]').fill('admin');
         await page.locator('[name=password]').fill(newPassword);
         await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.locator('form button[type=submit]').click()]);
-        await page.locator('#groups').waitFor();
+        await page.locator('#home').waitFor();
         assert.equal(await page.locator('[name=password]').count(), 0, 'The recovered password authenticates successfully');
         flows++;
       } finally { await context.close(); cleanup.reverse().forEach(fn => fn()); }

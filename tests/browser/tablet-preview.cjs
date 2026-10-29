@@ -7,7 +7,8 @@ async function buildTabletPreview(directory, { sourceOverrides = {} } = {}) {
   const esbuild = require('esbuild');
   const stubs = `
 import React,{createContext,useContext,useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {Alert,useWindowDimensions} from 'react-native';
+import {useWindowDimensions} from 'react-native';
+import {Alert} from '${root}/src/ui/ThemedNative';
 import {createOrderItem} from '${root}/orderItems';
 import {translate,LOCALES} from '${root}/src/i18n/translations';
 const noop=()=>{},asyncNoop=async()=>{},sub=()=>noop;

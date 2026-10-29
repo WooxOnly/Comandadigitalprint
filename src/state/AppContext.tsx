@@ -10,7 +10,8 @@ import { appStorage as AsyncStorage, cloud } from '../services/cloudStorage';
 import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Platform, useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
+import { Alert } from '../ui/AppAlert';
 import { printOrder, printPrinterTest, type PrinterSettings, type ServiceMode } from '../../printerService';
 import { DEFAULT_MENU, standardizeMenu, filterProducts, isDemoMenu, type Product } from '../../menuData';
 import { createOrderItem, type OrderItem, type PizzaMode, type Extra } from '../../orderItems';
@@ -112,7 +113,7 @@ function useAppState() {
       if (storedMenu && !menuDirty.current && storedMenu !== previous.menu) { menuRef.current = standardizeMenu(JSON.parse(storedMenu)); setMenu(menuRef.current); previous.menu = storedMenu; }
       if (printer && !printerDirty.current && printer !== previous.printer) { setPrinterSettings(JSON.parse(printer)); previous.printer = printer; }
       if (settings && settings !== previous.settings) { setOrderSettings(parseOrderSettings(settings)); previous.settings = settings; }
-      if (logo) setLogoUri(logo);
+      setLogoUri(logo || null);
     }).catch(error => logError('storage.refresh_failed', error));
   }, { dataOnly: true }), [isReady]);
 

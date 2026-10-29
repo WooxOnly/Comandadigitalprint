@@ -1,5 +1,11 @@
 # Revisão de desempenho — 23/10/2026
 
+## Revisão geral de 29/10/2026
+
+- Pedidos online: 20 consultas de fundo idênticas resultaram em zero gravações extras dos IDs vistos e zero renderizações extras do consumidor. Respostas novas continuam atualizando os dados e acionando o som conforme a configuração. Mantidos intervalo, permissões e regras. Código compartilhado preparado; APK instalado não foi atualizado.
+- Diagnóstico de 40 transições, CPU Chromium limitada a 6× e 8.000 pedidos sintéticos: medianas Início 321 ms, Cardápio 423 ms, Preparo 686 ms, Pedido 1.013 ms, Histórico 2.298 ms. Fixture com provedores sintéticos; não é medição Android nem ganho antes/depois. Histórico com muitos cartões permanece pendente de virtualização validada. Web operacional mantém paginação sob demanda.
+- Evidência e demais limites: [revisão geral](REVISAO-GERAL-2026-10-29.md). Publicação apenas operacional web; sem novo APK/OTA.
+
 Escopo autorizado: investigar e melhorar o desempenho mantendo layout, funções e regras. Trabalho local, sem publicação, APK ou OTA. As alterações do cardápio online continuam separadas e não foram disponibilizadas nesta revisão.
 
 ## Gargalos encontrados e corrigidos

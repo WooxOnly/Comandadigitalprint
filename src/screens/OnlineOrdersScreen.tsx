@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
-import { Text, View } from '../ui/ThemedNative';
+import { Alert, Text, View } from '../ui/ThemedNative';
 import { KeyboardPressable as Pressable } from '../ui/KeyboardControls';
 import { ScreenFrame } from '../ui/ScreenFrame';
 import { COLORS, styles } from '../ui/theme';
