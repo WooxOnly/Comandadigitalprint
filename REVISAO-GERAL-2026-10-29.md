@@ -100,3 +100,9 @@ Evidências preservadas em `/workspace/artifacts/auditoria-20261029/`: `browser-
 ## Entrega
 
 Destino: aplicativo web de homologação, `/app/`. Publicação usa `web_only=true`, `publish_web=false`, `sync_api=false`, `build_apk=false`, `enable_online_demo=false`. Sem migração, alteração de registros reais, mudança de cobrança, backend, portais, produção ou compilação APK/OTA.
+
+Publicação concluída com sucesso no [workflow 40900739607](https://github.com/WooxOnly/Comandadigitalprint/actions/runs/40900739607), código `ec775ea`. Validação e web aprovados; portais, APK e release ignorados. A tentativa anterior foi cancelada para incluir a proteção contra repetição de som em filas maiores que 500.
+
+Conferência remota somente leitura: HTML e novo bundle acessíveis, implementação `app-alert` e confirmação de preparo presentes, API saudável com `ok=true` e `syncProtocol=2`. Evidência adicional: `deployment-smoke.json` na pasta de artefatos.
+
+Teste no [aplicativo web de homologação](https://bistrohub-app-homologacao.wooxonly-comandas.workers.dev/app/). O APK instalado permanece na versão anterior.
