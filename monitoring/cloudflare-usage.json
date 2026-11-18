@@ -1,31 +1,31 @@
 {
-  "checkedAt": "2026-11-18T03:05:19.258Z",
+  "checkedAt": "2026-11-18T20:50:26.607Z",
   "ok": true,
   "missingMetrics": [],
   "baseMonthlyUSD": 5,
   "hardSpendingCap": false,
-  "windowStart": "2026-10-18T03:05:19.258Z",
-  "windowEnd": "2026-11-18T03:05:19.258Z",
+  "windowStart": "2026-10-18T20:50:26.607Z",
+  "windowEnd": "2026-11-18T20:50:26.607Z",
   "basis": "rolling-31-days-conservative",
   "billingCycleVerified": false,
   "note": "Estimativa conservadora dos últimos 31 dias, não uma fatura. A credencial não possui leitura de assinaturas; não assumir renovação no primeiro dia do mês. Métricas podem ter atraso. Alertas não bloqueiam cobrança.",
   "metrics": {
     "requests": {
-      "value": 72610,
+      "value": 71810,
       "included": 10000000,
-      "percent": 0.7261,
+      "percent": 0.7181,
       "band": 0
     },
     "cpuMs": {
-      "value": 496431.57,
+      "value": 483229.49,
       "included": 30000000,
-      "percent": 1.6547718999999999,
+      "percent": 1.6107649666666668,
       "band": 0
     },
     "rowsRead": {
-      "value": 18334524,
+      "value": 18334737,
       "included": 25000000000,
-      "percent": 0.073338096,
+      "percent": 0.073338948,
       "band": 0
     },
     "rowsWritten": {
